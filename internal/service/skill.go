@@ -302,7 +302,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 
 	skillDirMap := make(map[string]bool)
 	for _, file := range zipReader.File {
-		cleanName := filepath.ToSlash(file.Name)
+		cleanName := filepath.ToSlash(utils.FixFileName(file.Name))
 		parts := strings.Split(cleanName, "/")
 		if len(parts) >= 2 && parts[0] != "" && parts[0] != utils.SkillExportMarker {
 			dirName := parts[0]
@@ -331,7 +331,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 
 		skillMDContent := ""
 		for _, file := range zipReader.File {
-			if filepath.ToSlash(file.Name) == prefix+"SKILL.md" {
+			if filepath.ToSlash(utils.FixFileName(file.Name)) == prefix+"SKILL.md" {
 				rc, err := file.Open()
 				if err == nil {
 					data, _ := io.ReadAll(rc)

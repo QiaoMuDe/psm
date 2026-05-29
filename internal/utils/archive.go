@@ -9,7 +9,41 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/simplifiedchinese"
 )
+
+// FixFileName 修复 ZIP 条目中非 UTF-8 编码的文件名（如 GBK/GB18030）为正确的 UTF-8 字符串
+// 处理中文 Windows 工具创建 ZIP 时使用 GBK 编码但不设置 UTF-8 标志位导致的乱码问题
+func FixFileName(name string) string {
+	if name == "" {
+		return name
+	}
+
+	if utf8.ValidString(name) && !strings.ContainsRune(name, '\uFFFD') {
+		return name
+	}
+
+	rawBytes := []byte(name)
+	if decoded, err := simplifiedchinese.GB18030.NewDecoder().Bytes(rawBytes); err == nil {
+		if utf8.ValidString(string(decoded)) {
+			return string(decoded)
+		}
+	}
+
+	cp437Bytes, err := charmap.CodePage437.NewEncoder().Bytes([]byte(name))
+	if err == nil {
+		if decoded, err := simplifiedchinese.GB18030.NewDecoder().Bytes(cp437Bytes); err == nil {
+			if utf8.ValidString(string(decoded)) {
+				return string(decoded)
+			}
+		}
+	}
+
+	return name
+}
 
 // SkillExportMarker 技能导出 ZIP 的标识文件名，空文件仅用于格式识别
 const SkillExportMarker = ".psm-skill-export"
@@ -28,10 +62,11 @@ func UnzipToDir(zipPath string, destDir string) error {
 	}
 
 	for _, file := range reader.File {
-		targetPath := filepath.Join(destDir, file.Name)
+		fileName := FixFileName(file.Name)
+		targetPath := filepath.Join(destDir, fileName)
 
 		if !strings.HasPrefix(filepath.Clean(targetPath), filepath.Clean(destDir)+string(filepath.Separator)) {
-			return fmt.Errorf("ZIP 文件包含非法路径: %s", file.Name)
+			return fmt.Errorf("ZIP 文件包含非法路径: %s", fileName)
 		}
 
 		if file.FileInfo().IsDir() {
@@ -46,7 +81,7 @@ func UnzipToDir(zipPath string, destDir string) error {
 		}
 
 		if err := extractFile(file, targetPath); err != nil {
-			return fmt.Errorf("解压文件 %s 失败: %w", file.Name, err)
+			return fmt.Errorf("解压文件 %s 失败: %w", fileName, err)
 		}
 	}
 
@@ -473,7 +508,8 @@ func UnzipPrefixToDir(reader *zip.Reader, prefix string, destDir string) error {
 	}
 
 	for _, file := range reader.File {
-		cleanName := filepath.ToSlash(file.Name)
+		fileName := FixFileName(file.Name)
+		cleanName := filepath.ToSlash(fileName)
 		if !strings.HasPrefix(cleanName, prefix) {
 			continue
 		}
@@ -486,7 +522,7 @@ func UnzipPrefixToDir(reader *zip.Reader, prefix string, destDir string) error {
 		targetPath := filepath.Join(destDir, relPath)
 
 		if !strings.HasPrefix(filepath.Clean(targetPath), filepath.Clean(destDir)+string(filepath.Separator)) {
-			return fmt.Errorf("ZIP 文件包含非法路径: %s", file.Name)
+			return fmt.Errorf("ZIP 文件包含非法路径: %s", fileName)
 		}
 
 		if file.FileInfo().IsDir() {
@@ -501,7 +537,7 @@ func UnzipPrefixToDir(reader *zip.Reader, prefix string, destDir string) error {
 		}
 
 		if err := extractFile(file, targetPath); err != nil {
-			return fmt.Errorf("解压文件 %s 失败: %w", file.Name, err)
+			return fmt.Errorf("解压文件 %s 失败: %w", fileName, err)
 		}
 	}
 

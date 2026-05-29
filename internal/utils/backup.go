@@ -89,7 +89,7 @@ func CreateBackupArchive(data *BackupData, skillStoragePath string, savePath str
 
 	if skillStoragePath != "" {
 		if _, err := os.Stat(skillStoragePath); err == nil {
-			if err := addDirToZipWithPrefix(writer, skillStoragePath, "psm-backup/skills"); err != nil {
+			if err := addDirToZipWithPrefix(writer, skillStoragePath, "psm-backup/skills/"); err != nil {
 				return fmt.Errorf("打包 Skill 文件失败: %w", err)
 			}
 		}
