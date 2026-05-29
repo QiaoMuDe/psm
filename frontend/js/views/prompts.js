@@ -380,6 +380,9 @@ const PromptsView = {
                 const ids = this.selectedIds.size > 0 ? [...this.selectedIds] : [];
                 await API.exportPrompts(ids, filePath);
                 Toast.success('导出成功');
+                this.selectedIds.clear();
+                document.getElementById('prompt-list').querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                this.updateBatchBar();
             } catch (err) {
                 // 错误已由 API.call 处理
             }

@@ -402,8 +402,9 @@ func (s *SkillService) BatchImportSkills(zipPaths []string) (*db.ImportResult, e
 	return result, nil
 }
 
-// ExportSkillsToZip 将选中的 Skill 打包为一个 ZIP 文件
-// ZIP 包含导出标识文件和所有技能目录，skillIds 为空时导出全部
+// ExportSkillsToZip 将选中的多个 Skill 打包为 PSM 导出格式的 ZIP 文件
+// ZIP 包含导出标识文件和所有技能目录，每个技能目录直接位于 ZIP 根目录下
+// skillIds 为空时导出全部，跳过获取失败的技能继续处理
 func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) error {
 	var skills []db.Skill
 
@@ -417,7 +418,7 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 		for _, id := range skillIds {
 			sk, err := s.GetSkill(id)
 			if err != nil {
-				return fmt.Errorf("获取 Skill (ID=%d) 失败: %w", id, err)
+				continue
 			}
 			skills = append(skills, *sk)
 		}
@@ -440,9 +441,21 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 	return utils.CreateSkillExportZip(skillDirs, savePath)
 }
 
-// ExportSkill 导出单个 Skill 为 ZIP 文件（兼容旧格式，内部调用 ExportSkillsToZip）
+// ExportSkill 导出单个 Skill 为标准格式 ZIP 文件
+// ZIP 根目录直接包含 SKILL.md 和其他文件，无 PSM 标识文件，可被其他工具直接使用
 func (s *SkillService) ExportSkill(id int64, zipPath string) error {
-	return s.ExportSkillsToZip([]int64{id}, zipPath)
+	sk, err := s.GetSkill(id)
+	if err != nil {
+		return fmt.Errorf("获取 Skill (ID=%d) 失败: %w", id, err)
+	}
+
+	storagePath, err := s.settingsSvc.GetSkillStoragePath()
+	if err != nil {
+		return fmt.Errorf("获取 Skill 存储路径失败: %w", err)
+	}
+
+	skillDir := filepath.Join(storagePath, sk.RelativePath)
+	return utils.ZipDir(skillDir, zipPath)
 }
 
 // ListSkillFiles 列出 Skill 目录下的文件和子目录

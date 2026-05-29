@@ -6,6 +6,7 @@ const SkillsView = {
     currentKeyword: '',
     currentView: App.settings.skill_view_mode || 'list',
     selectedIds: new Set(),
+    allSkills: [],
 
     /**
      * 渲染 Skill 管理视图
@@ -113,6 +114,7 @@ const SkillsView = {
 
         try {
             let skills = await API.getSkills();
+            this.allSkills = skills;
 
             if (SkillsView.currentKeyword) {
                 skills = skills.filter(s =>
@@ -384,12 +386,21 @@ const SkillsView = {
 
         document.getElementById('export-skill-btn').addEventListener('click', async () => {
             try {
-                const filePath = await API.saveZIPFileDialog('skills.zip');
-                if (!filePath) return;
                 const ids = this.selectedIds.size > 0 ? [...this.selectedIds] : [];
-                await API.exportSkills(ids, filePath);
+                if (ids.length === 1) {
+                    const skill = this.allSkills.find(s => s.id === ids[0]);
+                    const defaultName = skill ? `${skill.name}.zip` : 'skill.zip';
+                    const filePath = await API.saveZIPFileDialog(defaultName);
+                    if (!filePath) return;
+                    await API.exportSkill(ids[0], filePath);
+                } else {
+                    const filePath = await API.saveZIPFileDialog('skills.zip');
+                    if (!filePath) return;
+                    await API.exportSkills(ids, filePath);
+                }
                 Toast.success(`导出成功`);
                 this.selectedIds.clear();
+                document.getElementById('skill-list').querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
                 this.updateBatchBar();
             } catch (err) {
                 // 错误已由 API.call 处理

@@ -472,6 +472,7 @@ func HasExportMarker(zipPath string) (bool, error) {
 
 // CreateSkillExportZip 创建技能导出格式的 ZIP 文件
 // 包含导出标识文件和所有技能目录，每个技能目录直接位于 ZIP 根目录下
+// 跳过不存在的技能目录，继续处理其余技能
 func CreateSkillExportZip(skillDirs map[string]string, savePath string) error {
 	if err := EnsureDir(filepath.Dir(savePath)); err != nil {
 		return fmt.Errorf("创建 ZIP 文件目录失败: %w", err)
@@ -492,13 +493,19 @@ func CreateSkillExportZip(skillDirs map[string]string, savePath string) error {
 	}
 	entry.Write([]byte(""))
 
+	var lastErr error
 	for name, localPath := range skillDirs {
+		if _, statErr := os.Stat(localPath); statErr != nil {
+			lastErr = fmt.Errorf("技能 %s 目录不存在: %w", name, statErr)
+			continue
+		}
 		if err := addDirToZipWithPrefix(writer, localPath, name+"/"); err != nil {
-			return fmt.Errorf("打包技能 %s 失败: %w", name, err)
+			lastErr = fmt.Errorf("打包技能 %s 失败: %w", name, err)
+			continue
 		}
 	}
 
-	return nil
+	return lastErr
 }
 
 // UnzipPrefixToDir 从已打开的 ZIP reader 中解压指定前缀的文件到目标目录
