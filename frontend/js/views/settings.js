@@ -12,53 +12,54 @@ const SettingsView = {
             <div class="page-header">
                 <h2 class="page-title">设置</h2>
             </div>
-            <div class="card">
-                <div class="card-body">
-                    <div class="form-group">
-                        <label class="form-label">应用主题</label>
-                        <select id="setting-theme" class="form-select" style="width: 200px;">
-                            <option value="light">亮色</option>
-                            <option value="dark">暗色</option>
-                            <option value="auto">跟随系统</option>
-                        </select>
-                    </div>
+            <div class="view-content">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">应用主题</label>
+                            <select id="setting-theme" class="form-select" style="width: 200px;">
+                                <option value="light">亮色</option>
+                                <option value="dark">暗色</option>
+                                <option value="auto">跟随系统</option>
+                            </select>
+                        </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Skill 存储路径</label>
-                        <div class="flex gap-12">
-                            <input type="text" class="form-input" id="setting-skill-path" readonly style="flex:1" />
-                            <button class="btn btn-default" id="open-skill-path-btn" title="在文件管理器中打开">
+                        <div class="form-group">
+                            <label class="form-label">Skill 存储路径</label>
+                            <div class="flex gap-12">
+                                <input type="text" class="form-input" id="setting-skill-path" readonly style="flex:1" />
+                                <button class="btn btn-default" id="open-skill-path-btn" title="在文件管理器中打开">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                        <polyline points="15 3 21 3 21 9"/>
+                                        <line x1="10" y1="14" x2="21" y2="3"/>
+                                    </svg>
+                                    打开
+                                </button>
+                                <button class="btn btn-default" id="change-skill-path-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    更改
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="save-settings-btn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                                    <polyline points="15 3 21 3 21 9"/>
-                                    <line x1="10" y1="14" x2="21" y2="3"/>
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                    <polyline points="17 21 17 13 7 13 7 21"/>
+                                    <polyline points="7 3 7 8 15 8"/>
                                 </svg>
-                                打开
-                            </button>
-                            <button class="btn btn-default" id="change-skill-path-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                                </svg>
-                                更改
+                                保存设置
                             </button>
                         </div>
                     </div>
-
-                    <div class="divider"></div>
-
-                    <div class="form-actions">
-                        <button class="btn btn-primary" id="save-settings-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                                <polyline points="17 21 17 13 7 13 7 21"/>
-                                <polyline points="7 3 7 8 15 8"/>
-                            </svg>
-                            保存设置
-                        </button>
-                    </div>
                 </div>
             </div>
-
         `;
 
         await this.loadSettings();

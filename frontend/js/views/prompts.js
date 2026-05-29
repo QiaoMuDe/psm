@@ -17,7 +17,7 @@ const PromptsView = {
             <div class="page-header">
                 <h2 class="page-title">Prompt 管理</h2>
             </div>
-            <div class="card">
+            <div class="card view-toolbar">
                 <div class="card-header">
                     <div class="toolbar">
                         <div class="toolbar-left">
@@ -78,7 +78,7 @@ const PromptsView = {
                         批量删除
                     </button>
                 </div>
-                <div class="card-body">
+                <div class="view-content">
                     <div id="prompt-list">
                         <div class="loading">加载中...</div>
                     </div>
