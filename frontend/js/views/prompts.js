@@ -159,6 +159,7 @@ const PromptsView = {
             let tags = [];
             try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
             const tagsHtml = tags.map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('');
+            const contentEscaped = escapeHtml(p.content);
             html += `<tr data-id="${p.id}">
                 <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${p.id}" /></td>
                 <td><strong>${escapeHtml(p.name)}</strong></td>
@@ -166,6 +167,14 @@ const PromptsView = {
                 <td><div class="item-card-tags">${tagsHtml}</div></td>
                 <td class="text-secondary">${time}</td>
                 <td>
+                    <button class="btn btn-default btn-sm view-prompt-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-content="${contentEscaped}" data-category="${escapeHtml(p.category || '')}" data-tags="${escapeHtml(tags.join(', '))}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        查看
+                    </button>
+                    <button class="btn btn-default btn-sm copy-prompt-btn" data-content="${contentEscaped}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        复制
+                    </button>
                     <button class="btn btn-default btn-sm edit-prompt-btn" data-id="${p.id}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         编辑
@@ -195,17 +204,26 @@ const PromptsView = {
             let tags = [];
             try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
             const tagsHtml = tags.slice(0, 3).map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('');
+            const contentEscaped = escapeHtml(p.content);
             html += `<div class="item-card" data-id="${p.id}">
                 <div class="card-checkbox-wrap">
                     <input type="checkbox" class="card-checkbox" data-id="${p.id}" />
                 </div>
                 <div class="item-card-title">${escapeHtml(p.name)}</div>
-                <div class="item-card-desc">${escapeHtml(p.content)}</div>
+                <div class="item-card-desc">${contentEscaped}</div>
                 <div class="item-card-meta">
                     <div class="item-card-tags"><span class="tag">${escapeHtml(p.category)}</span>${tagsHtml}</div>
                     <div class="item-card-time">${time}</div>
                 </div>
                 <div class="item-card-actions">
+                    <button class="btn btn-default btn-sm view-prompt-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-content="${contentEscaped}" data-category="${escapeHtml(p.category || '')}" data-tags="${escapeHtml(tags.join(', '))}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        查看
+                    </button>
+                    <button class="btn btn-default btn-sm copy-prompt-btn" data-content="${contentEscaped}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        复制
+                    </button>
                     <button class="btn btn-default btn-sm edit-prompt-btn" data-id="${p.id}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         编辑
@@ -238,6 +256,18 @@ const PromptsView = {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.handleDelete(btn.dataset.id);
+            });
+        });
+        container.querySelectorAll('.view-prompt-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.viewPrompt(btn.dataset);
+            });
+        });
+        container.querySelectorAll('.copy-prompt-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await this.copyPromptContent(btn);
             });
         });
     },
@@ -489,6 +519,62 @@ const PromptsView = {
             } catch (err) {
                 // 错误已由 API.call 处理
             }
+        }
+    },
+
+    /**
+     * 查看 Prompt 详情
+     * @param {Object} dataset - 按钮的 dataset 属性（name, content, category, tags）
+     */
+    viewPrompt(dataset) {
+        const tagsHtml = dataset.tags
+            ? dataset.tags.split(', ').filter(Boolean).map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join(' ')
+            : '<span class="tag">无</span>';
+
+        const content = `
+            <div class="form-group">
+                <label class="form-label">名称</label>
+                <div style="font-size:16px;font-weight:600;color:var(--text-primary)">${escapeHtml(dataset.name)}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">分类</label>
+                <div><span class="tag">${escapeHtml(dataset.category || '未分类')}</span></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">标签</label>
+                <div>${tagsHtml}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">内容</label>
+                <pre style="white-space:pre-wrap;word-wrap:break-word;background:var(--bg-page);padding:12px;border-radius:var(--radius);font-size:13px;line-height:1.6;color:var(--text-primary);border:1px solid var(--border);max-height:400px;overflow-y:auto;margin:0">${escapeHtml(dataset.content)}</pre>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-default" onclick="Modal.close()">关闭</button>
+            </div>
+        `;
+
+        Modal.open('查看 Prompt', content);
+    },
+
+    /**
+     * 复制 Prompt 内容到剪贴板
+     * @param {HTMLElement} btn - 触发复制的按钮元素
+     */
+    async copyPromptContent(btn) {
+        const content = btn.dataset.content;
+        try {
+            await navigator.clipboard.writeText(content);
+            Toast.success('内容已复制到剪贴板');
+        } catch (err) {
+            const textarea = document.createElement('textarea');
+            textarea.value = content;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            Toast.success('内容已复制到剪贴板');
         }
     }
 };

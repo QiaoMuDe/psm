@@ -1,0 +1,26 @@
+# Checklist
+
+- [x] `variables.css` 已创建，包含 `@import` 字体声明
+- [x] `variables.css` 包含 `:root` 亮色主题变量（所有 CSS 自定义属性）
+- [x] `variables.css` 包含 `[data-theme="dark"]` 暗色主题变量
+- [x] `variables.css` 包含 Reset 样式（box-sizing, margin, padding）
+- [x] `variables.css` 包含 html / body / ::selection 基础排版
+- [x] `variables.css` 包含 `.app-container`
+- [x] `layout.css` 已创建，包含侧边栏全部样式（主体 + 底部 + 收起状态）
+- [x] `layout.css` 包含主内容区样式（.main-content, #view-container, .view-toolbar, .view-content）
+- [x] `layout.css` 包含滚动条美化样式
+- [x] `layout.css` 包含响应式媒体查询（768px + 1200px）
+- [x] `components.css` 已创建，包含卡片样式（普通卡片 + 统计卡片）
+- [x] `components.css` 包含按钮全系列样式
+- [x] `components.css` 包含表单样式
+- [x] `components.css` 包含表格样式
+- [x] `components.css` 包含工具栏 + 搜索框样式
+- [x] `components.css` 包含空状态 + 加载状态样式
+- [x] `components.css` 包含模态框 + 确认对话框 + Toast 样式
+- [x] `components.css` 包含标签 + 分隔线样式
+- [x] `components.css` 包含工具类（文本/间距/Flex）
+- [x] `components.css` 包含工具栏组件（分隔符/视图切换/批量栏/复选框）
+- [x] `components.css` 包含卡片网格 + item-card 样式
+- [x] `index.html` 已修改为引用 3 个 CSS 文件（variables → layout → components）
+- [x] 原始 `style.css` 已删除
+- [x] 3 个文件行数之和等于原始文件行数（1328 vs 1330，差异为末尾空行）

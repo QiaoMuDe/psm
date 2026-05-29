@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --bg-page: #F8FAFC;
+    --bg-surface: #FFFFFF;
+    --bg-sidebar: #0F172A;
+    --bg-sidebar-hover: #1E293B;
+    --bg-sidebar-active: rgba(59, 130, 246, 0.15);
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+    --text-sidebar: #94A3B8;
+    --text-sidebar-active: #FFFFFF;
+    --border: #E2E8F0;
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --accent-light: rgba(37, 99, 235, 0.08);
+    --success: #10B981;
+    --danger: #EF4444;
+    --danger-hover: #DC2626;
+    --warning: #F59E0B;
+    --transition: 150ms ease;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --spacing-1: 8px;
+    --spacing-2: 12px;
+    --spacing-3: 16px;
+    --spacing-4: 24px;
+    --spacing-5: 32px;
+    --spacing-6: 48px;
+    --sidebar-width: 220px;
+    --sidebar-collapsed: 60px;
+}
+
+[data-theme="dark"] {
+    --bg-page: #0F172A;
+    --bg-surface: #1E293B;
+    --bg-sidebar: #020617;
+    --bg-sidebar-hover: #0F172A;
+    --bg-sidebar-active: rgba(96, 165, 250, 0.15);
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-sidebar: #64748B;
+    --text-sidebar-active: #FFFFFF;
+    --border: #334155;
+    --accent: #60A5FA;
+    --accent-hover: #3B82F6;
+    --accent-light: rgba(96, 165, 250, 0.1);
+    --danger: #EF4444;
+    --danger-hover: #DC2626;
+}
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+body {
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    line-height: 1.5;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+::selection {
+    background-color: var(--accent);
+    color: #FFFFFF;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
