@@ -7,6 +7,7 @@ const SkillsView = {
     currentView: App.settings.skill_view_mode || 'list',
     selectedIds: new Set(),
     allSkills: [],
+    batchMode: false,
 
     /**
      * 渲染 Skill 管理视图
@@ -42,6 +43,10 @@ const SkillsView = {
                             </div>
                             <div class="toolbar-separator"></div>
                             <div class="action-buttons">
+                                <button class="btn btn-default btn-sm" id="batch-manage-skill-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                    批量管理
+                                </button>
                                 <button class="btn btn-default btn-sm" id="import-skill-btn">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -72,13 +77,19 @@ const SkillsView = {
                 </div>
                 <div class="batch-bar" id="skill-batch-bar" style="display:none;">
                     <div class="batch-bar-left">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <label class="batch-select-all-label">
+                            <input type="checkbox" class="select-all-checkbox" id="skill-select-all" />
+                            全选
+                        </label>
                         <span id="skill-selected-count">0 项已选</span>
                     </div>
-                    <button class="btn btn-danger btn-sm" id="skill-batch-delete-btn">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        批量删除
-                    </button>
+                    <div class="batch-bar-right">
+                        <button class="btn btn-danger btn-sm" id="skill-batch-delete-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            批量删除
+                        </button>
+                        <button class="btn btn-default btn-sm" id="skill-exit-batch-btn">退出管理</button>
+                    </div>
                 </div>
                 <div class="view-content">
                     <div id="skill-list">
@@ -107,6 +118,8 @@ const SkillsView = {
      */
     async loadSkills() {
         this.selectedIds.clear();
+        this.batchMode = false;
+        this.syncBatchMode();
         this.updateBatchBar();
 
         const listEl = document.getElementById('skill-list');
@@ -151,7 +164,7 @@ const SkillsView = {
      * @param {Array} skills - Skill 数据数组
      */
     renderTable(container, skills) {
-        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"><input type="checkbox" class="select-all-checkbox" /></th><th>名称</th><th>描述</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>描述</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
 
         skills.forEach(s => {
             const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
@@ -207,16 +220,12 @@ const SkillsView = {
     renderCards(container, skills) {
         let html = '<div class="cards-grid">';
         skills.forEach(s => {
-            const time = new Date(s.updated_at).toLocaleString('zh-CN');
             html += `<div class="item-card" data-id="${s.id}">
                 <div class="card-checkbox-wrap">
                     <input type="checkbox" class="card-checkbox" data-id="${s.id}" />
                 </div>
                 <div class="item-card-title">${escapeHtml(s.name)}</div>
                 <div class="item-card-desc">${escapeHtml(s.description || '暂无描述')}</div>
-                <div class="item-card-meta">
-                    <div class="item-card-time">${time}</div>
-                </div>
                 <div class="item-card-actions">
                     <button class="btn btn-default btn-sm view-skill-btn" data-id="${s.id}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -262,6 +271,28 @@ const SkillsView = {
                 this.handleDelete(btn.dataset.id, btn.dataset.name);
             });
         });
+
+        container.querySelectorAll('tr[data-id]').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
+                const cb = row.querySelector('.row-checkbox');
+                if (cb) {
+                    cb.checked = !cb.checked;
+                    cb.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+
+        container.querySelectorAll('.item-card[data-id]').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
+                const cb = card.querySelector('.card-checkbox');
+                if (cb) {
+                    cb.checked = !cb.checked;
+                    cb.dispatchEvent(new Event('change'));
+                }
+            });
+        });
     },
 
     /**
@@ -269,11 +300,11 @@ const SkillsView = {
      * @param {HTMLElement} container - 包含 checkbox 的容器元素
      */
     bindCheckboxEvents(container) {
-        const selectAll = container.querySelector('.select-all-checkbox');
+        const selectAll = document.getElementById('skill-select-all');
+        const cbSelector = '.row-checkbox, .card-checkbox';
         if (selectAll) {
             selectAll.addEventListener('change', () => {
-                const checkboxes = container.querySelectorAll('.row-checkbox');
-                checkboxes.forEach(cb => {
+                container.querySelectorAll(cbSelector).forEach(cb => {
                     cb.checked = selectAll.checked;
                     const id = Number(cb.dataset.id);
                     if (selectAll.checked) {
@@ -295,8 +326,8 @@ const SkillsView = {
                     this.selectedIds.delete(id);
                 }
                 if (selectAll) {
-                    const allCheckboxes = container.querySelectorAll('.row-checkbox');
-                    selectAll.checked = allCheckboxes.length > 0 && this.selectedIds.size === allCheckboxes.length;
+                    const allCbs = container.querySelectorAll(cbSelector);
+                    selectAll.checked = allCbs.length > 0 && this.selectedIds.size === allCbs.length;
                 }
                 this.updateBatchBar();
             });
@@ -311,8 +342,70 @@ const SkillsView = {
         const countEl = document.getElementById('skill-selected-count');
         if (bar && countEl) {
             const count = this.selectedIds.size;
-            bar.style.display = count > 0 ? 'flex' : 'none';
+            bar.style.display = this.batchMode ? 'flex' : 'none';
             countEl.textContent = `${count} 项已选`;
+        }
+        this.syncSelectionUI();
+    },
+
+    /**
+     * 同步选中状态的视觉反馈（高亮行/卡片）
+     */
+    syncSelectionUI() {
+        document.querySelectorAll('#skill-list tr[data-id]').forEach(row => {
+            const id = Number(row.dataset.id);
+            row.classList.toggle('row-selected', this.selectedIds.has(id));
+        });
+        document.querySelectorAll('#skill-list .item-card[data-id]').forEach(card => {
+            const id = Number(card.dataset.id);
+            card.classList.toggle('card-selected', this.selectedIds.has(id));
+        });
+    },
+
+    /**
+     * 切换批量管理模式
+     */
+    toggleBatchMode() {
+        this.batchMode = !this.batchMode;
+        if (!this.batchMode) {
+            this.selectedIds.clear();
+        }
+        this.syncBatchMode();
+        this.updateBatchBar();
+    },
+
+    /**
+     * 退出批量管理模式
+     */
+    exitBatchMode() {
+        this.batchMode = false;
+        this.selectedIds.clear();
+        this.syncBatchMode();
+        this.updateBatchBar();
+    },
+
+    /**
+     * 同步批量管理模式的 DOM 状态（添加/移除 batch-mode 类、显示/隐藏批量栏）
+     */
+    syncBatchMode() {
+        const viewContent = document.querySelector('#skill-list').closest('.view-content') || document.querySelector('#skill-list').parentElement;
+        const wrapper = viewContent.closest('.view-toolbar') || viewContent.parentElement;
+        if (wrapper) {
+            wrapper.classList.toggle('batch-mode', this.batchMode);
+        }
+        const bar = document.getElementById('skill-batch-bar');
+        if (bar) {
+            bar.style.display = this.batchMode ? 'flex' : 'none';
+        }
+        const btn = document.getElementById('batch-manage-skill-btn');
+        if (btn) {
+            btn.classList.toggle('btn-primary', this.batchMode);
+            btn.classList.toggle('btn-default', !this.batchMode);
+        }
+        if (!this.batchMode) {
+            document.getElementById('skill-list').querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('skill-select-all');
+            if (selectAll) selectAll.checked = false;
         }
     },
 
@@ -408,6 +501,10 @@ const SkillsView = {
         });
 
         document.getElementById('skill-batch-delete-btn').addEventListener('click', () => this.handleBatchDelete());
+
+        document.getElementById('batch-manage-skill-btn').addEventListener('click', () => this.toggleBatchMode());
+
+        document.getElementById('skill-exit-batch-btn').addEventListener('click', () => this.exitBatchMode());
     },
 
     /**
