@@ -116,6 +116,11 @@ func (a *App) DeletePrompt(id int64) error {
 	return a.promptSvc.DeletePrompt(id)
 }
 
+// BatchDeletePrompts 批量删除多个 Prompt
+func (a *App) BatchDeletePrompts(ids []int64) (int64, error) {
+	return a.promptSvc.BatchDeletePrompts(ids)
+}
+
 // GetCategories 获取所有分类列表
 func (a *App) GetCategories() ([]string, error) {
 	return a.promptSvc.GetCategories()
@@ -168,9 +173,19 @@ func (a *App) DeleteSkill(id int64, deleteFiles bool) error {
 	return a.skillSvc.DeleteSkill(id, deleteFiles)
 }
 
+// BatchDeleteSkills 批量删除多个 Skill
+func (a *App) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, error) {
+	return a.skillSvc.BatchDeleteSkills(ids, deleteFiles)
+}
+
 // ImportSkill 从 ZIP 文件导入 Skill
 func (a *App) ImportSkill(zipPath string) (*db.Skill, error) {
 	return a.skillSvc.ImportSkill(zipPath)
+}
+
+// BatchImportSkills 批量导入多个 Skill ZIP 文件
+func (a *App) BatchImportSkills(zipPaths []string) (*db.ImportResult, error) {
+	return a.skillSvc.BatchImportSkills(zipPaths)
 }
 
 // ExportSkill 导出 Skill 为 ZIP 文件
@@ -221,6 +236,16 @@ func (a *App) OpenJSONFileDialog() (string, error) {
 		Title: "选择 JSON 文件",
 		Filters: []runtime.FileFilter{
 			{DisplayName: "JSON 文件", Pattern: "*.json"},
+		},
+	})
+}
+
+// OpenMultiZIPFileDialog 打开多文件选择对话框，选择多个 ZIP 文件
+func (a *App) OpenMultiZIPFileDialog() ([]string, error) {
+	return runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择 Skill ZIP 文件（可多选）",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "ZIP 文件", Pattern: "*.zip"},
 		},
 	})
 }

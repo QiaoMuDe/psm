@@ -159,6 +159,51 @@ func (s *SkillService) DeleteSkill(id int64, deleteFiles bool) error {
 	return nil
 }
 
+// BatchDeleteSkills 批量删除多个 Skill，deleteFiles 为 true 时同时删除文件，返回实际删除的数量
+func (s *SkillService) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	if deleteFiles {
+		storagePath, err := s.settingsSvc.GetSkillStoragePath()
+		if err != nil {
+			return 0, fmt.Errorf("获取 Skill 存储路径失败: %w", err)
+		}
+
+		for _, id := range ids {
+			sk, err := s.GetSkill(id)
+			if err != nil {
+				continue
+			}
+			fullPath := filepath.Join(storagePath, sk.RelativePath)
+			os.RemoveAll(fullPath)
+		}
+	}
+
+	query := "DELETE FROM skills WHERE id IN ("
+	args := make([]interface{}, 0, len(ids))
+	for i, id := range ids {
+		if i > 0 {
+			query += ","
+		}
+		query += "?"
+		args = append(args, id)
+	}
+	query += ")"
+
+	result, err := s.db.Exec(query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("批量删除 Skill 失败: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("获取影响行数失败: %w", err)
+	}
+	return affected, nil
+}
+
 // ImportSkill 从 ZIP 文件导入 Skill（解压 + 创建数据库记录）
 // ZIP 根目录必须包含 SKILL.md 文件，从中解析名称和描述
 func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
@@ -231,6 +276,23 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 		UpdatedAt:    now,
 	}
 	return skill, nil
+}
+
+// BatchImportSkills 批量导入多个 Skill ZIP 文件，返回导入结果统计
+func (s *SkillService) BatchImportSkills(zipPaths []string) (*db.ImportResult, error) {
+	result := &db.ImportResult{}
+
+	for _, zipPath := range zipPaths {
+		_, err := s.ImportSkill(zipPath)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", filepath.Base(zipPath), err))
+		} else {
+			result.Success++
+		}
+	}
+
+	return result, nil
 }
 
 // ExportSkill 导出 Skill 为 ZIP 文件（包含 skill.json 元数据）

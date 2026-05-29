@@ -4,7 +4,9 @@
  */
 const PromptsView = {
     currentKeyword: '',
-    currentCategory: '',
+    currentCategory: 'all',
+    currentView: App.settings.prompt_view_mode || 'list',
+    selectedIds: new Set(),
 
     /**
      * 渲染 Prompt 管理视图
@@ -20,38 +22,61 @@ const PromptsView = {
                     <div class="toolbar">
                         <div class="toolbar-left">
                             <div class="search-box">
-                                <input type="text" id="prompt-search" placeholder="搜索 Prompt..." />
+                                <input type="text" id="prompt-search" placeholder="搜索提示词..." />
                             </div>
-                            <select id="prompt-category" class="form-select" style="width: 150px;">
-                                <option value="">全部分类</option>
+                            <select class="form-select" id="prompt-category" style="width: 140px;">
+                                <option value="all">所有分类</option>
                             </select>
                         </div>
                         <div class="toolbar-right">
-                            <button class="btn btn-primary" id="add-prompt-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19"/>
-                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                            <div class="view-toggle">
+                                <button class="view-toggle-btn${this.currentView === 'list' ? ' active' : ''}" data-view="list" title="列表视图">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                                    </svg>
+                                </button>
+                                <button class="view-toggle-btn${this.currentView === 'card' ? ' active' : ''}" data-view="card" title="卡片视图">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="toolbar-separator"></div>
+                            <div class="action-buttons">
+                                <button class="btn btn-default btn-sm" id="import-prompt-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                    导入
+                                </button>
+                                <button class="btn btn-default btn-sm" id="export-prompt-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                    导出
+                                </button>
+                            </div>
+                            <div class="toolbar-separator"></div>
+                            <button class="btn btn-primary btn-sm" id="add-prompt-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                                 </svg>
-                                新建 Prompt
-                            </button>
-                            <button class="btn btn-default" id="import-prompt-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="17 8 12 3 7 8"/>
-                                    <line x1="12" y1="3" x2="12" y2="15"/>
-                                </svg>
-                                导入
-                            </button>
-                            <button class="btn btn-default" id="export-prompt-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="7 10 12 15 17 10"/>
-                                    <line x1="12" y1="15" x2="12" y2="3"/>
-                                </svg>
-                                导出
+                                新建
                             </button>
                         </div>
                     </div>
+                </div>
+                <div class="batch-bar" id="prompt-batch-bar" style="display:none;">
+                    <div class="batch-bar-left">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <span id="prompt-selected-count">0 项已选</span>
+                    </div>
+                    <button class="btn btn-danger btn-sm" id="prompt-batch-delete-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        批量删除
+                    </button>
                 </div>
                 <div class="card-body">
                     <div id="prompt-list">
@@ -85,9 +110,12 @@ const PromptsView = {
     },
 
     /**
-     * 加载 Prompt 列表并渲染表格
+     * 加载 Prompt 列表并根据当前视图模式渲染
      */
     async loadPrompts() {
+        this.selectedIds.clear();
+        this.updateBatchBar();
+
         const listEl = document.getElementById('prompt-list');
         listEl.innerHTML = '<div class="loading">加载中...</div>';
 
@@ -104,58 +132,185 @@ const PromptsView = {
                             <line x1="9" y1="15" x2="15" y2="15"/>
                         </svg>
                         <div class="empty-state-text">暂无 Prompt</div>
-                        <div class="empty-state-hint">点击"新建 Prompt"添加第一条</div>
+                        <div class="empty-state-hint">点击"新建"添加第一条</div>
                     </div>`;
                 return;
             }
 
-            let html = '<div class="table-container"><table class="table"><thead><tr><th>名称</th><th>分类</th><th>内容预览</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
-
-            prompts.forEach(p => {
-                const preview = p.content.length > 50 ? p.content.substring(0, 50) + '...' : p.content;
-                const time = new Date(p.updated_at).toLocaleString('zh-CN');
-                html += `
-                    <tr>
-                        <td><strong>${escapeHtml(p.name)}</strong></td>
-                        <td>${p.category ? `<span class="tag">${escapeHtml(p.category)}</span>` : '-'}</td>
-                        <td class="text-secondary">${escapeHtml(preview)}</td>
-                        <td>${time}</td>
-                        <td>
-                            <div class="flex gap-8">
-                                <button class="btn btn-sm btn-primary edit-prompt-btn" data-id="${p.id}">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                    </svg>
-                                    编辑
-                                </button>
-                                <button class="btn btn-sm btn-danger delete-prompt-btn" data-id="${p.id}">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="3 6 5 6 21 6"/>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                        <line x1="10" y1="11" x2="10" y2="17"/>
-                                        <line x1="14" y1="11" x2="14" y2="17"/>
-                                    </svg>
-                                    删除
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table></div>';
-            listEl.innerHTML = html;
-
-            listEl.querySelectorAll('.edit-prompt-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.openEditModal(btn.dataset.id));
-            });
-
-            listEl.querySelectorAll('.delete-prompt-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.handleDelete(btn.dataset.id));
-            });
+            if (this.currentView === 'card') {
+                this.renderCards(listEl, prompts);
+            } else {
+                this.renderTable(listEl, prompts);
+            }
         } catch (err) {
             listEl.innerHTML = `<div class="empty-state">加载失败: ${escapeHtml(err.message)}</div>`;
+        }
+    },
+
+    /**
+     * 以表格形式渲染 Prompt 列表
+     * @param {HTMLElement} container - 容器元素
+     * @param {Array} prompts - Prompt 数据列表
+     */
+    renderTable(container, prompts) {
+        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"><input type="checkbox" class="select-all-checkbox" /></th><th>名称</th><th>分类</th><th>标签</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+        prompts.forEach(p => {
+            const time = new Date(p.updated_at).toLocaleString('zh-CN');
+            let tags = [];
+            try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
+            const tagsHtml = tags.map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('');
+            html += `<tr data-id="${p.id}">
+                <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${p.id}" /></td>
+                <td><strong>${escapeHtml(p.name)}</strong></td>
+                <td><span class="tag">${escapeHtml(p.category)}</span></td>
+                <td><div class="item-card-tags">${tagsHtml}</div></td>
+                <td class="text-secondary">${time}</td>
+                <td>
+                    <button class="btn btn-default btn-sm edit-prompt-btn" data-id="${p.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        编辑
+                    </button>
+                    <button class="btn btn-danger btn-sm delete-prompt-btn" data-id="${p.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        删除
+                    </button>
+                </td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+        this.bindItemEvents(container);
+        this.bindCheckboxEvents(container);
+    },
+
+    /**
+     * 以卡片形式渲染 Prompt 列表
+     * @param {HTMLElement} container - 容器元素
+     * @param {Array} prompts - Prompt 数据列表
+     */
+    renderCards(container, prompts) {
+        let html = '<div class="cards-grid">';
+        prompts.forEach(p => {
+            const time = new Date(p.updated_at).toLocaleString('zh-CN');
+            let tags = [];
+            try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
+            const tagsHtml = tags.slice(0, 3).map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('');
+            html += `<div class="item-card" data-id="${p.id}">
+                <div class="card-checkbox-wrap">
+                    <input type="checkbox" class="card-checkbox" data-id="${p.id}" />
+                </div>
+                <div class="item-card-title">${escapeHtml(p.name)}</div>
+                <div class="item-card-desc">${escapeHtml(p.content)}</div>
+                <div class="item-card-meta">
+                    <div class="item-card-tags"><span class="tag">${escapeHtml(p.category)}</span>${tagsHtml}</div>
+                    <div class="item-card-time">${time}</div>
+                </div>
+                <div class="item-card-actions">
+                    <button class="btn btn-default btn-sm edit-prompt-btn" data-id="${p.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        编辑
+                    </button>
+                    <button class="btn btn-danger btn-sm delete-prompt-btn" data-id="${p.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        删除
+                    </button>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+        this.bindItemEvents(container);
+        this.bindCheckboxEvents(container);
+    },
+
+    /**
+     * 为列表/卡片中的编辑和删除按钮绑定事件
+     * @param {HTMLElement} container - 包含按钮的容器元素
+     */
+    bindItemEvents(container) {
+        container.querySelectorAll('.edit-prompt-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openEditModal(Number(btn.dataset.id));
+            });
+        });
+        container.querySelectorAll('.delete-prompt-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleDelete(btn.dataset.id);
+            });
+        });
+    },
+
+    /**
+     * 绑定 checkbox 选择事件（全选/单选/卡片选择）
+     * @param {HTMLElement} container - 包含 checkbox 的容器元素
+     */
+    bindCheckboxEvents(container) {
+        const selectAll = container.querySelector('.select-all-checkbox');
+        if (selectAll) {
+            selectAll.addEventListener('change', () => {
+                const checkboxes = container.querySelectorAll('.row-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = selectAll.checked;
+                    const id = Number(cb.dataset.id);
+                    if (selectAll.checked) {
+                        this.selectedIds.add(id);
+                    } else {
+                        this.selectedIds.delete(id);
+                    }
+                });
+                this.updateBatchBar();
+            });
+        }
+
+        container.querySelectorAll('.row-checkbox, .card-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const id = Number(cb.dataset.id);
+                if (cb.checked) {
+                    this.selectedIds.add(id);
+                } else {
+                    this.selectedIds.delete(id);
+                }
+                if (selectAll) {
+                    const allCheckboxes = container.querySelectorAll('.row-checkbox');
+                    selectAll.checked = allCheckboxes.length > 0 && this.selectedIds.size === allCheckboxes.length;
+                }
+                this.updateBatchBar();
+            });
+        });
+    },
+
+    /**
+     * 更新批量操作栏的显示状态和选中计数
+     */
+    updateBatchBar() {
+        const bar = document.getElementById('prompt-batch-bar');
+        const countEl = document.getElementById('prompt-selected-count');
+        if (bar && countEl) {
+            const count = this.selectedIds.size;
+            bar.style.display = count > 0 ? 'flex' : 'none';
+            countEl.textContent = `${count} 项已选`;
+        }
+    },
+
+    /**
+     * 处理批量删除 Prompt 操作
+     */
+    async handleBatchDelete() {
+        const count = this.selectedIds.size;
+        if (count === 0) return;
+
+        const confirmed = await Confirm.danger(`确定要删除选中的 ${count} 条 Prompt 吗？此操作不可恢复。`);
+        if (confirmed) {
+            try {
+                const deleted = await API.batchDeletePrompts([...this.selectedIds]);
+                Toast.success(`成功删除 ${deleted} 条 Prompt`);
+                this.selectedIds.clear();
+                await this.loadPrompts();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
         }
     },
 
@@ -198,6 +353,18 @@ const PromptsView = {
                 // 错误已由 API.call 处理
             }
         });
+
+        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                PromptsView.currentView = btn.dataset.view;
+                document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                API.updateSetting('prompt_view_mode', btn.dataset.view);
+                this.loadPrompts();
+            });
+        });
+
+        document.getElementById('prompt-batch-delete-btn').addEventListener('click', () => this.handleBatchDelete());
     },
 
     /**

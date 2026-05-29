@@ -5,6 +5,7 @@
 const App = {
     currentView: 'dashboard',
     loadedScripts: {},
+    settings: {},
 
     /** 初始化应用 */
     async init() {
@@ -15,8 +16,8 @@ const App = {
             });
         });
         try {
-            const settings = await API.getSettings();
-            document.documentElement.setAttribute('data-theme', settings.app_theme || 'light');
+            App.settings = await API.getSettings();
+            document.documentElement.setAttribute('data-theme', App.settings.app_theme || 'light');
         } catch (e) {
             // 忽略
         }

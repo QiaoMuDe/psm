@@ -1,9 +1,11 @@
 /**
  * Skill 管理视图组件
- * 提供 Skill 的增删改查功能，所有图标使用内联 SVG
+ * 提供 Skill 的增删改查功能，支持列表/卡片视图切换，所有图标使用内联 SVG
  */
 const SkillsView = {
     currentKeyword: '',
+    currentView: App.settings.skill_view_mode || 'list',
+    selectedIds: new Set(),
 
     /**
      * 渲染 Skill 管理视图
@@ -23,31 +25,59 @@ const SkillsView = {
                             </div>
                         </div>
                         <div class="toolbar-right">
-                            <button class="btn btn-primary" id="add-skill-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <div class="view-toggle">
+                                <button class="view-toggle-btn${this.currentView === 'list' ? ' active' : ''}" data-view="list" title="列表视图">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                                    </svg>
+                                </button>
+                                <button class="view-toggle-btn${this.currentView === 'card' ? ' active' : ''}" data-view="card" title="卡片视图">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="toolbar-separator"></div>
+                            <div class="action-buttons">
+                                <button class="btn btn-default btn-sm" id="import-skill-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                    导入
+                                </button>
+                                <button class="btn btn-default btn-sm" id="export-skill-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="7 10 12 15 17 10"/>
+                                        <line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                    导出
+                                </button>
+                            </div>
+                            <div class="toolbar-separator"></div>
+                            <button class="btn btn-primary btn-sm" id="add-skill-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="5" x2="12" y2="19"/>
                                     <line x1="5" y1="12" x2="19" y2="12"/>
                                 </svg>
                                 新建 Skill
                             </button>
-                            <button class="btn btn-default" id="import-skill-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="17 8 12 3 7 8"/>
-                                    <line x1="12" y1="3" x2="12" y2="15"/>
-                                </svg>
-                                导入
-                            </button>
-                            <button class="btn btn-default" id="export-skill-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="7 10 12 15 17 10"/>
-                                    <line x1="12" y1="15" x2="12" y2="3"/>
-                                </svg>
-                                导出
-                            </button>
                         </div>
                     </div>
+                </div>
+                <div class="batch-bar" id="skill-batch-bar" style="display:none;">
+                    <div class="batch-bar-left">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <span id="skill-selected-count">0 项已选</span>
+                    </div>
+                    <button class="btn btn-danger btn-sm" id="skill-batch-delete-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        批量删除
+                    </button>
                 </div>
                 <div class="card-body">
                     <div id="skill-list">
@@ -57,14 +87,27 @@ const SkillsView = {
             </div>
         `;
 
+        this.syncViewToggle();
         await this.loadSkills();
         this.bindEvents();
     },
 
     /**
-     * 加载 Skill 列表并渲染表格
+     * 同步视图切换按钮的激活状态
+     */
+    syncViewToggle() {
+        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === this.currentView);
+        });
+    },
+
+    /**
+     * 加载 Skill 列表并根据当前视图模式渲染
      */
     async loadSkills() {
+        this.selectedIds.clear();
+        this.updateBatchBar();
+
         const listEl = document.getElementById('skill-list');
         listEl.innerHTML = '<div class="loading">加载中...</div>';
 
@@ -90,69 +133,211 @@ const SkillsView = {
                 return;
             }
 
-            let html = '<div class="table-container"><table class="table"><thead><tr><th>名称</th><th>描述</th><th>版本</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
-
-            skills.forEach(s => {
-                const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
-                const time = new Date(s.updated_at).toLocaleString('zh-CN');
-                html += `
-                    <tr>
-                        <td><strong>${escapeHtml(s.name)}</strong></td>
-                        <td class="text-secondary">${escapeHtml(desc)}</td>
-                        <td>${escapeHtml(s.version || '-')}</td>
-                        <td>${time}</td>
-                        <td>
-                            <div class="flex gap-8">
-                                <button class="btn btn-sm btn-primary view-skill-btn" data-id="${s.id}">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                        <circle cx="12" cy="12" r="3"/>
-                                    </svg>
-                                    查看
-                                </button>
-                                <button class="btn btn-sm btn-default edit-skill-btn" data-id="${s.id}">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                    </svg>
-                                    编辑
-                                </button>
-                                <button class="btn btn-sm btn-danger delete-skill-btn" data-id="${s.id}">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="3 6 5 6 21 6"/>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                        <line x1="10" y1="11" x2="10" y2="17"/>
-                                        <line x1="14" y1="11" x2="14" y2="17"/>
-                                    </svg>
-                                    删除
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table></div>';
-            listEl.innerHTML = html;
-
-            listEl.querySelectorAll('.view-skill-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.viewSkill(btn.dataset.id));
-            });
-
-            listEl.querySelectorAll('.edit-skill-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.openEditModal(btn.dataset.id));
-            });
-
-            listEl.querySelectorAll('.delete-skill-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.handleDelete(btn.dataset.id));
-            });
+            if (this.currentView === 'card') {
+                this.renderCards(listEl, skills);
+            } else {
+                this.renderTable(listEl, skills);
+            }
         } catch (err) {
             listEl.innerHTML = `<div class="empty-state">加载失败: ${escapeHtml(err.message)}</div>`;
         }
     },
 
     /**
-     * 绑定搜索、新建、导入、导出事件
+     * 以表格视图渲染 Skill 列表
+     * @param {HTMLElement} container - 容器元素
+     * @param {Array} skills - Skill 数据数组
+     */
+    renderTable(container, skills) {
+        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"><input type="checkbox" class="select-all-checkbox" /></th><th>名称</th><th>描述</th><th>版本</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+
+        skills.forEach(s => {
+            const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
+            const time = new Date(s.updated_at).toLocaleString('zh-CN');
+            html += `
+                <tr data-id="${s.id}">
+                    <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${s.id}" /></td>
+                    <td><strong>${escapeHtml(s.name)}</strong></td>
+                    <td class="text-secondary">${escapeHtml(desc)}</td>
+                    <td>${escapeHtml(s.version || '-')}</td>
+                    <td>${time}</td>
+                    <td>
+                        <div class="flex gap-8">
+                            <button class="btn btn-sm btn-primary view-skill-btn" data-id="${s.id}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                查看
+                            </button>
+                            <button class="btn btn-sm btn-default edit-skill-btn" data-id="${s.id}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                编辑
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-skill-btn" data-id="${s.id}" data-name="${escapeHtml(s.name)}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    <line x1="10" y1="11" x2="10" y2="17"/>
+                                    <line x1="14" y1="11" x2="14" y2="17"/>
+                                </svg>
+                                删除
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+        this.bindItemEvents(container);
+        this.bindCheckboxEvents(container);
+    },
+
+    /**
+     * 以卡片视图渲染 Skill 列表
+     * @param {HTMLElement} container - 容器元素
+     * @param {Array} skills - Skill 数据数组
+     */
+    renderCards(container, skills) {
+        let html = '<div class="cards-grid">';
+        skills.forEach(s => {
+            const time = new Date(s.updated_at).toLocaleString('zh-CN');
+            html += `<div class="item-card" data-id="${s.id}">
+                <div class="card-checkbox-wrap">
+                    <input type="checkbox" class="card-checkbox" data-id="${s.id}" />
+                </div>
+                <div class="item-card-title">${escapeHtml(s.name)}</div>
+                <div class="item-card-desc">${escapeHtml(s.description || '暂无描述')}</div>
+                <div class="item-card-meta">
+                    <div class="item-card-tags"><span class="tag tag-success">${escapeHtml(s.version)}</span></div>
+                    <div class="item-card-time">${time}</div>
+                </div>
+                <div class="item-card-actions">
+                    <button class="btn btn-default btn-sm view-skill-btn" data-id="${s.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        查看
+                    </button>
+                    <button class="btn btn-default btn-sm edit-skill-btn" data-id="${s.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        编辑
+                    </button>
+                    <button class="btn btn-danger btn-sm delete-skill-btn" data-id="${s.id}" data-name="${escapeHtml(s.name)}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        删除
+                    </button>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+        this.bindItemEvents(container);
+        this.bindCheckboxEvents(container);
+    },
+
+    /**
+     * 统一绑定列表/卡片中查看、编辑、删除按钮的事件
+     * @param {HTMLElement} container - 包含操作按钮的容器元素
+     */
+    bindItemEvents(container) {
+        container.querySelectorAll('.view-skill-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.viewSkill(Number(btn.dataset.id));
+            });
+        });
+        container.querySelectorAll('.edit-skill-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openEditModal(Number(btn.dataset.id));
+            });
+        });
+        container.querySelectorAll('.delete-skill-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleDelete(btn.dataset.id, btn.dataset.name);
+            });
+        });
+    },
+
+    /**
+     * 绑定 checkbox 选择事件（全选/单选/卡片选择）
+     * @param {HTMLElement} container - 包含 checkbox 的容器元素
+     */
+    bindCheckboxEvents(container) {
+        const selectAll = container.querySelector('.select-all-checkbox');
+        if (selectAll) {
+            selectAll.addEventListener('change', () => {
+                const checkboxes = container.querySelectorAll('.row-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = selectAll.checked;
+                    const id = Number(cb.dataset.id);
+                    if (selectAll.checked) {
+                        this.selectedIds.add(id);
+                    } else {
+                        this.selectedIds.delete(id);
+                    }
+                });
+                this.updateBatchBar();
+            });
+        }
+
+        container.querySelectorAll('.row-checkbox, .card-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const id = Number(cb.dataset.id);
+                if (cb.checked) {
+                    this.selectedIds.add(id);
+                } else {
+                    this.selectedIds.delete(id);
+                }
+                if (selectAll) {
+                    const allCheckboxes = container.querySelectorAll('.row-checkbox');
+                    selectAll.checked = allCheckboxes.length > 0 && this.selectedIds.size === allCheckboxes.length;
+                }
+                this.updateBatchBar();
+            });
+        });
+    },
+
+    /**
+     * 更新批量操作栏的显示状态和选中计数
+     */
+    updateBatchBar() {
+        const bar = document.getElementById('skill-batch-bar');
+        const countEl = document.getElementById('skill-selected-count');
+        if (bar && countEl) {
+            const count = this.selectedIds.size;
+            bar.style.display = count > 0 ? 'flex' : 'none';
+            countEl.textContent = `${count} 项已选`;
+        }
+    },
+
+    /**
+     * 处理批量删除 Skill 操作
+     */
+    async handleBatchDelete() {
+        const count = this.selectedIds.size;
+        if (count === 0) return;
+
+        const confirmed = await Confirm.danger(`确定要删除选中的 ${count} 个 Skill 吗？将同时删除文件，此操作不可恢复。`);
+        if (confirmed) {
+            try {
+                const deleted = await API.batchDeleteSkills([...this.selectedIds], true);
+                Toast.success(`成功删除 ${deleted} 个 Skill`);
+                this.selectedIds.clear();
+                await this.loadSkills();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        }
+    },
+
+    /**
+     * 绑定搜索、新建、导入、导出、视图切换事件
      */
     bindEvents() {
         document.getElementById('skill-search').addEventListener('input', (e) => {
@@ -162,12 +347,32 @@ const SkillsView = {
 
         document.getElementById('add-skill-btn').addEventListener('click', () => this.openCreateModal());
 
+        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                SkillsView.currentView = btn.dataset.view;
+                document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                API.updateSetting('skill_view_mode', btn.dataset.view);
+                this.loadSkills();
+            });
+        });
+
         document.getElementById('import-skill-btn').addEventListener('click', async () => {
             try {
-                const filePath = await API.openZIPFileDialog();
-                if (!filePath) return;
-                const skill = await API.importSkill(filePath);
-                Toast.success(`导入成功：${skill.name}`);
+                const filePaths = await API.openMultiZIPFileDialog();
+                if (!filePaths || filePaths.length === 0) return;
+                if (filePaths.length === 1) {
+                    const skill = await API.importSkill(filePaths[0]);
+                    Toast.success(`导入成功：${skill.name}`);
+                } else {
+                    const result = await API.batchImportSkills(filePaths);
+                    let msg = `批量导入完成：成功 ${result.success}，失败 ${result.failed}`;
+                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
+                        msg += `\n` + result.errors.slice(0, 3).join('\n');
+                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
+                    }
+                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
+                }
                 await this.loadSkills();
             } catch (err) {
                 // 错误已由 API.call 处理
@@ -188,6 +393,8 @@ const SkillsView = {
                 // 错误已由 API.call 处理
             }
         });
+
+        document.getElementById('skill-batch-delete-btn').addEventListener('click', () => this.handleBatchDelete());
     },
 
     /**
