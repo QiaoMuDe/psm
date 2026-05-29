@@ -365,6 +365,12 @@ body {
     border: 1px solid var(--border);
     padding: var(--spacing-4);
     text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition);
+}
+
+.stat-card:hover {
+    border-color: var(--accent);
 }
 
 .stat-value {
