@@ -121,6 +121,7 @@ func insertDefaultSettings(db *sql.DB) error {
 		"app_theme":          "light",
 		"prompt_view_mode":   "list",
 		"skill_view_mode":    "list",
+		"sidebar_collapsed":  "false",
 	}
 
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)")

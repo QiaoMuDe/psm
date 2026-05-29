@@ -15,9 +15,22 @@ const App = {
                 App.navigate(item.dataset.view);
             });
         });
+
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebar-toggle');
+        if (sidebar && toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const collapsed = sidebar.classList.toggle('collapsed');
+                API.updateSetting('sidebar_collapsed', String(collapsed));
+            });
+        }
+
         try {
             App.settings = await API.getSettings();
             document.documentElement.setAttribute('data-theme', App.settings.app_theme || 'light');
+            if (sidebar && App.settings.sidebar_collapsed === 'true') {
+                sidebar.classList.add('collapsed');
+            }
         } catch (e) {
             // 忽略
         }
