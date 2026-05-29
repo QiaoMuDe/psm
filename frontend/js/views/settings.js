@@ -59,11 +59,28 @@ const SettingsView = {
                         </div>
                     </div>
                 </div>
+                <div class="version-info" id="version-info"></div>
             </div>
         `;
 
-        await this.loadSettings();
+        await Promise.all([this.loadSettings(), this.loadVersion()]);
         this.bindEvents();
+    },
+
+    /**
+     * 加载应用版本信息
+     */
+    async loadVersion() {
+        try {
+            const v = await API.getVersion();
+            const el = document.getElementById('version-info');
+            if (!el) return;
+            const version = v.git_version && v.git_version !== 'unknown' ? v.git_version : 'dev';
+            el.textContent = `PSM ${version}`;
+        } catch (err) {
+            const el = document.getElementById('version-info');
+            if (el) el.textContent = 'PSM dev';
+        }
     },
 
     /**

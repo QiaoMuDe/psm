@@ -3,6 +3,7 @@ module psm
 go 1.25.0
 
 require (
+	gitee.com/MM-Q/verman v0.0.19
 	github.com/wailsapp/wails/v2 v2.11.0
 	golang.org/x/text v0.22.0
 	modernc.org/sqlite v1.51.0

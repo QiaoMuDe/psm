@@ -47,6 +47,8 @@ export function GetSkillStoragePath():Promise<string>;
 
 export function GetSkills():Promise<Array<db.Skill>>;
 
+export function GetVersion():Promise<Record<string, string>>;
+
 export function ImportPrompts(arg1:string):Promise<db.ImportResult>;
 
 export function ImportSkill(arg1:string):Promise<db.Skill>;

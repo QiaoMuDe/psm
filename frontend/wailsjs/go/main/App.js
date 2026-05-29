@@ -90,6 +90,10 @@ export function GetSkills() {
   return window['go']['main']['App']['GetSkills']();
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function ImportPrompts(arg1) {
   return window['go']['main']['App']['ImportPrompts'](arg1);
 }

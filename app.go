@@ -12,6 +12,7 @@ import (
 	"psm/internal/service"
 	"psm/internal/utils"
 
+	"gitee.com/MM-Q/verman"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -88,6 +89,20 @@ func (a *App) OpenDataDirectory() error {
 		return fmt.Errorf("获取数据目录路径失败: %w", err)
 	}
 	return exec.Command("explorer", filepath.FromSlash(path)).Start()
+}
+
+// GetVersion 获取应用版本信息
+func (a *App) GetVersion() map[string]string {
+	return map[string]string{
+		"app_name":       verman.V.AppName,
+		"git_version":    verman.V.GitVersion,
+		"git_commit":     verman.V.GitCommit,
+		"git_tree_state": verman.V.GitTreeState,
+		"git_commit_time": verman.V.GitCommitTime,
+		"build_time":     verman.V.BuildTime,
+		"go_version":     verman.V.GoVersion,
+		"platform":       verman.V.Platform,
+	}
 }
 
 // ===== Prompt 相关方法 =====
