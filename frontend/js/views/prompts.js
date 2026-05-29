@@ -5,9 +5,10 @@
 const PromptsView = {
     currentKeyword: '',
     currentCategory: 'all',
-    currentView: App.settings.prompt_view_mode || 'list',
+    currentView: App.settings.prompt_view_mode || 'card',
     selectedIds: new Set(),
     batchMode: false,
+    allPrompts: [],
 
     /**
      * 渲染 Prompt 管理视图
@@ -134,6 +135,7 @@ const PromptsView = {
 
         try {
             const prompts = await API.getPrompts(PromptsView.currentKeyword, PromptsView.currentCategory);
+            this.allPrompts = prompts;
 
             if (prompts.length === 0) {
                 listEl.innerHTML = `
@@ -227,24 +229,6 @@ const PromptsView = {
                     <span class="tag">${escapeHtml(p.category)}</span>
                     <div class="item-card-tags">${tagsHtml}</div>
                 </div>
-                <div class="item-card-actions">
-                    <button class="btn btn-default btn-sm view-prompt-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-content="${contentEscaped}" data-category="${escapeHtml(p.category || '')}" data-tags="${escapeHtml(tags.join(', '))}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        查看
-                    </button>
-                    <button class="btn btn-default btn-sm copy-prompt-btn" data-content="${contentEscaped}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        复制
-                    </button>
-                    <button class="btn btn-default btn-sm edit-prompt-btn" data-id="${p.id}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        编辑
-                    </button>
-                    <button class="btn btn-danger btn-sm delete-prompt-btn" data-id="${p.id}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        删除
-                    </button>
-                </div>
             </div>`;
         });
         html += '</div>';
@@ -292,6 +276,10 @@ const PromptsView = {
                     cb.dispatchEvent(new Event('change'));
                 }
             });
+            row.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showPromptContextMenu(e, Number(row.dataset.id));
+            });
         });
 
         container.querySelectorAll('.item-card[data-id]').forEach(card => {
@@ -302,6 +290,11 @@ const PromptsView = {
                     cb.checked = !cb.checked;
                     cb.dispatchEvent(new Event('change'));
                 }
+            });
+            card.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showPromptContextMenu(e, Number(card.dataset.id));
             });
         });
     },
@@ -679,5 +672,46 @@ const PromptsView = {
             document.body.removeChild(textarea);
             Toast.success('内容已复制到剪贴板');
         }
+    },
+
+    /**
+     * 显示 Prompt 卡片/行的右键菜单
+     * @param {MouseEvent} e - 右键事件
+     * @param {number} id - Prompt ID
+     */
+    showPromptContextMenu(e, id) {
+        const prompt = this.allPrompts.find(p => p.id === id);
+        if (!prompt) return;
+
+        const viewIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        const copyIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        const editIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+        const deleteIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+        let tags = [];
+        try { tags = typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : (prompt.tags || []); } catch(e) { tags = []; }
+
+        ContextMenu.show(e.clientX, e.clientY, [
+            { label: '查看', icon: viewIcon, action: () => this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', ') }) },
+            { label: '复制内容', icon: copyIcon, action: async () => {
+                try {
+                    await navigator.clipboard.writeText(prompt.content);
+                    Toast.success('内容已复制到剪贴板');
+                } catch (err) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = prompt.content;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    Toast.success('内容已复制到剪贴板');
+                }
+            }},
+            { separator: true },
+            { label: '编辑', icon: editIcon, action: () => this.openEditModal(id) },
+            { label: '删除', icon: deleteIcon, danger: true, action: () => this.handleDelete(String(id)) }
+        ]);
     }
 };

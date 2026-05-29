@@ -119,8 +119,8 @@ func insertDefaultSettings(db *sql.DB) error {
 	defaults := map[string]string{
 		"skill_storage_path": skillPath,
 		"app_theme":          "light",
-		"prompt_view_mode":   "list",
-		"skill_view_mode":    "list",
+		"prompt_view_mode":   "card",
+		"skill_view_mode":    "card",
 		"sidebar_collapsed":  "false",
 	}
 

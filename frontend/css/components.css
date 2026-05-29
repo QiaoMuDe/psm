@@ -909,3 +909,60 @@
     padding: 4px 8px;
     font-size: 11px;
 }
+
+/* ==================== 右键菜单 ==================== */
+
+.context-menu {
+    position: fixed;
+    z-index: 3000;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 0;
+    min-width: 140px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    animation: contextMenuIn 0.12s ease-out;
+}
+
+@keyframes contextMenuIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color var(--transition);
+    user-select: none;
+}
+
+.context-menu-item:hover {
+    background-color: var(--accent-light);
+    color: var(--accent);
+}
+
+.context-menu-item.danger {
+    color: var(--danger);
+}
+
+.context-menu-item.danger:hover {
+    background-color: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+}
+
+.context-menu-separator {
+    height: 1px;
+    background-color: var(--border);
+    margin: 4px 0;
+}

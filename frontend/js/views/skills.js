@@ -4,7 +4,7 @@
  */
 const SkillsView = {
     currentKeyword: '',
-    currentView: App.settings.skill_view_mode || 'list',
+    currentView: App.settings.skill_view_mode || 'card',
     selectedIds: new Set(),
     allSkills: [],
     batchMode: false,
@@ -226,20 +226,6 @@ const SkillsView = {
                 </div>
                 <div class="item-card-title">${escapeHtml(s.name)}</div>
                 <div class="item-card-desc">${escapeHtml(s.description || '暂无描述')}</div>
-                <div class="item-card-actions">
-                    <button class="btn btn-default btn-sm view-skill-btn" data-id="${s.id}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        查看
-                    </button>
-                    <button class="btn btn-default btn-sm edit-skill-btn" data-id="${s.id}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        编辑
-                    </button>
-                    <button class="btn btn-danger btn-sm delete-skill-btn" data-id="${s.id}" data-name="${escapeHtml(s.name)}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        删除
-                    </button>
-                </div>
             </div>`;
         });
         html += '</div>';
@@ -281,6 +267,10 @@ const SkillsView = {
                     cb.dispatchEvent(new Event('change'));
                 }
             });
+            row.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showSkillContextMenu(e, Number(row.dataset.id));
+            });
         });
 
         container.querySelectorAll('.item-card[data-id]').forEach(card => {
@@ -291,6 +281,11 @@ const SkillsView = {
                     cb.checked = !cb.checked;
                     cb.dispatchEvent(new Event('change'));
                 }
+            });
+            card.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showSkillContextMenu(e, Number(card.dataset.id));
             });
         });
     },
@@ -660,5 +655,26 @@ const SkillsView = {
                 // 错误已由 API.call 处理
             }
         }
+    },
+
+    /**
+     * 显示 Skill 卡片/行的右键菜单
+     * @param {MouseEvent} e - 右键事件
+     * @param {number} id - Skill ID
+     */
+    showSkillContextMenu(e, id) {
+        const skill = this.allSkills.find(s => s.id === id);
+        if (!skill) return;
+
+        const viewIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        const editIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+        const deleteIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+        ContextMenu.show(e.clientX, e.clientY, [
+            { label: '查看', icon: viewIcon, action: () => this.viewSkill(id) },
+            { separator: true },
+            { label: '编辑', icon: editIcon, action: () => this.openEditModal(id) },
+            { label: '删除', icon: deleteIcon, danger: true, action: () => this.handleDelete(String(id)) }
+        ]);
     }
 };

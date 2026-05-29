@@ -35,6 +35,7 @@ const App = {
             // 忽略
         }
         App.navigate('dashboard');
+        ContextMenu.init();
     },
 
     /**
