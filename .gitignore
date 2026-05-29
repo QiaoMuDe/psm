@@ -1,0 +1,48 @@
+# 构建产物
+build/bin/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go 依赖
+# vendor/
+
+# 测试相关
+*.test
+*.out
+*.prof
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Wails
+frontend/wailsjs/
+
+# 数据库
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 日志
+*.log
+
+# 环境变量
+.env
+.env.local
