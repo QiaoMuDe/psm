@@ -1,0 +1,137 @@
+// Package db 提供 SQLite 数据库初始化和表结构管理功能
+package db
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	_ "modernc.org/sqlite"
+)
+
+// expandHome 将路径中的 ~ 替换为当前用户的主目录（包内部使用）
+func expandHome(path string) (string, error) {
+	if !strings.HasPrefix(path, "~") {
+		return path, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("获取用户主目录失败: %w", err)
+	}
+	if path == "~" {
+		return home, nil
+	}
+	if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, "~\\") {
+		return filepath.Join(home, path[2:]), nil
+	}
+	return path, nil
+}
+
+// ensureDir 确保指定路径的目录存在，若不存在则递归创建（包内部使用）
+func ensureDir(path string) error {
+	return os.MkdirAll(path, 0755)
+}
+
+// InitDB 初始化 SQLite 数据库连接，启用 WAL 模式，创建所需表结构并插入默认设置
+// 参数 dbPath 为数据库文件路径（支持 ~ 开头的路径）
+func InitDB(dbPath string) (*sql.DB, error) {
+	expandedPath, err := expandHome(dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("展开数据库路径失败: %w", err)
+	}
+
+	dbDir := filepath.Dir(expandedPath)
+	if err := ensureDir(dbDir); err != nil {
+		return nil, fmt.Errorf("创建数据库目录失败: %w", err)
+	}
+
+	db, err := sql.Open("sqlite", expandedPath)
+	if err != nil {
+		return nil, fmt.Errorf("打开数据库失败: %w", err)
+	}
+
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("启用 WAL 模式失败: %w", err)
+	}
+
+	if err := createTables(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("创建数据表失败: %w", err)
+	}
+
+	if err := insertDefaultSettings(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("插入默认设置失败: %w", err)
+	}
+
+	return db, nil
+}
+
+// createTables 创建数据库所需的三张表：settings、prompts、skills
+func createTables(db *sql.DB) error {
+	createSettings := `
+	CREATE TABLE IF NOT EXISTS settings (
+	    key   TEXT PRIMARY KEY,
+	    value TEXT NOT NULL
+	);`
+
+	createPrompts := `
+	CREATE TABLE IF NOT EXISTS prompts (
+	    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	    name        TEXT NOT NULL,
+	    content     TEXT NOT NULL DEFAULT '',
+	    category    TEXT NOT NULL DEFAULT 'uncategorized',
+	    tags        TEXT NOT NULL DEFAULT '[]',
+	    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+	    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	createSkills := `
+	CREATE TABLE IF NOT EXISTS skills (
+	    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+	    name          TEXT NOT NULL,
+	    description   TEXT NOT NULL DEFAULT '',
+	    relative_path TEXT NOT NULL,
+	    version       TEXT NOT NULL DEFAULT '1.0.0',
+	    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+	    updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	for _, stmt := range []string{createSettings, createPrompts, createSkills} {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("执行建表语句失败: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// insertDefaultSettings 插入默认的系统设置项，已存在的设置不会被覆盖
+func insertDefaultSettings(db *sql.DB) error {
+	skillPath, err := expandHome("~/.psm/skills")
+	if err != nil {
+		return fmt.Errorf("展开默认技能路径失败: %w", err)
+	}
+
+	defaults := map[string]string{
+		"skill_storage_path": skillPath,
+		"app_theme":          "light",
+	}
+
+	stmt, err := db.Prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)")
+	if err != nil {
+		return fmt.Errorf("预编译插入语句失败: %w", err)
+	}
+	defer stmt.Close()
+
+	for key, value := range defaults {
+		if _, err := stmt.Exec(key, value); err != nil {
+			return fmt.Errorf("插入默认设置 [%s=%s] 失败: %w", key, value, err)
+		}
+	}
+
+	return nil
+}
