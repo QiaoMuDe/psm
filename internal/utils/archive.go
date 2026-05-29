@@ -315,6 +315,54 @@ func ParseSkillFrontmatter(content string) (name, description string) {
 	return name, description
 }
 
+// UpdateSkillFrontmatter 更新 SKILL.md 文件的 YAML frontmatter 中的 name 和 description
+// 如果文件不存在则创建，如果没有 frontmatter 则在文件头部添加
+func UpdateSkillFrontmatter(filePath string, name string, description string) error {
+	frontmatter := fmt.Sprintf("---\nname: %s\ndescription: %s\n---\n", name, description)
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return os.WriteFile(filePath, []byte(frontmatter), 0644)
+	}
+
+	content := string(data)
+	if strings.HasPrefix(strings.TrimSpace(content), "---") {
+		endIdx := strings.Index(content[3:], "---")
+		if endIdx >= 0 {
+			content = frontmatter + content[endIdx+3+3:]
+		} else {
+			content = frontmatter + content
+		}
+	} else {
+		content = frontmatter + "\n" + content
+	}
+
+	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
+// FlattenIfNested 检查目录是否只包含一个同名子目录，如果是则将内容上移一层
+// 用于修复 ZIP 解压后多余的目录层级
+func FlattenIfNested(dirPath string, expectedName string) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil || len(entries) != 1 || !entries[0].IsDir() {
+		return
+	}
+	if entries[0].Name() != expectedName {
+		return
+	}
+	nestedDir := filepath.Join(dirPath, entries[0].Name())
+	nestedEntries, err := os.ReadDir(nestedDir)
+	if err != nil || len(nestedEntries) == 0 {
+		return
+	}
+	for _, entry := range nestedEntries {
+		src := filepath.Join(nestedDir, entry.Name())
+		dst := filepath.Join(dirPath, entry.Name())
+		os.Rename(src, dst)
+	}
+	os.Remove(nestedDir)
+}
+
 // GetSkillMetadataFromZip 从 ZIP 文件中读取 SKILL.md 元数据（优先）或 metadata.json/skill.json
 func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 	reader, err := zip.OpenReader(zipPath)

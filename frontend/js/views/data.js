@@ -1,5 +1,5 @@
 /**
- * DataView - 数据导入导出视图
+ * DataView - 数据管理视图
  * 提供完整的数据备份（导出）和恢复（导入）功能
  */
 const DataView = {
@@ -11,7 +11,7 @@ const DataView = {
     async render(container) {
         container.innerHTML = `
             <div class="page-header">
-                <h2 class="page-title">数据导入导出</h2>
+                <h2 class="page-title">数据管理</h2>
                 <p class="page-subtitle">备份和恢复所有应用数据，方便跨设备迁移</p>
             </div>
 

@@ -30,8 +30,8 @@ export function CreatePrompt(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['CreatePrompt'](arg1, arg2, arg3, arg4);
 }
 
-export function CreateSkill(arg1, arg2, arg3) {
-  return window['go']['main']['App']['CreateSkill'](arg1, arg2, arg3);
+export function CreateSkill(arg1, arg2) {
+  return window['go']['main']['App']['CreateSkill'](arg1, arg2);
 }
 
 export function DeletePrompt(arg1) {
@@ -106,6 +106,10 @@ export function ListSkillFiles(arg1) {
   return window['go']['main']['App']['ListSkillFiles'](arg1);
 }
 
+export function OpenDataDirectory() {
+  return window['go']['main']['App']['OpenDataDirectory']();
+}
+
 export function OpenFileDialog(arg1) {
   return window['go']['main']['App']['OpenFileDialog'](arg1);
 }
@@ -154,6 +158,6 @@ export function UpdateSettings(arg1) {
   return window['go']['main']['App']['UpdateSettings'](arg1);
 }
 
-export function UpdateSkill(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['UpdateSkill'](arg1, arg2, arg3, arg4);
+export function UpdateSkill(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateSkill'](arg1, arg2, arg3);
 }

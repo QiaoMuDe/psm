@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"psm/internal/db"
 	"psm/internal/service"
@@ -80,6 +81,15 @@ func (a *App) GetSkillStoragePath() (string, error) {
 	return a.settingsSvc.GetSkillStoragePath()
 }
 
+// OpenDataDirectory 在系统文件管理器中打开数据目录
+func (a *App) OpenDataDirectory() error {
+	path, err := a.settingsSvc.GetSkillStoragePath()
+	if err != nil {
+		return fmt.Errorf("获取数据目录路径失败: %w", err)
+	}
+	return exec.Command("explorer", filepath.FromSlash(path)).Start()
+}
+
 // ===== Prompt 相关方法 =====
 
 // CreatePrompt 创建新的 Prompt
@@ -150,8 +160,8 @@ func (a *App) CountPrompts() (int, error) {
 // ===== Skill 相关方法 =====
 
 // CreateSkill 创建空 Skill
-func (a *App) CreateSkill(name, description, version string) (*db.Skill, error) {
-	return a.skillSvc.CreateSkill(name, description, version)
+func (a *App) CreateSkill(name, description string) (*db.Skill, error) {
+	return a.skillSvc.CreateSkill(name, description)
 }
 
 // GetSkill 根据 ID 获取 Skill
@@ -164,9 +174,9 @@ func (a *App) GetSkills() ([]db.Skill, error) {
 	return a.skillSvc.GetSkills()
 }
 
-// UpdateSkill 更新 Skill 元数据
-func (a *App) UpdateSkill(id int64, name, description, version string) error {
-	return a.skillSvc.UpdateSkill(id, name, description, version)
+// UpdateSkill 更新 Skill 元数据，同时同步 SKILL.md 文件
+func (a *App) UpdateSkill(id int64, name, description string) error {
+	return a.skillSvc.UpdateSkill(id, name, description)
 }
 
 // DeleteSkill 删除 Skill
@@ -264,7 +274,6 @@ func (a *App) BackupData(savePath string) error {
 			Name:         s.Name,
 			Description:  s.Description,
 			RelativePath: s.RelativePath,
-			Version:      s.Version,
 			CreatedAt:    s.CreatedAt,
 			UpdatedAt:    s.UpdatedAt,
 		})
@@ -332,7 +341,7 @@ func (a *App) RestoreData(zipPath string) (*utils.BackupRestoreResult, error) {
 			result.SkillsSkipped++
 			continue
 		}
-		_, err := a.skillSvc.CreateSkill(s.Name, s.Description, s.Version)
+		_, err := a.skillSvc.CreateSkill(s.Name, s.Description)
 		if err != nil {
 			continue
 		}

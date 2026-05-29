@@ -149,7 +149,7 @@ const SkillsView = {
      * @param {Array} skills - Skill 数据数组
      */
     renderTable(container, skills) {
-        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"><input type="checkbox" class="select-all-checkbox" /></th><th>名称</th><th>描述</th><th>版本</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"><input type="checkbox" class="select-all-checkbox" /></th><th>名称</th><th>描述</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
 
         skills.forEach(s => {
             const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
@@ -159,7 +159,6 @@ const SkillsView = {
                     <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${s.id}" /></td>
                     <td><strong>${escapeHtml(s.name)}</strong></td>
                     <td class="text-secondary">${escapeHtml(desc)}</td>
-                    <td>${escapeHtml(s.version || '-')}</td>
                     <td>${time}</td>
                     <td>
                         <div class="flex gap-8">
@@ -214,7 +213,6 @@ const SkillsView = {
                 <div class="item-card-title">${escapeHtml(s.name)}</div>
                 <div class="item-card-desc">${escapeHtml(s.description || '暂无描述')}</div>
                 <div class="item-card-meta">
-                    <div class="item-card-tags"><span class="tag tag-success">${escapeHtml(s.version)}</span></div>
                     <div class="item-card-time">${time}</div>
                 </div>
                 <div class="item-card-actions">
@@ -415,10 +413,6 @@ const SkillsView = {
                     <label class="form-label">描述</label>
                     <textarea class="form-textarea" id="skill-description" rows="3"></textarea>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">版本</label>
-                    <input type="text" class="form-input" id="skill-version" placeholder="v1.0.0" />
-                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
                     <button type="submit" class="btn btn-primary">保存</button>
@@ -432,10 +426,9 @@ const SkillsView = {
             e.preventDefault();
             const name = document.getElementById('skill-name').value.trim();
             const description = document.getElementById('skill-description').value.trim();
-            const version = document.getElementById('skill-version').value.trim();
 
             try {
-                await API.createSkill(name, description, version);
+                await API.createSkill(name, description);
                 Toast.success('创建成功');
                 Modal.close();
                 await this.loadSkills();
@@ -460,30 +453,25 @@ const SkillsView = {
                         <input type="text" class="form-input" id="skill-name" value="${escapeHtml(skill.name)}" required />
                     </div>
                     <div class="form-group">
-                        <label class="form-label">描述</label>
-                        <textarea class="form-textarea" id="skill-description" rows="3">${escapeHtml(skill.description || '')}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">版本</label>
-                        <input type="text" class="form-input" id="skill-version" value="${escapeHtml(skill.version || '')}" />
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
-                        <button type="submit" class="btn btn-primary">保存</button>
-                    </div>
-                </form>
-            `;
+                    <label class="form-label">描述</label>
+                    <textarea class="form-textarea" id="skill-description" rows="3">${skill.description || ''}</textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        `;
 
-            Modal.open('编辑 Skill', content);
+        Modal.open('编辑 Skill', content);
 
-            document.getElementById('skill-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('skill-name').value.trim();
-                const description = document.getElementById('skill-description').value.trim();
-                const version = document.getElementById('skill-version').value.trim();
+        document.getElementById('skill-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('skill-name').value.trim();
+            const description = document.getElementById('skill-description').value.trim();
 
-                try {
-                    await API.updateSkill(id, name, description, version);
+            try {
+                await API.updateSkill(skill.id, name, description);
                     Toast.success('更新成功');
                     Modal.close();
                     await this.loadSkills();
@@ -530,10 +518,6 @@ const SkillsView = {
                     <div class="form-group">
                         <label class="form-label">描述</label>
                         <div>${escapeHtml(skill.description || '-')}</div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">版本</label>
-                        <div>${escapeHtml(skill.version || '-')}</div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">创建时间</label>

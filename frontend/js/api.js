@@ -38,10 +38,10 @@ const API = {
     countPrompts: () => API.call(window.go.main.App.CountPrompts),
 
     // ===== Skill API =====
-    createSkill: (name, description, version) => API.call(window.go.main.App.CreateSkill, name, description, version),
+    createSkill: (name, description) => API.call(window.go.main.App.CreateSkill, name, description),
     getSkill: (id) => API.call(window.go.main.App.GetSkill, Number(id)),
     getSkills: () => API.call(window.go.main.App.GetSkills),
-    updateSkill: (id, name, description, version) => API.call(window.go.main.App.UpdateSkill, Number(id), name, description, version),
+    updateSkill: (id, name, description) => API.call(window.go.main.App.UpdateSkill, Number(id), name, description),
     deleteSkill: (id, deleteFiles) => API.call(window.go.main.App.DeleteSkill, Number(id), deleteFiles),
     batchDeleteSkills: (ids, deleteFiles) => API.call(window.go.main.App.BatchDeleteSkills, ids.map(Number), deleteFiles),
     importSkill: (zipPath) => API.call(window.go.main.App.ImportSkill, zipPath),
@@ -56,6 +56,7 @@ const API = {
     // ===== 备份恢复 API =====
     backupData: (savePath) => API.call(window.go.main.App.BackupData, savePath),
     restoreData: (zipPath) => API.call(window.go.main.App.RestoreData, zipPath),
+    openDataDirectory: () => API.call(window.go.main.App.OpenDataDirectory),
 
     // ===== 文件对话框 API =====
     openFileDialog: (filter) => API.call(window.go.main.App.OpenFileDialog, filter),

@@ -64,17 +64,18 @@ const DashboardView = {
             document.getElementById('prompt-count').textContent = promptCount;
             document.getElementById('skill-count').textContent = skillCount;
             const recentItems = document.getElementById('recent-items');
-            if ((!recentPrompts || recentPrompts.length === 0) && (!recentSkills || recentSkills.length === 0)) {
+            const all = [
+                ...(recentPrompts || []).map(p => ({ name: p.name, type: 'Prompt', updated_at: p.updated_at })),
+                ...(recentSkills || []).map(s => ({ name: s.name, type: 'Skill', updated_at: s.updated_at }))
+            ].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 5);
+            if (all.length === 0) {
                 return;
             }
             let html = '<div class="table-container"><table class="table"><thead><tr><th>名称</th><th>类型</th><th>更新时间</th></tr></thead><tbody>';
-            (recentPrompts || []).forEach(p => {
-                const time = new Date(p.updated_at).toLocaleString('zh-CN');
-                html += `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td><span class="tag tag-blue">Prompt</span></td><td class="text-secondary">${time}</td></tr>`;
-            });
-            (recentSkills || []).forEach(s => {
-                const time = new Date(s.updated_at).toLocaleString('zh-CN');
-                html += `<tr><td><strong>${escapeHtml(s.name)}</strong></td><td><span class="tag tag-teal">Skill</span></td><td class="text-secondary">${time}</td></tr>`;
+            all.forEach(item => {
+                const time = new Date(item.updated_at).toLocaleString('zh-CN');
+                const tagClass = item.type === 'Prompt' ? 'tag-blue' : 'tag-teal';
+                html += `<tr><td><strong>${escapeHtml(item.name)}</strong></td><td><span class="tag ${tagClass}">${item.type}</span></td><td class="text-secondary">${time}</td></tr>`;
             });
             html += '</tbody></table></div>';
             recentItems.innerHTML = html;

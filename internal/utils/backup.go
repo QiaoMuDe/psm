@@ -36,7 +36,6 @@ type BackupSkill struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
 	RelativePath string `json:"relative_path"`
-	Version      string `json:"version"`
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
 }

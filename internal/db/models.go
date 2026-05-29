@@ -18,13 +18,12 @@ type Prompt struct {
 	UpdatedAt string `json:"updated_at"` // 更新时间
 }
 
-// Skill 表示技能数据模型，包含描述、路径和版本等信息
+// Skill 表示技能数据模型，包含描述和路径信息
 type Skill struct {
 	ID           int64  `json:"id"`            // 技能唯一标识
 	Name         string `json:"name"`          // 技能名称
 	Description  string `json:"description"`   // 技能描述
 	RelativePath string `json:"relative_path"` // 技能文件的相对路径
-	Version      string `json:"version"`       // 版本号
 	CreatedAt    string `json:"created_at"`    // 创建时间
 	UpdatedAt    string `json:"updated_at"`    // 更新时间
 }

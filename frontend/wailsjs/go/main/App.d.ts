@@ -17,7 +17,7 @@ export function CountSkills():Promise<number>;
 
 export function CreatePrompt(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<db.Prompt>;
 
-export function CreateSkill(arg1:string,arg2:string,arg3:string):Promise<db.Skill>;
+export function CreateSkill(arg1:string,arg2:string):Promise<db.Skill>;
 
 export function DeletePrompt(arg1:number):Promise<void>;
 
@@ -55,6 +55,8 @@ export function ImportSkillAuto(arg1:string):Promise<db.ImportResult>;
 
 export function ListSkillFiles(arg1:number):Promise<Array<db.SkillFile>>;
 
+export function OpenDataDirectory():Promise<void>;
+
 export function OpenFileDialog(arg1:string):Promise<string>;
 
 export function OpenJSONFileDialog():Promise<string>;
@@ -79,4 +81,4 @@ export function UpdateSetting(arg1:string,arg2:string):Promise<void>;
 
 export function UpdateSettings(arg1:Record<string, string>):Promise<void>;
 
-export function UpdateSkill(arg1:number,arg2:string,arg3:string,arg4:string):Promise<void>;
+export function UpdateSkill(arg1:number,arg2:string,arg3:string):Promise<void>;

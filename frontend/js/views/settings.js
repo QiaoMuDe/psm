@@ -26,7 +26,15 @@ const SettingsView = {
                     <div class="form-group">
                         <label class="form-label">Skill 存储路径</label>
                         <div class="flex gap-12">
-                            <input type="text" class="form-input" id="setting-skill-path" readonly />
+                            <input type="text" class="form-input" id="setting-skill-path" readonly style="flex:1" />
+                            <button class="btn btn-default" id="open-skill-path-btn" title="在文件管理器中打开">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                    <polyline points="15 3 21 3 21 9"/>
+                                    <line x1="10" y1="14" x2="21" y2="3"/>
+                                </svg>
+                                打开
+                            </button>
                             <button class="btn btn-default" id="change-skill-path-btn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -76,6 +84,14 @@ const SettingsView = {
      * 绑定更改路径、保存设置事件
      */
     bindEvents() {
+        document.getElementById('open-skill-path-btn').addEventListener('click', async () => {
+            try {
+                await API.openDataDirectory();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        });
+
         document.getElementById('change-skill-path-btn').addEventListener('click', async () => {
             try {
                 const dir = await API.selectDirectoryDialog();

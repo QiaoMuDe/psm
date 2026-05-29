@@ -47,7 +47,6 @@ export namespace db {
 	    name: string;
 	    description: string;
 	    relative_path: string;
-	    version: string;
 	    created_at: string;
 	    updated_at: string;
 	
@@ -61,7 +60,6 @@ export namespace db {
 	        this.name = source["name"];
 	        this.description = source["description"];
 	        this.relative_path = source["relative_path"];
-	        this.version = source["version"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
 	    }

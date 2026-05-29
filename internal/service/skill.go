@@ -28,7 +28,7 @@ func NewSkillService(db *sql.DB, settingsSvc *SettingsService) *SkillService {
 }
 
 // CreateSkill 创建空 Skill（创建目录 + 数据库记录）
-func (s *SkillService) CreateSkill(name, description, version string) (*db.Skill, error) {
+func (s *SkillService) CreateSkill(name, description string) (*db.Skill, error) {
 	storagePath, err := s.settingsSvc.GetSkillStoragePath()
 	if err != nil {
 		return nil, fmt.Errorf("获取 Skill 存储路径失败: %w", err)
@@ -42,8 +42,8 @@ func (s *SkillService) CreateSkill(name, description, version string) (*db.Skill
 	relativePath := name
 	now := time.Now().Format("2006-01-02 15:04:05")
 	result, err := s.db.Exec(
-		"INSERT INTO skills (name, description, relative_path, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-		name, description, relativePath, version, now, now,
+		"INSERT INTO skills (name, description, relative_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+		name, description, relativePath, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("创建 Skill 记录失败: %w", err)
@@ -59,7 +59,6 @@ func (s *SkillService) CreateSkill(name, description, version string) (*db.Skill
 		Name:         name,
 		Description:  description,
 		RelativePath: relativePath,
-		Version:      version,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -70,8 +69,8 @@ func (s *SkillService) CreateSkill(name, description, version string) (*db.Skill
 func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 	var sk db.Skill
 	err := s.db.QueryRow(
-		"SELECT id, name, description, relative_path, version, created_at, updated_at FROM skills WHERE id = ?", id,
-	).Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.Version, &sk.CreatedAt, &sk.UpdatedAt)
+		"SELECT id, name, description, relative_path, created_at, updated_at FROM skills WHERE id = ?", id,
+	).Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.CreatedAt, &sk.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("Skill (ID=%d) 不存在", id)
 	}
@@ -84,7 +83,7 @@ func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 // GetSkills 获取所有 Skill 列表
 func (s *SkillService) GetSkills() ([]db.Skill, error) {
 	rows, err := s.db.Query(
-		"SELECT id, name, description, relative_path, version, created_at, updated_at FROM skills ORDER BY updated_at DESC",
+		"SELECT id, name, description, relative_path, created_at, updated_at FROM skills ORDER BY updated_at DESC",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("查询 Skill 列表失败: %w", err)
@@ -94,7 +93,7 @@ func (s *SkillService) GetSkills() ([]db.Skill, error) {
 	skills := []db.Skill{}
 	for rows.Next() {
 		var sk db.Skill
-		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.Version, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
+		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Skill 记录失败: %w", err)
 		}
 		skills = append(skills, sk)
@@ -107,12 +106,17 @@ func (s *SkillService) GetSkills() ([]db.Skill, error) {
 	return skills, nil
 }
 
-// UpdateSkill 更新 Skill 元数据
-func (s *SkillService) UpdateSkill(id int64, name, description, version string) error {
+// UpdateSkill 更新 Skill 元数据，同时同步更新技能目录中的 SKILL.md frontmatter
+func (s *SkillService) UpdateSkill(id int64, name, description string) error {
+	sk, err := s.GetSkill(id)
+	if err != nil {
+		return err
+	}
+
 	now := time.Now().Format("2006-01-02 15:04:05")
 	result, err := s.db.Exec(
-		"UPDATE skills SET name = ?, description = ?, version = ?, updated_at = ? WHERE id = ?",
-		name, description, version, now, id,
+		"UPDATE skills SET name = ?, description = ?, updated_at = ? WHERE id = ?",
+		name, description, now, id,
 	)
 	if err != nil {
 		return fmt.Errorf("更新 Skill 失败: %w", err)
@@ -125,6 +129,11 @@ func (s *SkillService) UpdateSkill(id int64, name, description, version string) 
 	if affected == 0 {
 		return fmt.Errorf("Skill (ID=%d) 不存在", id)
 	}
+
+	storagePath, _ := s.settingsSvc.GetSkillStoragePath()
+	skillMDPath := filepath.Join(storagePath, sk.RelativePath, "SKILL.md")
+	utils.UpdateSkillFrontmatter(skillMDPath, name, description)
+
 	return nil
 }
 
@@ -247,17 +256,15 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 		return nil, fmt.Errorf("解压 Skill 包失败: %w", err)
 	}
 
+	utils.FlattenIfNested(skillDir, name)
+
 	relativePath := name
 	description := metadata.Description
-	version := metadata.Version
-	if version == "" {
-		version = "1.0.0"
-	}
 
 	now := time.Now().Format("2006-01-02 15:04:05")
 	insertResult, err := s.db.Exec(
-		"INSERT INTO skills (name, description, relative_path, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-		name, description, relativePath, version, now, now,
+		"INSERT INTO skills (name, description, relative_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+		name, description, relativePath, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("创建 Skill 记录失败: %w", err)
@@ -273,7 +280,6 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 		Name:         name,
 		Description:  description,
 		RelativePath: relativePath,
-		Version:      version,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -350,8 +356,8 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 
 		now := time.Now().Format("2006-01-02 15:04:05")
 		_, err = s.db.Exec(
-			"INSERT INTO skills (name, description, relative_path, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-			name, description, dirName, "1.0.0", now, now,
+			"INSERT INTO skills (name, description, relative_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+			name, description, dirName, now, now,
 		)
 		if err != nil {
 			result.Failed++
@@ -480,7 +486,7 @@ func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
 		limit = 10
 	}
 	rows, err := s.db.Query(
-		"SELECT id, name, description, relative_path, version, created_at, updated_at FROM skills ORDER BY updated_at DESC LIMIT ?",
+		"SELECT id, name, description, relative_path, created_at, updated_at FROM skills ORDER BY updated_at DESC LIMIT ?",
 		limit,
 	)
 	if err != nil {
@@ -491,7 +497,7 @@ func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
 	skills := []db.Skill{}
 	for rows.Next() {
 		var sk db.Skill
-		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.Version, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
+		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Skill 记录失败: %w", err)
 		}
 		skills = append(skills, sk)
