@@ -72,7 +72,7 @@ func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 		"SELECT id, name, description, relative_path, created_at, updated_at FROM skills WHERE id = ?", id,
 	).Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.CreatedAt, &sk.UpdatedAt)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("Skill (ID=%d) 不存在", id)
+		return nil, fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("查询 Skill 失败: %w", err)
@@ -88,7 +88,7 @@ func (s *SkillService) GetSkills() ([]db.Skill, error) {
 	if err != nil {
 		return nil, fmt.Errorf("查询 Skill 列表失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	skills := []db.Skill{}
 	for rows.Next() {
@@ -127,12 +127,12 @@ func (s *SkillService) UpdateSkill(id int64, name, description string) error {
 		return fmt.Errorf("获取影响行数失败: %w", err)
 	}
 	if affected == 0 {
-		return fmt.Errorf("Skill (ID=%d) 不存在", id)
+		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 
 	storagePath, _ := s.settingsSvc.GetSkillStoragePath()
 	skillMDPath := filepath.Join(storagePath, sk.RelativePath, "SKILL.md")
-	utils.UpdateSkillFrontmatter(skillMDPath, name, description)
+	_ = utils.UpdateSkillFrontmatter(skillMDPath, name, description)
 
 	return nil
 }
@@ -165,7 +165,7 @@ func (s *SkillService) DeleteSkill(id int64, deleteFiles bool) error {
 		return fmt.Errorf("获取影响行数失败: %w", err)
 	}
 	if affected == 0 {
-		return fmt.Errorf("Skill (ID=%d) 不存在", id)
+		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 	return nil
 }
@@ -188,7 +188,7 @@ func (s *SkillService) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, 
 				continue
 			}
 			fullPath := filepath.Join(storagePath, sk.RelativePath)
-			os.RemoveAll(fullPath)
+			_ = os.RemoveAll(fullPath)
 		}
 	}
 
@@ -248,7 +248,7 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 		return nil, fmt.Errorf("检查 Skill 是否存在失败: %w", err)
 	}
 	if exists {
-		return nil, fmt.Errorf("Skill '%s' 已存在，请先删除或更改名称", name)
+		return nil, fmt.Errorf("skill '%s' 已存在，请先删除或更改名称", name)
 	}
 
 	skillDir := filepath.Join(storagePath, name)
@@ -298,7 +298,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 	if err != nil {
 		return nil, fmt.Errorf("打开 ZIP 文件失败: %w", err)
 	}
-	defer zipReader.Close()
+	defer func() { _ = zipReader.Close() }()
 
 	skillDirMap := make(map[string]bool)
 	for _, file := range zipReader.File {
@@ -335,7 +335,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 				rc, err := file.Open()
 				if err == nil {
 					data, _ := io.ReadAll(rc)
-					rc.Close()
+					_ = rc.Close()
 					skillMDContent = string(data)
 				}
 				break
@@ -362,7 +362,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 		if err != nil {
 			result.Failed++
 			result.Errors = append(result.Errors, fmt.Sprintf("%s: 创建记录失败: %v", dirName, err))
-			os.RemoveAll(skillDir)
+			_ = os.RemoveAll(skillDir)
 			continue
 		}
 		result.Success++
@@ -505,7 +505,7 @@ func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
 	if err != nil {
 		return nil, fmt.Errorf("查询最近 Skill 列表失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	skills := []db.Skill{}
 	for rows.Next() {

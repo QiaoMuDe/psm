@@ -53,17 +53,17 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	}
 
 	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("启用 WAL 模式失败: %w", err)
 	}
 
 	if err := createTables(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("创建数据表失败: %w", err)
 	}
 
 	if err := insertDefaultSettings(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("插入默认设置失败: %w", err)
 	}
 
@@ -128,7 +128,7 @@ func insertDefaultSettings(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("预编译插入语句失败: %w", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	for key, value := range defaults {
 		if _, err := stmt.Exec(key, value); err != nil {

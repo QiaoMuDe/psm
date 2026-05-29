@@ -22,7 +22,7 @@ func (s *SettingsService) GetSettings() (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("查询设置项失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	settings := make(map[string]string)
 	for rows.Next() {
@@ -71,14 +71,14 @@ func (s *SettingsService) UpdateSettings(settings map[string]string) error {
 
 	stmt, err := tx.Prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf("预编译语句失败: %w", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	for key, value := range settings {
 		if _, err := stmt.Exec(key, value); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("更新设置项 '%s' 失败: %w", key, err)
 		}
 	}

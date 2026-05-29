@@ -59,10 +59,10 @@ func CreateBackupArchive(data *BackupData, skillStoragePath string, savePath str
 	if err != nil {
 		return fmt.Errorf("创建备份文件失败: %w", err)
 	}
-	defer zipFile.Close()
+	defer func() { _ = zipFile.Close() }()
 
 	writer := zip.NewWriter(zipFile)
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	data.CreatedAt = time.Now().Format(time.RFC3339)
 
@@ -106,7 +106,7 @@ func RestoreBackupArchive(zipPath string, skillStoragePath string) (*BackupData,
 	if err != nil {
 		return nil, fmt.Errorf("打开备份文件失败: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	var backupData *BackupData
 
@@ -117,7 +117,7 @@ func RestoreBackupArchive(zipPath string, skillStoragePath string) (*BackupData,
 			if err != nil {
 				return nil, fmt.Errorf("打开 data.json 失败: %w", err)
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			data, err := io.ReadAll(rc)
 			if err != nil {
@@ -160,13 +160,13 @@ func RestoreBackupArchive(zipPath string, skillStoragePath string) (*BackupData,
 
 			dstFile, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 			if err != nil {
-				rc.Close()
+				_ = rc.Close()
 				continue
 			}
 
-			io.Copy(dstFile, rc)
-			dstFile.Close()
-			rc.Close()
+			_, _ = io.Copy(dstFile, rc)
+			_ = dstFile.Close()
+			_ = rc.Close()
 		}
 	}
 

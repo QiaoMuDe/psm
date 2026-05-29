@@ -55,7 +55,7 @@ func UnzipToDir(zipPath string, destDir string) error {
 	if err != nil {
 		return fmt.Errorf("打开 ZIP 文件失败: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	if err := EnsureDir(destDir); err != nil {
 		return fmt.Errorf("创建目标目录失败: %w", err)
@@ -94,13 +94,13 @@ func extractFile(file *zip.File, targetPath string) error {
 	if err != nil {
 		return fmt.Errorf("打开 ZIP 内文件失败: %w", err)
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	dstFile, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 	if err != nil {
 		return fmt.Errorf("创建目标文件失败: %w", err)
 	}
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Errorf("写入文件内容失败: %w", err)
@@ -126,10 +126,10 @@ func ZipDirWithMetadata(sourceDir string, zipPath string, metadata interface{}) 
 	if err != nil {
 		return fmt.Errorf("创建 ZIP 文件失败: %w", err)
 	}
-	defer zipFile.Close()
+	defer func() { _ = zipFile.Close() }()
 
 	writer := zip.NewWriter(zipFile)
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	if metadata != nil {
 		if err := writeMetadataToZip(writer, metadata); err != nil {
@@ -227,7 +227,7 @@ func addFileToZip(writer *zip.Writer, filePath string, zipEntryPath string) erro
 	if err != nil {
 		return fmt.Errorf("打开文件失败: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	info, err := file.Stat()
 	if err != nil {
@@ -266,7 +266,7 @@ func HasSkillMD(zipPath string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("打开 ZIP 文件失败: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	for _, file := range reader.File {
 		base := filepath.Base(file.Name)
@@ -283,7 +283,7 @@ func ReadSkillMDFromZip(zipPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("打开 ZIP 文件失败: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	for _, file := range reader.File {
 		base := filepath.Base(file.Name)
@@ -292,7 +292,7 @@ func ReadSkillMDFromZip(zipPath string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("打开 SKILL.md 失败: %w", err)
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			data, err := io.ReadAll(rc)
 			if err != nil {
@@ -393,9 +393,9 @@ func FlattenIfNested(dirPath string, expectedName string) {
 	for _, entry := range nestedEntries {
 		src := filepath.Join(nestedDir, entry.Name())
 		dst := filepath.Join(dirPath, entry.Name())
-		os.Rename(src, dst)
+		_ = os.Rename(src, dst)
 	}
-	os.Remove(nestedDir)
+	_ = os.Remove(nestedDir)
 }
 
 // GetSkillMetadataFromZip 从 ZIP 文件中读取 SKILL.md 元数据（优先）或 metadata.json/skill.json
@@ -404,7 +404,7 @@ func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 	if err != nil {
 		return nil, fmt.Errorf("打开 ZIP 文件失败: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	for _, file := range reader.File {
 		base := filepath.Base(file.Name)
@@ -413,7 +413,7 @@ func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 			if err != nil {
 				return nil, fmt.Errorf("打开 SKILL.md 失败: %w", err)
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			data, err := io.ReadAll(rc)
 			if err != nil {
@@ -436,7 +436,7 @@ func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 			if err != nil {
 				return nil, fmt.Errorf("打开元数据文件失败: %w", err)
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			data, err := io.ReadAll(rc)
 			if err != nil {
@@ -460,7 +460,7 @@ func HasExportMarker(zipPath string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("打开 ZIP 文件失败: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	for _, file := range reader.File {
 		if filepath.Base(file.Name) == SkillExportMarker && !file.FileInfo().IsDir() {
@@ -482,16 +482,16 @@ func CreateSkillExportZip(skillDirs map[string]string, savePath string) error {
 	if err != nil {
 		return fmt.Errorf("创建 ZIP 文件失败: %w", err)
 	}
-	defer zipFile.Close()
+	defer func() { _ = zipFile.Close() }()
 
 	writer := zip.NewWriter(zipFile)
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	entry, err := writer.Create(SkillExportMarker)
 	if err != nil {
 		return fmt.Errorf("创建标识文件条目失败: %w", err)
 	}
-	entry.Write([]byte(""))
+	_, _ = entry.Write([]byte(""))
 
 	var lastErr error
 	for name, localPath := range skillDirs {

@@ -48,14 +48,14 @@ func (a *App) startup(ctx context.Context) {
 
 	storagePath, err := a.settingsSvc.GetSkillStoragePath()
 	if err == nil {
-		os.MkdirAll(storagePath, 0755)
+		_ = os.MkdirAll(storagePath, 0755)
 	}
 }
 
 // shutdown 应用关闭生命周期回调，关闭数据库连接
 func (a *App) shutdown(ctx context.Context) {
 	if a.database != nil {
-		a.database.Close()
+		_ = a.database.Close()
 	}
 }
 

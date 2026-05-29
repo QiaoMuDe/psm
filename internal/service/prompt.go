@@ -53,7 +53,7 @@ func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 		"SELECT id, name, content, category, tags, created_at, updated_at FROM prompts WHERE id = ?", id,
 	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("Prompt (ID=%d) 不存在", id)
+		return nil, fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("查询 Prompt 失败: %w", err)
@@ -83,7 +83,7 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 	if err != nil {
 		return nil, fmt.Errorf("查询 Prompt 列表失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	prompts := []db.Prompt{}
 	for rows.Next() {
@@ -117,7 +117,7 @@ func (s *PromptService) UpdatePrompt(id int64, name, content, category, tags str
 		return fmt.Errorf("获取影响行数失败: %w", err)
 	}
 	if affected == 0 {
-		return fmt.Errorf("Prompt (ID=%d) 不存在", id)
+		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
 	return nil
 }
@@ -134,7 +134,7 @@ func (s *PromptService) DeletePrompt(id int64) error {
 		return fmt.Errorf("获取影响行数失败: %w", err)
 	}
 	if affected == 0 {
-		return fmt.Errorf("Prompt (ID=%d) 不存在", id)
+		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
 	return nil
 }
@@ -174,7 +174,7 @@ func (s *PromptService) GetCategories() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("查询分类列表失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	categories := []string{}
 	for rows.Next() {
@@ -201,7 +201,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 		if err != nil {
 			return fmt.Errorf("查询全部 Prompt 失败: %w", err)
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		for rows.Next() {
 			var p db.Prompt
@@ -277,7 +277,7 @@ func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 	if err != nil {
 		return nil, fmt.Errorf("查询最近 Prompt 列表失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	prompts := []db.Prompt{}
 	for rows.Next() {
