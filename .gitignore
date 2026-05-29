@@ -43,6 +43,10 @@ frontend/wailsjs/
 # 日志
 *.log
 
+# 测试数据注入脚本编译产物
+seed
+tools/seed/seed
+
 # 环境变量
 .env
 .env.local
