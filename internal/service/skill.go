@@ -1,8 +1,10 @@
 package service
 
 import (
+	"archive/zip"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"psm/internal/db"
@@ -278,28 +280,145 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 	return skill, nil
 }
 
-// BatchImportSkills 批量导入多个 Skill ZIP 文件，返回导入结果统计
+// ImportSkillFromExportZip 从导出格式 ZIP 中批量导入技能
+// ZIP 包含标识文件和 skills/ 目录，扫描所有子目录逐个导入，同名跳过
+func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResult, error) {
+	storagePath, err := s.settingsSvc.GetSkillStoragePath()
+	if err != nil {
+		return nil, fmt.Errorf("获取 Skill 存储路径失败: %w", err)
+	}
+
+	zipReader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return nil, fmt.Errorf("打开 ZIP 文件失败: %w", err)
+	}
+	defer zipReader.Close()
+
+	skillDirMap := make(map[string]bool)
+	for _, file := range zipReader.File {
+		cleanName := filepath.ToSlash(file.Name)
+		parts := strings.Split(cleanName, "/")
+		if len(parts) >= 2 && parts[0] != "" && parts[0] != utils.SkillExportMarker {
+			dirName := parts[0]
+			if !skillDirMap[dirName] {
+				skillDirMap[dirName] = true
+			}
+		}
+	}
+
+	result := &db.ImportResult{}
+
+	for dirName := range skillDirMap {
+		prefix := dirName + "/"
+
+		var exists bool
+		err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM skills WHERE name = ?)", dirName).Scan(&exists)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: 查询失败: %v", dirName, err))
+			continue
+		}
+		if exists {
+			result.Skipped++
+			continue
+		}
+
+		skillMDContent := ""
+		for _, file := range zipReader.File {
+			if filepath.ToSlash(file.Name) == prefix+"SKILL.md" {
+				rc, err := file.Open()
+				if err == nil {
+					data, _ := io.ReadAll(rc)
+					rc.Close()
+					skillMDContent = string(data)
+				}
+				break
+			}
+		}
+
+		name, description := utils.ParseSkillFrontmatter(skillMDContent)
+		if name == "" {
+			name = dirName
+		}
+
+		skillDir := filepath.Join(storagePath, dirName)
+		if err := utils.UnzipPrefixToDir(&zipReader.Reader, prefix, skillDir); err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: 解压失败: %v", dirName, err))
+			continue
+		}
+
+		now := time.Now().Format("2006-01-02 15:04:05")
+		_, err = s.db.Exec(
+			"INSERT INTO skills (name, description, relative_path, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+			name, description, dirName, "1.0.0", now, now,
+		)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: 创建记录失败: %v", dirName, err))
+			os.RemoveAll(skillDir)
+			continue
+		}
+		result.Success++
+	}
+
+	return result, nil
+}
+
+// BatchImportSkills 批量导入多个 Skill ZIP 文件，自动识别格式（导出格式或公共格式），返回导入结果统计
 func (s *SkillService) BatchImportSkills(zipPaths []string) (*db.ImportResult, error) {
 	result := &db.ImportResult{}
 
 	for _, zipPath := range zipPaths {
-		_, err := s.ImportSkill(zipPath)
-		if err != nil {
-			result.Failed++
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", filepath.Base(zipPath), err))
+		hasMarker, _ := utils.HasExportMarker(zipPath)
+		if hasMarker {
+			batchResult, err := s.ImportSkillFromExportZip(zipPath)
+			if err != nil {
+				result.Failed++
+				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", filepath.Base(zipPath), err))
+			} else {
+				result.Success += batchResult.Success
+				result.Skipped += batchResult.Skipped
+				result.Failed += batchResult.Failed
+				result.Errors = append(result.Errors, batchResult.Errors...)
+			}
 		} else {
-			result.Success++
+			_, err := s.ImportSkill(zipPath)
+			if err != nil {
+				result.Failed++
+				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", filepath.Base(zipPath), err))
+			} else {
+				result.Success++
+			}
 		}
 	}
 
 	return result, nil
 }
 
-// ExportSkill 导出 Skill 为 ZIP 文件（包含 skill.json 元数据）
-func (s *SkillService) ExportSkill(id int64, zipPath string) error {
-	sk, err := s.GetSkill(id)
-	if err != nil {
-		return err
+// ExportSkillsToZip 将选中的 Skill 打包为一个 ZIP 文件
+// ZIP 包含导出标识文件和所有技能目录，skillIds 为空时导出全部
+func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) error {
+	var skills []db.Skill
+
+	if len(skillIds) == 0 {
+		allSkills, err := s.GetSkills()
+		if err != nil {
+			return fmt.Errorf("获取 Skill 列表失败: %w", err)
+		}
+		skills = allSkills
+	} else {
+		for _, id := range skillIds {
+			sk, err := s.GetSkill(id)
+			if err != nil {
+				return fmt.Errorf("获取 Skill (ID=%d) 失败: %w", id, err)
+			}
+			skills = append(skills, *sk)
+		}
+	}
+
+	if len(skills) == 0 {
+		return fmt.Errorf("没有可导出的 Skill")
 	}
 
 	storagePath, err := s.settingsSvc.GetSkillStoragePath()
@@ -307,17 +426,17 @@ func (s *SkillService) ExportSkill(id int64, zipPath string) error {
 		return fmt.Errorf("获取 Skill 存储路径失败: %w", err)
 	}
 
-	skillDir := filepath.Join(storagePath, sk.RelativePath)
-	metadata := map[string]string{
-		"name":        sk.Name,
-		"description": sk.Description,
-		"version":     sk.Version,
+	skillDirs := make(map[string]string, len(skills))
+	for _, sk := range skills {
+		skillDirs[sk.Name] = filepath.Join(storagePath, sk.RelativePath)
 	}
 
-	if err := utils.ZipDirWithMetadata(skillDir, zipPath, metadata); err != nil {
-		return fmt.Errorf("打包 Skill 为 ZIP 失败: %w", err)
-	}
-	return nil
+	return utils.CreateSkillExportZip(skillDirs, savePath)
+}
+
+// ExportSkill 导出单个 Skill 为 ZIP 文件（兼容旧格式，内部调用 ExportSkillsToZip）
+func (s *SkillService) ExportSkill(id int64, zipPath string) error {
+	return s.ExportSkillsToZip([]int64{id}, zipPath)
 }
 
 // ListSkillFiles 列出 Skill 目录下的文件和子目录

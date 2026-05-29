@@ -87,3 +87,26 @@ export namespace db {
 
 }
 
+export namespace utils {
+	
+	export class BackupRestoreResult {
+	    prompts_restored: number;
+	    skills_restored: number;
+	    prompts_skipped: number;
+	    skills_skipped: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new BackupRestoreResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.prompts_restored = source["prompts_restored"];
+	        this.skills_restored = source["skills_restored"];
+	        this.prompts_skipped = source["prompts_skipped"];
+	        this.skills_skipped = source["skills_skipped"];
+	    }
+	}
+
+}
+

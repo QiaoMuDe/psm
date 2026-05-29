@@ -45,11 +45,17 @@ const API = {
     deleteSkill: (id, deleteFiles) => API.call(window.go.main.App.DeleteSkill, Number(id), deleteFiles),
     batchDeleteSkills: (ids, deleteFiles) => API.call(window.go.main.App.BatchDeleteSkills, ids.map(Number), deleteFiles),
     importSkill: (zipPath) => API.call(window.go.main.App.ImportSkill, zipPath),
+    importSkillAuto: (zipPath) => API.call(window.go.main.App.ImportSkillAuto, zipPath),
     exportSkill: (id, zipPath) => API.call(window.go.main.App.ExportSkill, Number(id), zipPath),
+    exportSkills: (ids, savePath) => API.call(window.go.main.App.ExportSkills, ids, savePath),
     listSkillFiles: (id) => API.call(window.go.main.App.ListSkillFiles, Number(id)),
     getRecentSkills: (limit) => API.call(window.go.main.App.GetRecentSkills, limit),
     countSkills: () => API.call(window.go.main.App.CountSkills),
     batchImportSkills: (zipPaths) => API.call(window.go.main.App.BatchImportSkills, zipPaths),
+
+    // ===== 备份恢复 API =====
+    backupData: (savePath) => API.call(window.go.main.App.BackupData, savePath),
+    restoreData: (zipPath) => API.call(window.go.main.App.RestoreData, zipPath),
 
     // ===== 文件对话框 API =====
     openFileDialog: (filter) => API.call(window.go.main.App.OpenFileDialog, filter),

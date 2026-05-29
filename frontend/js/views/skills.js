@@ -362,11 +362,16 @@ const SkillsView = {
                 const filePaths = await API.openMultiZIPFileDialog();
                 if (!filePaths || filePaths.length === 0) return;
                 if (filePaths.length === 1) {
-                    const skill = await API.importSkill(filePaths[0]);
-                    Toast.success(`导入成功：${skill.name}`);
+                    const result = await API.importSkillAuto(filePaths[0]);
+                    let msg = `导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
+                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
+                        msg += `\n` + result.errors.slice(0, 3).join('\n');
+                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
+                    }
+                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
                 } else {
                     const result = await API.batchImportSkills(filePaths);
-                    let msg = `批量导入完成：成功 ${result.success}，失败 ${result.failed}`;
+                    let msg = `批量导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
                     if (result.failed > 0 && result.errors && result.errors.length > 0) {
                         msg += `\n` + result.errors.slice(0, 3).join('\n');
                         if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
@@ -383,12 +388,11 @@ const SkillsView = {
             try {
                 const filePath = await API.saveZIPFileDialog('skills.zip');
                 if (!filePath) return;
-                const skills = await API.getSkills();
-                for (const skill of skills) {
-                    const skillZipPath = filePath.replace('.zip', `_${skill.name}.zip`);
-                    await API.exportSkill(skill.id, skillZipPath);
-                }
-                Toast.success(`导出成功：共 ${skills.length} 个 Skill`);
+                const ids = this.selectedIds.size > 0 ? [...this.selectedIds] : [];
+                await API.exportSkills(ids, filePath);
+                Toast.success(`导出成功`);
+                this.selectedIds.clear();
+                this.updateBatchBar();
             } catch (err) {
                 // 错误已由 API.call 处理
             }

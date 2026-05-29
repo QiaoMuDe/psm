@@ -50,6 +50,7 @@ const SettingsView = {
                     </div>
                 </div>
             </div>
+
         `;
 
         await this.loadSettings();
@@ -100,5 +101,6 @@ const SettingsView = {
                 // 错误已由 API.call 处理
             }
         });
+
     }
 };

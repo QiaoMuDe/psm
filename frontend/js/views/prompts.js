@@ -347,7 +347,8 @@ const PromptsView = {
             try {
                 const filePath = await API.saveJSONFileDialog('prompts.json');
                 if (!filePath) return;
-                await API.exportPrompts([], filePath);
+                const ids = this.selectedIds.size > 0 ? [...this.selectedIds] : [];
+                await API.exportPrompts(ids, filePath);
                 Toast.success('导出成功');
             } catch (err) {
                 // 错误已由 API.call 处理

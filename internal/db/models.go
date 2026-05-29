@@ -10,10 +10,10 @@ type Settings struct {
 // Prompt 表示提示词数据模型，包含内容、分类和标签等信息
 type Prompt struct {
 	ID        int64  `json:"id"`         // 提示词唯一标识
-	Name      string `json:"name"`      // 提示词名称
-	Content   string `json:"content"`   // 提示词内容
-	Category  string `json:"category"`  // 分类名称
-	Tags      string `json:"tags"`      // 标签列表，以 JSON 数组字符串存储
+	Name      string `json:"name"`       // 提示词名称
+	Content   string `json:"content"`    // 提示词内容
+	Category  string `json:"category"`   // 分类名称
+	Tags      string `json:"tags"`       // 标签列表，以 JSON 数组字符串存储
 	CreatedAt string `json:"created_at"` // 创建时间
 	UpdatedAt string `json:"updated_at"` // 更新时间
 }
@@ -21,12 +21,12 @@ type Prompt struct {
 // Skill 表示技能数据模型，包含描述、路径和版本等信息
 type Skill struct {
 	ID           int64  `json:"id"`            // 技能唯一标识
-	Name         string `json:"name"`         // 技能名称
-	Description  string `json:"description"`  // 技能描述
+	Name         string `json:"name"`          // 技能名称
+	Description  string `json:"description"`   // 技能描述
 	RelativePath string `json:"relative_path"` // 技能文件的相对路径
-	Version      string `json:"version"`      // 版本号
-	CreatedAt    string `json:"created_at"`   // 创建时间
-	UpdatedAt    string `json:"updated_at"`   // 更新时间
+	Version      string `json:"version"`       // 版本号
+	CreatedAt    string `json:"created_at"`    // 创建时间
+	UpdatedAt    string `json:"updated_at"`    // 更新时间
 }
 
 // SkillFile 表示技能目录中的文件或子目录信息

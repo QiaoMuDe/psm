@@ -78,6 +78,10 @@ const App = {
                     await App.loadScript('js/views/skills.js');
                     await SkillsView.render(container);
                     break;
+                case 'data':
+                    await App.loadScript('js/views/data.js');
+                    await DataView.render(container);
+                    break;
                 case 'settings':
                     await App.loadScript('js/views/settings.js');
                     await SettingsView.render(container);

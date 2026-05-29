@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+// SkillExportMarker 技能导出 ZIP 的标识文件名，空文件仅用于格式识别
+const SkillExportMarker = ".psm-skill-export"
+
 // UnzipToDir 将指定的 ZIP 文件解压到目标目录
 // 如果目标目录不存在则自动创建
 func UnzipToDir(zipPath string, destDir string) error {
@@ -147,6 +150,36 @@ func addDirToZip(writer *zip.Writer, basePath string, relativePath string) error
 
 		if err := addFileToZip(writer, entryFullPath, zipEntryPath); err != nil {
 			return fmt.Errorf("添加文件 %s 到 ZIP 失败: %w", entryRelPath, err)
+		}
+	}
+
+	return nil
+}
+
+// addDirToZipWithPrefix 将目录内容添加到 ZIP writer 中，读取 localDir 但 ZIP 条目使用 zipPrefix 前缀
+// 用于将本地目录打包到 ZIP 的指定子路径下
+func addDirToZipWithPrefix(writer *zip.Writer, localDir string, zipPrefix string) error {
+	entries, err := os.ReadDir(localDir)
+	if err != nil {
+		return fmt.Errorf("读取目录 %s 失败: %w", localDir, err)
+	}
+
+	for _, entry := range entries {
+		entryLocalPath := filepath.Join(localDir, entry.Name())
+		zipEntryPath := filepath.ToSlash(zipPrefix + entry.Name())
+
+		if entry.IsDir() {
+			if _, err := writer.Create(zipEntryPath + "/"); err != nil {
+				return fmt.Errorf("创建 ZIP 目录条目失败: %w", err)
+			}
+			if err := addDirToZipWithPrefix(writer, entryLocalPath, zipEntryPath+"/"); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := addFileToZip(writer, entryLocalPath, zipEntryPath); err != nil {
+			return fmt.Errorf("添加文件 %s 到 ZIP 失败: %w", entry.Name(), err)
 		}
 	}
 
@@ -336,4 +369,93 @@ func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 	}
 
 	return &SkillMetadataFromZip{}, nil
+}
+
+// HasExportMarker 检查 ZIP 文件根目录下是否存在导出标识文件
+func HasExportMarker(zipPath string) (bool, error) {
+	reader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return false, fmt.Errorf("打开 ZIP 文件失败: %w", err)
+	}
+	defer reader.Close()
+
+	for _, file := range reader.File {
+		if filepath.Base(file.Name) == SkillExportMarker && !file.FileInfo().IsDir() {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// CreateSkillExportZip 创建技能导出格式的 ZIP 文件
+// 包含导出标识文件和所有技能目录，每个技能目录直接位于 ZIP 根目录下
+func CreateSkillExportZip(skillDirs map[string]string, savePath string) error {
+	if err := EnsureDir(filepath.Dir(savePath)); err != nil {
+		return fmt.Errorf("创建 ZIP 文件目录失败: %w", err)
+	}
+
+	zipFile, err := os.Create(savePath)
+	if err != nil {
+		return fmt.Errorf("创建 ZIP 文件失败: %w", err)
+	}
+	defer zipFile.Close()
+
+	writer := zip.NewWriter(zipFile)
+	defer writer.Close()
+
+	entry, err := writer.Create(SkillExportMarker)
+	if err != nil {
+		return fmt.Errorf("创建标识文件条目失败: %w", err)
+	}
+	entry.Write([]byte(""))
+
+	for name, localPath := range skillDirs {
+		if err := addDirToZipWithPrefix(writer, localPath, name+"/"); err != nil {
+			return fmt.Errorf("打包技能 %s 失败: %w", name, err)
+		}
+	}
+
+	return nil
+}
+
+// UnzipPrefixToDir 从已打开的 ZIP reader 中解压指定前缀的文件到目标目录
+func UnzipPrefixToDir(reader *zip.Reader, prefix string, destDir string) error {
+	if err := EnsureDir(destDir); err != nil {
+		return fmt.Errorf("创建目标目录失败: %w", err)
+	}
+
+	for _, file := range reader.File {
+		cleanName := filepath.ToSlash(file.Name)
+		if !strings.HasPrefix(cleanName, prefix) {
+			continue
+		}
+
+		relPath := strings.TrimPrefix(cleanName, prefix)
+		if relPath == "" {
+			continue
+		}
+
+		targetPath := filepath.Join(destDir, relPath)
+
+		if !strings.HasPrefix(filepath.Clean(targetPath), filepath.Clean(destDir)+string(filepath.Separator)) {
+			return fmt.Errorf("ZIP 文件包含非法路径: %s", file.Name)
+		}
+
+		if file.FileInfo().IsDir() {
+			if err := EnsureDir(targetPath); err != nil {
+				return fmt.Errorf("创建子目录失败: %w", err)
+			}
+			continue
+		}
+
+		if err := EnsureDir(filepath.Dir(targetPath)); err != nil {
+			return fmt.Errorf("创建父目录失败: %w", err)
+		}
+
+		if err := extractFile(file, targetPath); err != nil {
+			return fmt.Errorf("解压文件 %s 失败: %w", file.Name, err)
+		}
+	}
+
+	return nil
 }

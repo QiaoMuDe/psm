@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"psm/internal/db"
 	"psm/internal/service"
+	"psm/internal/utils"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -193,6 +194,26 @@ func (a *App) ExportSkill(id int64, zipPath string) error {
 	return a.skillSvc.ExportSkill(id, zipPath)
 }
 
+// ExportSkills 批量导出 Skill 为 ZIP 文件，skillIds 为空时导出全部
+func (a *App) ExportSkills(skillIds []int64, savePath string) error {
+	return a.skillSvc.ExportSkillsToZip(skillIds, savePath)
+}
+
+// ImportSkillAuto 自动识别 ZIP 格式并导入 Skill
+// 优先检测导出格式（标识文件），其次检测公共格式（SKILL.md）
+func (a *App) ImportSkillAuto(zipPath string) (*db.ImportResult, error) {
+	hasMarker, _ := utils.HasExportMarker(zipPath)
+	if hasMarker {
+		return a.skillSvc.ImportSkillFromExportZip(zipPath)
+	}
+
+	_, err := a.skillSvc.ImportSkill(zipPath)
+	if err != nil {
+		return nil, err
+	}
+	return &db.ImportResult{Success: 1}, nil
+}
+
 // ListSkillFiles 列出 Skill 目录下的文件
 func (a *App) ListSkillFiles(id int64) ([]db.SkillFile, error) {
 	return a.skillSvc.ListSkillFiles(id)
@@ -206,6 +227,119 @@ func (a *App) GetRecentSkills(limit int) ([]db.Skill, error) {
 // CountSkills 统计 Skill 总数
 func (a *App) CountSkills() (int, error) {
 	return a.skillSvc.CountSkills()
+}
+
+// BackupData 创建完整备份：读取所有数据并打包为 ZIP 文件
+func (a *App) BackupData(savePath string) error {
+	settings, err := a.settingsSvc.GetSettings()
+	if err != nil {
+		return fmt.Errorf("获取设置失败: %w", err)
+	}
+
+	prompts, err := a.promptSvc.GetPrompts("", "")
+	if err != nil {
+		return fmt.Errorf("获取提示词失败: %w", err)
+	}
+
+	skills, err := a.skillSvc.GetSkills()
+	if err != nil {
+		return fmt.Errorf("获取技能失败: %w", err)
+	}
+
+	backupPrompts := make([]utils.BackupPrompt, 0, len(prompts))
+	for _, p := range prompts {
+		backupPrompts = append(backupPrompts, utils.BackupPrompt{
+			Name:      p.Name,
+			Content:   p.Content,
+			Category:  p.Category,
+			Tags:      p.Tags,
+			CreatedAt: p.CreatedAt,
+			UpdatedAt: p.UpdatedAt,
+		})
+	}
+
+	backupSkills := make([]utils.BackupSkill, 0, len(skills))
+	for _, s := range skills {
+		backupSkills = append(backupSkills, utils.BackupSkill{
+			Name:         s.Name,
+			Description:  s.Description,
+			RelativePath: s.RelativePath,
+			Version:      s.Version,
+			CreatedAt:    s.CreatedAt,
+			UpdatedAt:    s.UpdatedAt,
+		})
+	}
+
+	data := &utils.BackupData{
+		Version:  "1.0",
+		Settings: settings,
+		Prompts:  backupPrompts,
+		Skills:   backupSkills,
+	}
+
+	skillPath, err := a.settingsSvc.GetSkillStoragePath()
+	if err != nil {
+		skillPath = ""
+	}
+
+	return utils.CreateBackupArchive(data, skillPath, savePath)
+}
+
+// RestoreData 从备份 ZIP 文件恢复所有数据
+func (a *App) RestoreData(zipPath string) (*utils.BackupRestoreResult, error) {
+	skillPath, err := a.settingsSvc.GetSkillStoragePath()
+	if err != nil {
+		skillPath = ""
+	}
+
+	backupData, err := utils.RestoreBackupArchive(zipPath, skillPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if backupData.Settings != nil {
+		delete(backupData.Settings, "skill_storage_path")
+		if err := a.settingsSvc.UpdateSettings(backupData.Settings); err != nil {
+			return nil, fmt.Errorf("恢复设置失败: %w", err)
+		}
+	}
+
+	result := &utils.BackupRestoreResult{}
+
+	for _, p := range backupData.Prompts {
+		existing, _ := a.promptSvc.GetPrompts(p.Name, "")
+		if len(existing) > 0 {
+			result.PromptsSkipped++
+			continue
+		}
+		_, err := a.promptSvc.CreatePrompt(p.Name, p.Content, p.Category, p.Tags)
+		if err != nil {
+			continue
+		}
+		result.PromptsRestored++
+	}
+
+	for _, s := range backupData.Skills {
+		existing, _ := a.skillSvc.GetSkills()
+		duplicated := false
+		for _, e := range existing {
+			if e.Name == s.Name {
+				duplicated = true
+				break
+			}
+		}
+		if duplicated {
+			result.SkillsSkipped++
+			continue
+		}
+		_, err := a.skillSvc.CreateSkill(s.Name, s.Description, s.Version)
+		if err != nil {
+			continue
+		}
+		result.SkillsRestored++
+	}
+
+	return result, nil
 }
 
 // ===== 文件对话框方法 =====
