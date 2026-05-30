@@ -1,0 +1,87 @@
+package handler
+
+import (
+	"encoding/json"
+	"psm/internal/db"
+	"psm/internal/service"
+)
+
+// PromptHandler 处理 Prompt 相关的方法，嵌入到 App 结构体
+type PromptHandler struct {
+	promptSvc *service.PromptService
+}
+
+// Init 初始化 PromptHandler
+func (h *PromptHandler) Init(promptSvc *service.PromptService) {
+	h.promptSvc = promptSvc
+}
+
+// CreatePrompt 创建新的 Prompt
+func (h *PromptHandler) CreatePrompt(name, content, category string, tags []string) (*db.Prompt, error) {
+	tagsJSON := "[]"
+	if len(tags) > 0 {
+		data, _ := json.Marshal(tags)
+		tagsJSON = string(data)
+	}
+	return h.promptSvc.CreatePrompt(name, content, category, tagsJSON)
+}
+
+// GetPrompt 根据 ID 获取 Prompt
+func (h *PromptHandler) GetPrompt(id int64) (*db.Prompt, error) {
+	return h.promptSvc.GetPrompt(id)
+}
+
+// GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
+func (h *PromptHandler) GetPrompts(keyword, category string) ([]db.Prompt, error) {
+	return h.promptSvc.GetPrompts(keyword, category)
+}
+
+// UpdatePrompt 更新 Prompt
+func (h *PromptHandler) UpdatePrompt(id int64, name, content, category string, tags []string) error {
+	tagsJSON := "[]"
+	if len(tags) > 0 {
+		data, _ := json.Marshal(tags)
+		tagsJSON = string(data)
+	}
+	return h.promptSvc.UpdatePrompt(id, name, content, category, tagsJSON)
+}
+
+// DeletePrompt 删除 Prompt
+func (h *PromptHandler) DeletePrompt(id int64) error {
+	return h.promptSvc.DeletePrompt(id)
+}
+
+// BatchDeletePrompts 批量删除多个 Prompt
+func (h *PromptHandler) BatchDeletePrompts(ids []int64) (int64, error) {
+	return h.promptSvc.BatchDeletePrompts(ids)
+}
+
+// GetCategories 获取所有分类列表
+func (h *PromptHandler) GetCategories() ([]string, error) {
+	return h.promptSvc.GetCategories()
+}
+
+// ExportPrompts 导出 Prompt 为 JSON 文件
+func (h *PromptHandler) ExportPrompts(ids []int64, filePath string) error {
+	return h.promptSvc.ExportPrompts(ids, filePath)
+}
+
+// ImportPrompts 从 JSON 文件导入 Prompt
+func (h *PromptHandler) ImportPrompts(filePath string) (*db.ImportResult, error) {
+	return h.promptSvc.ImportPrompts(filePath)
+}
+
+// GetRecentPrompts 获取最近修改的 Prompt 列表
+func (h *PromptHandler) GetRecentPrompts(limit int) ([]db.Prompt, error) {
+	return h.promptSvc.GetRecentPrompts(limit)
+}
+
+// CountPrompts 统计 Prompt 总数
+func (h *PromptHandler) CountPrompts() (int, error) {
+	return h.promptSvc.CountPrompts()
+}
+
+// TogglePinPrompt 切换 Prompt 的置顶状态
+func (h *PromptHandler) TogglePinPrompt(id int64) error {
+	return h.promptSvc.TogglePinPrompt(id)
+}

@@ -162,6 +162,14 @@ export function SelectDirectoryDialog() {
   return window['go']['main']['App']['SelectDirectoryDialog']();
 }
 
+export function TogglePinPrompt(arg1) {
+  return window['go']['main']['App']['TogglePinPrompt'](arg1);
+}
+
+export function TogglePinSkill(arg1) {
+  return window['go']['main']['App']['TogglePinSkill'](arg1);
+}
+
 export function UpdatePrompt(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['UpdatePrompt'](arg1, arg2, arg3, arg4, arg5);
 }

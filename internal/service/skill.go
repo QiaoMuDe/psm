@@ -69,8 +69,8 @@ func (s *SkillService) CreateSkill(name, description string) (*db.Skill, error) 
 func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 	var sk db.Skill
 	err := s.db.QueryRow(
-		"SELECT id, name, description, relative_path, created_at, updated_at FROM skills WHERE id = ?", id,
-	).Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.CreatedAt, &sk.UpdatedAt)
+		"SELECT id, name, description, relative_path, is_pinned, created_at, updated_at FROM skills WHERE id = ?", id,
+	).Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.IsPinned, &sk.CreatedAt, &sk.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
@@ -83,7 +83,7 @@ func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 // GetSkills 获取所有 Skill 列表
 func (s *SkillService) GetSkills() ([]db.Skill, error) {
 	rows, err := s.db.Query(
-		"SELECT id, name, description, relative_path, created_at, updated_at FROM skills ORDER BY updated_at DESC",
+		"SELECT id, name, description, relative_path, is_pinned, created_at, updated_at FROM skills ORDER BY is_pinned DESC, updated_at DESC",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("查询 Skill 列表失败: %w", err)
@@ -93,7 +93,7 @@ func (s *SkillService) GetSkills() ([]db.Skill, error) {
 	skills := []db.Skill{}
 	for rows.Next() {
 		var sk db.Skill
-		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
+		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.IsPinned, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Skill 记录失败: %w", err)
 		}
 		skills = append(skills, sk)
@@ -504,7 +504,7 @@ func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
 		limit = 10
 	}
 	rows, err := s.db.Query(
-		"SELECT id, name, description, relative_path, created_at, updated_at FROM skills ORDER BY updated_at DESC LIMIT ?",
+		"SELECT id, name, description, relative_path, is_pinned, created_at, updated_at FROM skills ORDER BY is_pinned DESC, updated_at DESC LIMIT ?",
 		limit,
 	)
 	if err != nil {
@@ -515,7 +515,7 @@ func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
 	skills := []db.Skill{}
 	for rows.Next() {
 		var sk db.Skill
-		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
+		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.IsPinned, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Skill 记录失败: %w", err)
 		}
 		skills = append(skills, sk)
@@ -573,6 +573,25 @@ func (s *SkillService) DeleteSkills(ids []int64) error {
 	_, err := s.db.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("批量删除 Skill 失败: %w", err)
+	}
+	return nil
+}
+
+// TogglePinSkill 切换 Skill 的置顶状态
+func (s *SkillService) TogglePinSkill(id int64) error {
+	result, err := s.db.Exec(
+		"UPDATE skills SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?",
+		time.Now().Format("2006-01-02 15:04:05"), id,
+	)
+	if err != nil {
+		return fmt.Errorf("切换置顶状态失败: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("获取影响行数失败: %w", err)
+	}
+	if affected == 0 {
+		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 	return nil
 }

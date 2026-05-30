@@ -50,8 +50,8 @@ func (s *PromptService) CreatePrompt(name, content, category, tags string) (*db.
 func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 	var p db.Prompt
 	err := s.db.QueryRow(
-		"SELECT id, name, content, category, tags, created_at, updated_at FROM prompts WHERE id = ?", id,
-	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.CreatedAt, &p.UpdatedAt)
+		"SELECT id, name, content, category, tags, is_pinned, created_at, updated_at FROM prompts WHERE id = ?", id,
+	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
@@ -63,7 +63,7 @@ func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 
 // GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
 func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error) {
-	query := "SELECT id, name, content, category, tags, created_at, updated_at FROM prompts WHERE 1=1"
+	query := "SELECT id, name, content, category, tags, is_pinned, created_at, updated_at FROM prompts WHERE 1=1"
 	var args []interface{}
 
 	if keyword != "" {
@@ -77,7 +77,7 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 		args = append(args, category)
 	}
 
-	query += " ORDER BY updated_at DESC"
+	query += " ORDER BY is_pinned DESC, updated_at DESC"
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 	prompts := []db.Prompt{}
 	for rows.Next() {
 		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
 		}
 		prompts = append(prompts, p)
@@ -197,7 +197,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 	prompts := []db.Prompt{}
 
 	if len(ids) == 0 {
-		rows, err := s.db.Query("SELECT id, name, content, category, tags, created_at, updated_at FROM prompts ORDER BY id")
+		rows, err := s.db.Query("SELECT id, name, content, category, tags, is_pinned, created_at, updated_at FROM prompts ORDER BY id")
 		if err != nil {
 			return fmt.Errorf("查询全部 Prompt 失败: %w", err)
 		}
@@ -205,7 +205,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 
 		for rows.Next() {
 			var p db.Prompt
-			if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.CreatedAt, &p.UpdatedAt); err != nil {
 				return fmt.Errorf("读取 Prompt 记录失败: %w", err)
 			}
 			prompts = append(prompts, p)
@@ -303,4 +303,23 @@ func (s *PromptService) CountPrompts() (int, error) {
 		return 0, fmt.Errorf("统计 Prompt 总数失败: %w", err)
 	}
 	return count, nil
+}
+
+// TogglePinPrompt 切换 Prompt 的置顶状态
+func (s *PromptService) TogglePinPrompt(id int64) error {
+	result, err := s.db.Exec(
+		"UPDATE prompts SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?",
+		time.Now().Format("2006-01-02 15:04:05"), id,
+	)
+	if err != nil {
+		return fmt.Errorf("切换置顶状态失败: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("获取影响行数失败: %w", err)
+	}
+	if affected == 0 {
+		return fmt.Errorf("prompt (ID=%d) 不存在", id)
+	}
+	return nil
 }

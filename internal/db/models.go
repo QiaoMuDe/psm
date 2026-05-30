@@ -14,6 +14,7 @@ type Prompt struct {
 	Content   string `json:"content"`    // 提示词内容
 	Category  string `json:"category"`   // 分类名称
 	Tags      string `json:"tags"`       // 标签列表，以 JSON 数组字符串存储
+	IsPinned  bool   `json:"is_pinned"`  // 是否置顶
 	CreatedAt string `json:"created_at"` // 创建时间
 	UpdatedAt string `json:"updated_at"` // 更新时间
 }
@@ -24,6 +25,7 @@ type Skill struct {
 	Name         string `json:"name"`          // 技能名称
 	Description  string `json:"description"`   // 技能描述
 	RelativePath string `json:"relative_path"` // 技能文件的相对路径
+	IsPinned     bool   `json:"is_pinned"`     // 是否置顶
 	CreatedAt    string `json:"created_at"`    // 创建时间
 	UpdatedAt    string `json:"updated_at"`    // 更新时间
 }

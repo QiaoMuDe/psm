@@ -85,6 +85,7 @@ func createTables(db *sql.DB) error {
 	    content     TEXT NOT NULL DEFAULT '',
 	    category    TEXT NOT NULL DEFAULT 'uncategorized',
 	    tags        TEXT NOT NULL DEFAULT '[]',
+	    is_pinned   INTEGER NOT NULL DEFAULT 0,
 	    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 	    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -96,6 +97,7 @@ func createTables(db *sql.DB) error {
 	    description   TEXT NOT NULL DEFAULT '',
 	    relative_path TEXT NOT NULL,
 	    version       TEXT NOT NULL DEFAULT '1.0.0',
+	    is_pinned     INTEGER NOT NULL DEFAULT 0,
 	    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 	    updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -103,6 +105,17 @@ func createTables(db *sql.DB) error {
 	for _, stmt := range []string{createSettings, createPrompts, createSkills} {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("执行建表语句失败: %w", err)
+		}
+	}
+
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_prompts_category ON prompts(category)",
+		"CREATE INDEX IF NOT EXISTS idx_prompts_updated_at ON prompts(updated_at)",
+		"CREATE INDEX IF NOT EXISTS idx_skills_updated_at ON skills(updated_at)",
+	}
+	for _, idx := range indexes {
+		if _, err := db.Exec(idx); err != nil {
+			return fmt.Errorf("创建索引失败: %w", err)
 		}
 	}
 

@@ -158,17 +158,22 @@ const SkillsView = {
      * @param {Array} skills - Skill 数据数组
      */
     renderTable(container, skills) {
-        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>描述</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>描述</th><th>更新时间</th><th>置顶</th><th>操作</th></tr></thead><tbody>';
 
         skills.forEach(s => {
             const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
             const time = new Date(s.updated_at).toLocaleString('zh-CN');
             html += `
-                <tr data-id="${s.id}">
+                <tr data-id="${s.id}" class="${s.is_pinned ? 'row-pinned' : ''}">
                     <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${s.id}" /></td>
-                    <td><strong>${escapeHtml(s.name)}</strong></td>
-                    <td class="text-secondary">${escapeHtml(desc)}</td>
+                    <td><strong>${highlightText(s.name, SkillsView.currentKeyword)}</strong></td>
+                    <td class="text-secondary">${highlightText(desc, SkillsView.currentKeyword)}</td>
                     <td>${time}</td>
+                    <td>
+                        <button class="btn btn-default btn-sm pin-skill-btn" data-id="${s.id}" title="${s.is_pinned ? '取消置顶' : '置顶'}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="${s.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L12 22M17 7L12 2L7 7"/></svg>
+                        </button>
+                    </td>
                     <td>
                         <div class="flex gap-8">
                             <button class="btn btn-sm btn-primary view-skill-btn" data-id="${s.id}">
@@ -214,12 +219,17 @@ const SkillsView = {
     renderCards(container, skills) {
         let html = '<div class="cards-grid">';
         skills.forEach(s => {
-            html += `<div class="item-card" data-id="${s.id}">
+            html += `<div class="item-card${s.is_pinned ? ' card-pinned' : ''}" data-id="${s.id}">
                 <div class="card-checkbox-wrap">
                     <input type="checkbox" class="card-checkbox" data-id="${s.id}" />
                 </div>
-                <div class="item-card-title">${escapeHtml(s.name)}</div>
-                <div class="item-card-desc">${escapeHtml(s.description || '暂无描述')}</div>
+                <div class="item-card-title">${highlightText(s.name, SkillsView.currentKeyword)}</div>
+                <div class="item-card-desc">${highlightText(s.description || '暂无描述', SkillsView.currentKeyword)}</div>
+                <div class="item-card-meta">
+                    <button class="btn btn-default btn-sm pin-skill-btn" data-id="${s.id}" title="${s.is_pinned ? '取消置顶' : '置顶'}" style="margin-left: auto;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="${s.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L12 22M17 7L12 2L7 7"/></svg>
+                    </button>
+                </div>
             </div>`;
         });
         html += '</div>';
@@ -249,6 +259,13 @@ const SkillsView = {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.handleDelete(btn.dataset.id, btn.dataset.name);
+            });
+        });
+        container.querySelectorAll('.pin-skill-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await API.togglePinSkill(Number(btn.dataset.id));
+                this.loadSkills();
             });
         });
 

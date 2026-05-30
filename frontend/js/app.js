@@ -354,4 +354,11 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function highlightText(text, keyword) {
+    if (!keyword || !text) return escapeHtml(text);
+    const escaped = escapeHtml(text);
+    const re = new RegExp('(' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return escaped.replace(re, '<mark>$1</mark>');
+}
+
 document.addEventListener('DOMContentLoaded', () => App.init());

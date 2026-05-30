@@ -24,6 +24,7 @@ export namespace db {
 	    content: string;
 	    category: string;
 	    tags: string;
+	    is_pinned: boolean;
 	    created_at: string;
 	    updated_at: string;
 	
@@ -38,6 +39,7 @@ export namespace db {
 	        this.content = source["content"];
 	        this.category = source["category"];
 	        this.tags = source["tags"];
+	        this.is_pinned = source["is_pinned"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
 	    }
@@ -47,6 +49,7 @@ export namespace db {
 	    name: string;
 	    description: string;
 	    relative_path: string;
+	    is_pinned: boolean;
 	    created_at: string;
 	    updated_at: string;
 	
@@ -60,6 +63,7 @@ export namespace db {
 	        this.name = source["name"];
 	        this.description = source["description"];
 	        this.relative_path = source["relative_path"];
+	        this.is_pinned = source["is_pinned"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
 	    }
@@ -85,7 +89,7 @@ export namespace db {
 
 }
 
-export namespace main {
+export namespace handler {
 	
 	export class DataStats {
 	    prompt_count: number;

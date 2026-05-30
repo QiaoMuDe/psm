@@ -169,19 +169,24 @@ const PromptsView = {
      * @param {Array} prompts - Prompt 数据列表
      */
     renderTable(container, prompts) {
-        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>分类</th><th>标签</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>分类</th><th>标签</th><th>更新时间</th><th>置顶</th><th>操作</th></tr></thead><tbody>';
         prompts.forEach(p => {
             const time = new Date(p.updated_at).toLocaleString('zh-CN');
             let tags = [];
             try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
-            const tagsHtml = tags.map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('');
+            const tagsHtml = tags.map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, PromptsView.currentKeyword)}</span>`).join('');
             const contentEscaped = escapeHtml(p.content);
-            html += `<tr data-id="${p.id}">
+            html += `<tr data-id="${p.id}" class="${p.is_pinned ? 'row-pinned' : ''}">
                 <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${p.id}" /></td>
-                <td><strong>${escapeHtml(p.name)}</strong></td>
+                <td><strong>${highlightText(p.name, PromptsView.currentKeyword)}</strong></td>
                 <td><span class="tag">${escapeHtml(p.category)}</span></td>
                 <td><div class="item-card-tags">${tagsHtml}</div></td>
                 <td class="text-secondary">${time}</td>
+                <td>
+                    <button class="btn btn-default btn-sm pin-prompt-btn" data-id="${p.id}" title="${p.is_pinned ? '取消置顶' : '置顶'}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="${p.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L12 22M17 7L12 2L7 7"/></svg>
+                    </button>
+                </td>
                 <td>
                     <button class="btn btn-default btn-sm view-prompt-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-content="${contentEscaped}" data-category="${escapeHtml(p.category || '')}" data-tags="${escapeHtml(tags.join(', '))}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -218,17 +223,20 @@ const PromptsView = {
         prompts.forEach(p => {
             let tags = [];
             try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
-            const tagsHtml = tags.slice(0, 4).map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('');
-            const contentEscaped = escapeHtml(p.content);
-            html += `<div class="item-card" data-id="${p.id}">
+            const tagsHtml = tags.slice(0, 4).map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, PromptsView.currentKeyword)}</span>`).join('');
+            const contentHighlighted = highlightText(p.content, PromptsView.currentKeyword);
+            html += `<div class="item-card${p.is_pinned ? ' card-pinned' : ''}" data-id="${p.id}">
                 <div class="card-checkbox-wrap">
                     <input type="checkbox" class="card-checkbox" data-id="${p.id}" />
                 </div>
-                <div class="item-card-title">${escapeHtml(p.name)}</div>
-                <div class="item-card-desc">${contentEscaped}</div>
+                <div class="item-card-title">${highlightText(p.name, PromptsView.currentKeyword)}</div>
+                <div class="item-card-desc">${contentHighlighted}</div>
                 <div class="item-card-meta">
                     <span class="tag">${escapeHtml(p.category)}</span>
                     <div class="item-card-tags">${tagsHtml}</div>
+                    <button class="btn btn-default btn-sm pin-prompt-btn" data-id="${p.id}" title="${p.is_pinned ? '取消置顶' : '置顶'}" style="margin-left: auto;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="${p.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L12 22M17 7L12 2L7 7"/></svg>
+                    </button>
                 </div>
             </div>`;
         });
@@ -265,6 +273,13 @@ const PromptsView = {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 await this.copyPromptContent(btn);
+            });
+        });
+        container.querySelectorAll('.pin-prompt-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await API.togglePinPrompt(Number(btn.dataset.id));
+                this.loadPrompts();
             });
         });
 
@@ -482,10 +497,6 @@ const PromptsView = {
     bindEvents() {
         document.getElementById('prompt-search').addEventListener('input', (e) => {
             PromptsView.currentKeyword = e.target.value;
-            if (e.target.value) {
-                PromptsView.currentTag = '';
-                PromptsView.updateTagFilter();
-            }
             clearTimeout(PromptsView._searchTimer);
             PromptsView._searchTimer = setTimeout(() => this.loadPrompts(), 100);
         });
