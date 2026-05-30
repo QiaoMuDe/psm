@@ -10,6 +10,7 @@ const PromptsView = {
     batchMode: false,
     currentTag: '',
     allPrompts: [],
+    hoveredPromptId: null,
 
     /**
      * 渲染 Prompt 管理视图
@@ -188,11 +189,11 @@ const PromptsView = {
                     </button>
                 </td>
                 <td>
-                    <button class="btn btn-default btn-sm view-prompt-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-content="${contentEscaped}" data-category="${escapeHtml(p.category || '')}" data-tags="${escapeHtml(tags.join(', '))}">
+                    <button class="btn btn-default btn-sm view-prompt-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-content="${contentEscaped}" data-category="${escapeHtml(p.category || '')}" data-tags="${escapeHtml(tags.join(', '))}" data-is-template="${p.is_template}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         查看
                     </button>
-                    <button class="btn btn-default btn-sm copy-prompt-btn" data-content="${contentEscaped}">
+                    <button class="btn btn-default btn-sm copy-prompt-btn" data-id="${p.id}" data-content="${contentEscaped}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                         复制
                     </button>
@@ -331,6 +332,17 @@ const PromptsView = {
                 e.preventDefault();
                 e.stopPropagation();
                 this.showPromptContextMenu(e, Number(card.dataset.id));
+            });
+        });
+
+        container.querySelectorAll('tr[data-id], .item-card[data-id]').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                this.hoveredPromptId = Number(el.dataset.id);
+            });
+            el.addEventListener('mouseleave', () => {
+                if (this.hoveredPromptId === Number(el.dataset.id)) {
+                    this.hoveredPromptId = null;
+                }
             });
         });
     },
@@ -556,6 +568,12 @@ const PromptsView = {
             'delete': () => { if (this.batchMode && this.selectedIds.size > 0) this.handleBatchDelete(); },
             'ctrl+a': (e) => { e.preventDefault(); if (this.batchMode) this.toggleSelectAll(true); },
             'ctrl+d': () => { if (this.batchMode) this.toggleSelectAll(false); },
+            'ctrl+c': (e) => {
+                if (this.hoveredPromptId && !this.batchMode) {
+                    e.preventDefault();
+                    this.copyPromptById(this.hoveredPromptId);
+                }
+            },
         });
 
         document.getElementById('prompt-list').addEventListener('click', (e) => {
@@ -578,7 +596,7 @@ const PromptsView = {
         const content = `
             <form id="prompt-form">
                 <div class="form-group">
-                    <label class="form-label">名称 *</label>
+                    <label class="form-label">名称 <span class="required-mark">*</span></label>
                     <input type="text" class="form-input" id="prompt-name" required />
                 </div>
                 <div class="form-group">
@@ -586,13 +604,21 @@ const PromptsView = {
                     <input type="text" class="form-input" id="prompt-category-input" placeholder="输入分类名称" />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">内容 *</label>
-                    <textarea class="form-textarea" id="prompt-content" rows="6" required></textarea>
+                    <label class="form-label">内容 <span class="required-mark">*</span></label>
+                    <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required></textarea>
                     <div class="char-count" id="prompt-char-count">0 字符</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">标签（逗号分隔）</label>
                     <input type="text" class="form-input" id="prompt-tags" placeholder="tag1, tag2, tag3" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模板</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="prompt-is-template" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code></span>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
@@ -618,9 +644,10 @@ const PromptsView = {
             const category = document.getElementById('prompt-category-input').value.trim();
             const tagsStr = document.getElementById('prompt-tags').value.trim();
             const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
+            const isTemplate = document.getElementById('prompt-is-template').checked;
 
             try {
-                await API.createPrompt(name, content, category, tags);
+                await API.createPrompt(name, content, category, tags, isTemplate);
                 Toast.success('创建成功');
                 Modal.close();
                 await this.loadPrompts();
@@ -641,7 +668,7 @@ const PromptsView = {
             const content = `
                 <form id="prompt-form">
                     <div class="form-group">
-                        <label class="form-label">名称 *</label>
+                        <label class="form-label">名称 <span class="required-mark">*</span></label>
                         <input type="text" class="form-input" id="prompt-name" value="${escapeHtml(prompt.name)}" required />
                     </div>
                     <div class="form-group">
@@ -649,13 +676,21 @@ const PromptsView = {
                         <input type="text" class="form-input" id="prompt-category-input" value="${escapeHtml(prompt.category || '')}" />
                     </div>
                     <div class="form-group">
-                        <label class="form-label">内容 *</label>
-                        <textarea class="form-textarea" id="prompt-content" rows="6" required>${escapeHtml(prompt.content)}</textarea>
+                        <label class="form-label">内容 <span class="required-mark">*</span></label>
+                        <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required>${escapeHtml(prompt.content)}</textarea>
                         <div class="char-count" id="prompt-char-count">${prompt.content.length} 字符</div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">标签（逗号分隔）</label>
                         <input type="text" class="form-input" id="prompt-tags" value="${escapeHtml((Array.isArray(prompt.tags) ? prompt.tags : (typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : [])).join(', '))}" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">模板</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="prompt-is-template" ${prompt.is_template ? 'checked' : ''} />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code></span>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
@@ -680,9 +715,10 @@ const PromptsView = {
                 const category = document.getElementById('prompt-category-input').value.trim();
                 const tagsStr = document.getElementById('prompt-tags').value.trim();
                 const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
+                const isTemplate = document.getElementById('prompt-is-template').checked;
 
                 try {
-                    await API.updatePrompt(id, name, content, category, tags);
+                    await API.updatePrompt(id, name, content, category, tags, isTemplate);
                     Toast.success('更新成功');
                     Modal.close();
                     await this.loadPrompts();
@@ -723,11 +759,12 @@ const PromptsView = {
             : '<span class="tag">无标签</span>';
 
         const category = dataset.category || '未分类';
+        const isTemplate = dataset.isTemplate === 'true' || dataset.isTemplate === true;
 
         const content = `
             <div class="detail-view">
                 <div class="detail-header">
-                    <div class="detail-title">${escapeHtml(dataset.name)}</div>
+                    <div class="detail-title">${escapeHtml(dataset.name)}${isTemplate ? ' <span class="tag tag-primary" style="font-size:11px;">模板</span>' : ''}</div>
                     <div class="detail-meta">
                         <div class="detail-meta-item">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -747,7 +784,7 @@ const PromptsView = {
                     <div class="detail-content">${escapeHtml(dataset.content)}</div>
                 </div>
                 <div class="detail-actions">
-                    <button class="btn btn-default" id="prompt-copy-btn">复制</button>
+                    <button class="btn btn-default" id="prompt-copy-btn" data-content="${escapeHtml(dataset.content)}" data-is-template="${isTemplate}">复制</button>
                     <button class="btn btn-default" onclick="Modal.close()">关闭</button>
                 </div>
             </div>
@@ -758,12 +795,39 @@ const PromptsView = {
         const copyBtn = document.getElementById('prompt-copy-btn');
         if (copyBtn) {
             copyBtn.addEventListener('click', async () => {
+                const content = copyBtn.dataset.content;
+                const isTemplate = copyBtn.dataset.isTemplate === 'true';
+
+                if (isTemplate) {
+                    const vars = parseTemplateVars(content);
+                    if (vars.length > 0) {
+                        showTemplateVarsModal(vars, async (values) => {
+                            const replaced = replaceTemplateVars(content, values);
+                            try {
+                                await navigator.clipboard.writeText(replaced);
+                                Toast.success('内容已复制到剪贴板');
+                            } catch (err) {
+                                const textarea = document.createElement('textarea');
+                                textarea.value = replaced;
+                                textarea.style.position = 'fixed';
+                                textarea.style.left = '-9999px';
+                                document.body.appendChild(textarea);
+                                textarea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textarea);
+                                Toast.success('内容已复制到剪贴板');
+                            }
+                        });
+                        return;
+                    }
+                }
+
                 try {
-                    await navigator.clipboard.writeText(dataset.content);
+                    await navigator.clipboard.writeText(content);
                     Toast.success('内容已复制到剪贴板');
                 } catch (err) {
                     const textarea = document.createElement('textarea');
-                    textarea.value = dataset.content;
+                    textarea.value = content;
                     textarea.style.position = 'fixed';
                     textarea.style.left = '-9999px';
                     document.body.appendChild(textarea);
@@ -777,11 +841,86 @@ const PromptsView = {
     },
 
     /**
+     * 根据 ID 复制 Prompt 内容到剪贴板（快捷键使用）
+     * @param {number} promptId - Prompt ID
+     */
+    async copyPromptById(promptId) {
+        const prompt = this.allPrompts.find(p => p.id === promptId);
+        if (!prompt) return;
+
+        if (prompt.is_template) {
+            const vars = parseTemplateVars(prompt.content);
+            if (vars.length > 0) {
+                showTemplateVarsModal(vars, async (values) => {
+                    const replaced = replaceTemplateVars(prompt.content, values);
+                    try {
+                        await navigator.clipboard.writeText(replaced);
+                        Toast.success('内容已复制到剪贴板');
+                    } catch (err) {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = replaced;
+                        textarea.style.position = 'fixed';
+                        textarea.style.left = '-9999px';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        Toast.success('内容已复制到剪贴板');
+                    }
+                });
+                return;
+            }
+        }
+
+        try {
+            await navigator.clipboard.writeText(prompt.content);
+            Toast.success('内容已复制到剪贴板');
+        } catch (err) {
+            const textarea = document.createElement('textarea');
+            textarea.value = prompt.content;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            Toast.success('内容已复制到剪贴板');
+        }
+    },
+
+    /**
      * 复制 Prompt 内容到剪贴板
      * @param {HTMLElement} btn - 触发复制的按钮元素
      */
     async copyPromptContent(btn) {
         const content = btn.dataset.content;
+        const promptId = btn.dataset.id;
+        const prompt = promptId ? this.allPrompts.find(p => p.id === Number(promptId)) : null;
+
+        if (prompt && prompt.is_template) {
+            const vars = parseTemplateVars(content);
+            if (vars.length > 0) {
+                showTemplateVarsModal(vars, async (values) => {
+                    const replaced = replaceTemplateVars(content, values);
+                    try {
+                        await navigator.clipboard.writeText(replaced);
+                        Toast.success('内容已复制到剪贴板');
+                    } catch (err) {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = replaced;
+                        textarea.style.position = 'fixed';
+                        textarea.style.left = '-9999px';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        Toast.success('内容已复制到剪贴板');
+                    }
+                });
+                return;
+            }
+        }
+
         try {
             await navigator.clipboard.writeText(content);
             Toast.success('内容已复制到剪贴板');
@@ -816,8 +955,31 @@ const PromptsView = {
         try { tags = typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : (prompt.tags || []); } catch(e) { tags = []; }
 
         ContextMenu.show(e.clientX, e.clientY, [
-            { label: '查看', icon: viewIcon, action: () => this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', ') }) },
+            { label: '查看', icon: viewIcon, action: () => this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', '), isTemplate: prompt.is_template }) },
             { label: '复制', icon: copyIcon, action: async () => {
+                if (prompt.is_template) {
+                    const vars = parseTemplateVars(prompt.content);
+                    if (vars.length > 0) {
+                        showTemplateVarsModal(vars, async (values) => {
+                            const replaced = replaceTemplateVars(prompt.content, values);
+                            try {
+                                await navigator.clipboard.writeText(replaced);
+                                Toast.success('内容已复制到剪贴板');
+                            } catch (err) {
+                                const textarea = document.createElement('textarea');
+                                textarea.value = replaced;
+                                textarea.style.position = 'fixed';
+                                textarea.style.left = '-9999px';
+                                document.body.appendChild(textarea);
+                                textarea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textarea);
+                                Toast.success('内容已复制到剪贴板');
+                            }
+                        });
+                        return;
+                    }
+                }
                 try {
                     await navigator.clipboard.writeText(prompt.content);
                     Toast.success('内容已复制到剪贴板');

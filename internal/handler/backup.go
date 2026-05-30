@@ -105,7 +105,7 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 			result.PromptsSkipped++
 			continue
 		}
-		_, err := h.promptSvc.CreatePrompt(p.Name, p.Content, p.Category, p.Tags)
+		_, err := h.promptSvc.CreatePrompt(p.Name, p.Content, p.Category, p.Tags, false)
 		if err != nil {
 			continue
 		}

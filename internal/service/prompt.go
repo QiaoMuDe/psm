@@ -19,11 +19,11 @@ func NewPromptService(db *sql.DB) *PromptService {
 }
 
 // CreatePrompt 创建新的 Prompt
-func (s *PromptService) CreatePrompt(name, content, category, tags string) (*db.Prompt, error) {
+func (s *PromptService) CreatePrompt(name, content, category, tags string, isTemplate bool) (*db.Prompt, error) {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	result, err := s.db.Exec(
-		"INSERT INTO prompts (name, content, category, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-		name, content, category, tags, now, now,
+		"INSERT INTO prompts (name, content, category, tags, is_template, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		name, content, category, tags, isTemplate, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("创建 Prompt 失败: %w", err)
@@ -35,13 +35,14 @@ func (s *PromptService) CreatePrompt(name, content, category, tags string) (*db.
 	}
 
 	prompt := &db.Prompt{
-		ID:        id,
-		Name:      name,
-		Content:   content,
-		Category:  category,
-		Tags:      tags,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:         id,
+		Name:       name,
+		Content:    content,
+		Category:   category,
+		Tags:       tags,
+		IsTemplate: isTemplate,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 	return prompt, nil
 }
@@ -50,8 +51,8 @@ func (s *PromptService) CreatePrompt(name, content, category, tags string) (*db.
 func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 	var p db.Prompt
 	err := s.db.QueryRow(
-		"SELECT id, name, content, category, tags, is_pinned, created_at, updated_at FROM prompts WHERE id = ?", id,
-	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.CreatedAt, &p.UpdatedAt)
+		"SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts WHERE id = ?", id,
+	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
@@ -63,7 +64,7 @@ func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 
 // GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
 func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error) {
-	query := "SELECT id, name, content, category, tags, is_pinned, created_at, updated_at FROM prompts WHERE 1=1"
+	query := "SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts WHERE 1=1"
 	var args []interface{}
 
 	if keyword != "" {
@@ -88,7 +89,7 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 	prompts := []db.Prompt{}
 	for rows.Next() {
 		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
 		}
 		prompts = append(prompts, p)
@@ -102,11 +103,11 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 }
 
 // UpdatePrompt 更新 Prompt
-func (s *PromptService) UpdatePrompt(id int64, name, content, category, tags string) error {
+func (s *PromptService) UpdatePrompt(id int64, name, content, category, tags string, isTemplate bool) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	result, err := s.db.Exec(
-		"UPDATE prompts SET name = ?, content = ?, category = ?, tags = ?, updated_at = ? WHERE id = ?",
-		name, content, category, tags, now, id,
+		"UPDATE prompts SET name = ?, content = ?, category = ?, tags = ?, is_template = ?, updated_at = ? WHERE id = ?",
+		name, content, category, tags, isTemplate, now, id,
 	)
 	if err != nil {
 		return fmt.Errorf("更新 Prompt 失败: %w", err)
@@ -197,7 +198,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 	prompts := []db.Prompt{}
 
 	if len(ids) == 0 {
-		rows, err := s.db.Query("SELECT id, name, content, category, tags, is_pinned, created_at, updated_at FROM prompts ORDER BY id")
+		rows, err := s.db.Query("SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts ORDER BY id")
 		if err != nil {
 			return fmt.Errorf("查询全部 Prompt 失败: %w", err)
 		}
@@ -205,7 +206,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 
 		for rows.Next() {
 			var p db.Prompt
-			if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
 				return fmt.Errorf("读取 Prompt 记录失败: %w", err)
 			}
 			prompts = append(prompts, p)
@@ -252,8 +253,8 @@ func (s *PromptService) ImportPrompts(filePath string) (*db.ImportResult, error)
 
 		now := time.Now().Format("2006-01-02 15:04:05")
 		_, err = s.db.Exec(
-			"INSERT INTO prompts (name, content, category, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-			p.Name, p.Content, p.Category, p.Tags, now, now,
+			"INSERT INTO prompts (name, content, category, tags, is_template, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			p.Name, p.Content, p.Category, p.Tags, p.IsTemplate, now, now,
 		)
 		if err != nil {
 			result.Failed++
@@ -271,7 +272,7 @@ func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 		limit = 10
 	}
 	rows, err := s.db.Query(
-		"SELECT id, name, content, category, tags, created_at, updated_at FROM prompts ORDER BY updated_at DESC LIMIT ?",
+		"SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts ORDER BY updated_at DESC LIMIT ?",
 		limit,
 	)
 	if err != nil {
@@ -282,7 +283,7 @@ func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 	prompts := []db.Prompt{}
 	for rows.Next() {
 		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
 		}
 		prompts = append(prompts, p)

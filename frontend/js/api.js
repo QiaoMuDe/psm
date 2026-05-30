@@ -29,10 +29,10 @@ const API = {
     cleanupOrphanSkills: () => API.call(window.go.main.App.CleanupOrphanSkills),
 
     // ===== Prompt API =====
-    createPrompt: (name, content, category, tags) => API.call(window.go.main.App.CreatePrompt, name, content, category, tags),
+    createPrompt: (name, content, category, tags, isTemplate) => API.call(window.go.main.App.CreatePrompt, name, content, category, tags, isTemplate),
     getPrompt: (id) => API.call(window.go.main.App.GetPrompt, Number(id)),
     getPrompts: (keyword, category) => API.call(window.go.main.App.GetPrompts, keyword, category),
-    updatePrompt: (id, name, content, category, tags) => API.call(window.go.main.App.UpdatePrompt, Number(id), name, content, category, tags),
+    updatePrompt: (id, name, content, category, tags, isTemplate) => API.call(window.go.main.App.UpdatePrompt, Number(id), name, content, category, tags, isTemplate),
     deletePrompt: (id) => API.call(window.go.main.App.DeletePrompt, Number(id)),
     batchDeletePrompts: (ids) => API.call(window.go.main.App.BatchDeletePrompts, ids.map(Number)),
     getCategories: () => API.call(window.go.main.App.GetCategories),

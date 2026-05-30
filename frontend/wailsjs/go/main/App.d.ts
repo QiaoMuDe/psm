@@ -18,7 +18,7 @@ export function CountPrompts():Promise<number>;
 
 export function CountSkills():Promise<number>;
 
-export function CreatePrompt(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<db.Prompt>;
+export function CreatePrompt(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:boolean):Promise<db.Prompt>;
 
 export function CreateSkill(arg1:string,arg2:string):Promise<db.Skill>;
 
@@ -88,7 +88,7 @@ export function TogglePinPrompt(arg1:number):Promise<void>;
 
 export function TogglePinSkill(arg1:number):Promise<void>;
 
-export function UpdatePrompt(arg1:number,arg2:string,arg3:string,arg4:string,arg5:Array<string>):Promise<void>;
+export function UpdatePrompt(arg1:number,arg2:string,arg3:string,arg4:string,arg5:Array<string>,arg6:boolean):Promise<void>;
 
 export function UpdateSetting(arg1:string,arg2:string):Promise<void>;
 

@@ -563,7 +563,7 @@ const SkillsView = {
             const content = `
                 <form id="skill-form">
                     <div class="form-group">
-                        <label class="form-label">名称 *</label>
+                        <label class="form-label">名称 <span class="required-mark">*</span></label>
                         <input type="text" class="form-input" id="skill-name" value="${escapeHtml(skill.name)}" required />
                     </div>
                     <div class="form-group">

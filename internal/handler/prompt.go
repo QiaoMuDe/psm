@@ -17,13 +17,13 @@ func (h *PromptHandler) Init(promptSvc *service.PromptService) {
 }
 
 // CreatePrompt 创建新的 Prompt
-func (h *PromptHandler) CreatePrompt(name, content, category string, tags []string) (*db.Prompt, error) {
+func (h *PromptHandler) CreatePrompt(name, content, category string, tags []string, isTemplate bool) (*db.Prompt, error) {
 	tagsJSON := "[]"
 	if len(tags) > 0 {
 		data, _ := json.Marshal(tags)
 		tagsJSON = string(data)
 	}
-	return h.promptSvc.CreatePrompt(name, content, category, tagsJSON)
+	return h.promptSvc.CreatePrompt(name, content, category, tagsJSON, isTemplate)
 }
 
 // GetPrompt 根据 ID 获取 Prompt
@@ -37,13 +37,13 @@ func (h *PromptHandler) GetPrompts(keyword, category string) ([]db.Prompt, error
 }
 
 // UpdatePrompt 更新 Prompt
-func (h *PromptHandler) UpdatePrompt(id int64, name, content, category string, tags []string) error {
+func (h *PromptHandler) UpdatePrompt(id int64, name, content, category string, tags []string, isTemplate bool) error {
 	tagsJSON := "[]"
 	if len(tags) > 0 {
 		data, _ := json.Marshal(tags)
 		tagsJSON = string(data)
 	}
-	return h.promptSvc.UpdatePrompt(id, name, content, category, tagsJSON)
+	return h.promptSvc.UpdatePrompt(id, name, content, category, tagsJSON, isTemplate)
 }
 
 // DeletePrompt 删除 Prompt

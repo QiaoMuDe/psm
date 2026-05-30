@@ -361,4 +361,58 @@ function highlightText(text, keyword) {
     return escaped.replace(re, '<mark>$1</mark>');
 }
 
+function parseTemplateVars(content) {
+    if (!content) return [];
+    const matches = content.match(/\{\{(.+?)\}\}/g);
+    if (!matches) return [];
+    const seen = new Set();
+    return matches.map(m => {
+        const name = m.slice(2, -2).trim();
+        if (seen.has(name)) return null;
+        seen.add(name);
+        return name;
+    }).filter(Boolean);
+}
+
+function replaceTemplateVars(content, vars) {
+    let result = content;
+    for (const [name, value] of Object.entries(vars)) {
+        const re = new RegExp('\\{\\{' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\}\\}', 'g');
+        result = result.replace(re, value || '');
+    }
+    return result;
+}
+
+function showTemplateVarsModal(vars, callback) {
+    let fieldsHtml = vars.map(v => `
+        <div class="template-var-row">
+            <label class="var-label">{{${escapeHtml(v)}}}</label>
+            <input type="text" class="form-input template-var-input" data-var="${escapeHtml(v)}" placeholder="留空则移除" />
+        </div>
+    `).join('');
+
+    const content = `
+        <div class="template-vars-form">
+            <div class="template-vars-list">
+                ${fieldsHtml}
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
+                <button type="button" class="btn btn-primary" id="template-copy-btn">复制到剪贴板</button>
+            </div>
+        </div>
+    `;
+
+    Modal.open('填写模板变量', content);
+
+    document.getElementById('template-copy-btn').addEventListener('click', () => {
+        const values = {};
+        document.querySelectorAll('.template-var-input').forEach(input => {
+            values[input.dataset.var] = input.value.trim();
+        });
+        Modal.close();
+        callback(values);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => App.init());

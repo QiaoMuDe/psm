@@ -86,6 +86,7 @@ func createTables(db *sql.DB) error {
 	    category    TEXT NOT NULL DEFAULT 'uncategorized',
 	    tags        TEXT NOT NULL DEFAULT '[]',
 	    is_pinned   INTEGER NOT NULL DEFAULT 0,
+	    is_template INTEGER NOT NULL DEFAULT 0,
 	    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 	    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`

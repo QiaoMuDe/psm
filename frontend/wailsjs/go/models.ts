@@ -25,6 +25,7 @@ export namespace db {
 	    category: string;
 	    tags: string;
 	    is_pinned: boolean;
+	    is_template: boolean;
 	    created_at: string;
 	    updated_at: string;
 	
@@ -40,6 +41,7 @@ export namespace db {
 	        this.category = source["category"];
 	        this.tags = source["tags"];
 	        this.is_pinned = source["is_pinned"];
+	        this.is_template = source["is_template"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
 	    }
