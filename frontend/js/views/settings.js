@@ -20,6 +20,10 @@ const SettingsView = {
                             <select id="setting-theme" class="form-select" style="width: 200px;">
                                 <option value="light">亮色</option>
                                 <option value="dark">暗色</option>
+                                <option value="midnight">午夜蓝</option>
+                                <option value="ocean">海洋蓝</option>
+                                <option value="forest">森林绿</option>
+                                <option value="sunset">日落橙</option>
                                 <option value="auto">跟随系统</option>
                             </select>
                         </div>

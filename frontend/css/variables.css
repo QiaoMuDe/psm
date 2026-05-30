@@ -50,6 +50,78 @@
     --danger-hover: #DC2626;
 }
 
+[data-theme="midnight"] {
+    --bg-page: #0B1120;
+    --bg-surface: #111827;
+    --bg-sidebar: #030712;
+    --bg-sidebar-hover: #0B1120;
+    --bg-sidebar-active: rgba(129, 140, 248, 0.15);
+    --text-primary: #E2E8F0;
+    --text-secondary: #94A3B8;
+    --text-sidebar: #64748B;
+    --text-sidebar-active: #FFFFFF;
+    --border: #1F2937;
+    --accent: #818CF8;
+    --accent-hover: #6366F1;
+    --accent-light: rgba(129, 140, 248, 0.1);
+    --danger: #F87171;
+    --danger-hover: #EF4444;
+}
+
+[data-theme="ocean"] {
+    --bg-page: #F0F9FF;
+    --bg-surface: #FFFFFF;
+    --bg-sidebar: #0C4A6E;
+    --bg-sidebar-hover: #075985;
+    --bg-sidebar-active: rgba(14, 165, 233, 0.15);
+    --text-primary: #0C4A6E;
+    --text-secondary: #64748B;
+    --text-sidebar: #7DD3FC;
+    --text-sidebar-active: #FFFFFF;
+    --border: #BAE6FD;
+    --accent: #0EA5E9;
+    --accent-hover: #0284C7;
+    --accent-light: rgba(14, 165, 233, 0.08);
+    --danger: #EF4444;
+    --danger-hover: #DC2626;
+}
+
+[data-theme="forest"] {
+    --bg-page: #F0FDF4;
+    --bg-surface: #FFFFFF;
+    --bg-sidebar: #14532D;
+    --bg-sidebar-hover: #166534;
+    --bg-sidebar-active: rgba(34, 197, 94, 0.15);
+    --text-primary: #14532D;
+    --text-secondary: #64748B;
+    --text-sidebar: #86EFAC;
+    --text-sidebar-active: #FFFFFF;
+    --border: #BBF7D0;
+    --accent: #22C55E;
+    --accent-hover: #16A34A;
+    --accent-light: rgba(34, 197, 94, 0.08);
+    --danger: #EF4444;
+    --danger-hover: #DC2626;
+}
+
+[data-theme="sunset"] {
+    --bg-page: #FFF7ED;
+    --bg-surface: #FFFFFF;
+    --bg-sidebar: #431407;
+    --bg-sidebar-hover: #7C2D12;
+    --bg-sidebar-active: rgba(249, 115, 22, 0.15);
+    --text-primary: #431407;
+    --text-secondary: #64748B;
+    --text-sidebar: #FDBA74;
+    --text-sidebar-active: #FFFFFF;
+    --border: #FED7AA;
+    --accent: #F97316;
+    --accent-hover: #EA580C;
+    --accent-light: rgba(249, 115, 22, 0.08);
+    --danger: #EF4444;
+    --danger-hover: #DC2626;
+}
+
 *,
 *::before,
 *::after {

@@ -94,14 +94,14 @@ func (a *App) OpenDataDirectory() error {
 // GetVersion 获取应用版本信息
 func (a *App) GetVersion() map[string]string {
 	return map[string]string{
-		"app_name":       verman.V.AppName,
-		"git_version":    verman.V.GitVersion,
-		"git_commit":     verman.V.GitCommit,
-		"git_tree_state": verman.V.GitTreeState,
+		"app_name":        verman.V.AppName,
+		"git_version":     verman.V.GitVersion,
+		"git_commit":      verman.V.GitCommit,
+		"git_tree_state":  verman.V.GitTreeState,
 		"git_commit_time": verman.V.GitCommitTime,
-		"build_time":     verman.V.BuildTime,
-		"go_version":     verman.V.GoVersion,
-		"platform":       verman.V.Platform,
+		"build_time":      verman.V.BuildTime,
+		"go_version":      verman.V.GoVersion,
+		"platform":        verman.V.Platform,
 	}
 }
 
