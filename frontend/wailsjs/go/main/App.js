@@ -154,6 +154,10 @@ export function OpenZIPFileDialog() {
   return window['go']['main']['App']['OpenZIPFileDialog']();
 }
 
+export function ResetAllData() {
+  return window['go']['main']['App']['ResetAllData']();
+}
+
 export function RestoreData(arg1) {
   return window['go']['main']['App']['RestoreData'](arg1);
 }

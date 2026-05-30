@@ -174,6 +174,28 @@ func (h *BackupHandler) GetOrphanSkills() ([]db.Skill, error) {
 	return h.skillSvc.GetOrphanSkills()
 }
 
+// ResetAllData 重置所有数据：清空提示词、技能（含文件）、恢复默认设置
+func (h *BackupHandler) ResetAllData() (map[string]int64, error) {
+	promptCount, err := h.promptSvc.DeleteAllPrompts()
+	if err != nil {
+		return nil, fmt.Errorf("清空提示词失败: %w", err)
+	}
+
+	skillCount, err := h.skillSvc.DeleteAllSkills(true)
+	if err != nil {
+		return nil, fmt.Errorf("清空技能失败: %w", err)
+	}
+
+	if err := h.settingsSvc.ResetSettings(); err != nil {
+		return nil, fmt.Errorf("重置设置失败: %w", err)
+	}
+
+	return map[string]int64{
+		"prompts_deleted": promptCount,
+		"skills_deleted":  skillCount,
+	}, nil
+}
+
 // CleanupOrphanSkills 清理孤立 Skill 数据
 func (h *BackupHandler) CleanupOrphanSkills() (int, error) {
 	orphans, err := h.skillSvc.GetOrphanSkills()

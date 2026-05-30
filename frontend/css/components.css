@@ -290,7 +290,6 @@
     align-items: center;
     margin-bottom: var(--spacing-3);
     gap: var(--spacing-2);
-    flex-wrap: wrap;
 }
 
 .toolbar-left,
@@ -298,6 +297,11 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
+    flex-shrink: 0;
+}
+
+.toolbar-right {
+    flex-wrap: nowrap;
 }
 
 /* ==================== 搜索框 ==================== */
@@ -1927,4 +1931,8 @@ tr.highlight-flash {
 
 .font-family-preview {
     font-size: calc(14px + var(--font-size-offset));
+}
+
+.search-result-active {
+    background: var(--accent-light);
 }

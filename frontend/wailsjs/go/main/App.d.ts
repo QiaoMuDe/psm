@@ -80,6 +80,8 @@ export function OpenMultiZIPFileDialog():Promise<Array<string>>;
 
 export function OpenZIPFileDialog():Promise<string>;
 
+export function ResetAllData():Promise<Record<string, number>>;
+
 export function RestoreData(arg1:string):Promise<utils.BackupRestoreResult>;
 
 export function SaveFileDialog(arg1:string):Promise<string>;

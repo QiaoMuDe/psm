@@ -4,6 +4,7 @@
  */
 const DashboardView = {
     _searchTimer: null,
+    _searchIndex: -1,
 
     /**
      * 渲染仪表盘视图
@@ -158,9 +159,25 @@ const DashboardView = {
         });
 
         searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
+            const items = dropdown.querySelectorAll('.search-result-item');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this._searchIndex = Math.min(this._searchIndex + 1, items.length - 1);
+                this.updateSearchHighlight(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this._searchIndex = Math.max(this._searchIndex - 1, -1);
+                this.updateSearchHighlight(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (this._searchIndex >= 0 && items[this._searchIndex]) {
+                    items[this._searchIndex].click();
+                }
+            } else if (e.key === 'Escape') {
                 dropdown.style.display = 'none';
                 searchInput.blur();
+                this._searchIndex = -1;
             }
         });
 
@@ -179,6 +196,7 @@ const DashboardView = {
      * @param {HTMLElement} dropdown - 下拉菜单元素
      */
     async performSearch(keyword, dropdown) {
+        this._searchIndex = -1;
         try {
             const [prompts, skills] = await Promise.all([
                 API.getPrompts(keyword, 'all', ''),
@@ -230,6 +248,21 @@ const DashboardView = {
         } catch (err) {
             console.error('搜索失败:', err);
         }
+    },
+
+    /**
+     * 更新搜索结果高亮状态
+     * @param {NodeList} items - 搜索结果项列表
+     */
+    updateSearchHighlight(items) {
+        items.forEach((item, index) => {
+            if (index === this._searchIndex) {
+                item.classList.add('search-result-active');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('search-result-active');
+            }
+        });
     },
 
     /**

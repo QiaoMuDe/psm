@@ -84,6 +84,24 @@ const DataView = {
                         </div>
                     </div>
                 </div>
+                <div class="card" style="margin-top: var(--spacing-4); border: 1px solid var(--danger);">
+                    <div class="card-header">
+                        <h3 class="card-title" style="color: var(--danger);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            危险操作
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                            重置所有数据：清空全部提示词和技能（含文件），恢复默认设置。此操作不可撤销！
+                        </p>
+                        <button class="btn btn-danger" id="reset-all-btn">重置所有数据</button>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -158,6 +176,29 @@ const DataView = {
             try {
                 const count = await API.cleanupOrphanSkills();
                 Toast.success(`已清理 ${count} 个孤立技能记录`);
+                this.loadStats();
+                this.loadOrphanStatus(container);
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        });
+
+        container.querySelector('#reset-all-btn').addEventListener('click', async () => {
+            const confirmed1 = await Confirm.show(
+                '⚠️ 警告：此操作将清空所有提示词和技能数据，并删除技能文件！\n\n建议先导出备份。确定继续吗？',
+                { confirmText: '继续重置', type: 'danger' }
+            );
+            if (!confirmed1) return;
+
+            const confirmed2 = await Confirm.show(
+                '最后确认：所有数据将被永久删除且无法恢复！',
+                { confirmText: '确定删除', type: 'danger' }
+            );
+            if (!confirmed2) return;
+
+            try {
+                const result = await API.resetAllData();
+                Toast.success(`重置完成：已删除 ${result.prompts_deleted} 条提示词、${result.skills_deleted} 个技能`);
                 this.loadStats();
                 this.loadOrphanStatus(container);
             } catch (err) {

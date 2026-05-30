@@ -90,6 +90,7 @@ cmds = [
 work_dir = ''
 # 依赖任务列表
 depends_on = [
+    'clean',
     'fc'
 ]
 # 支持运行的平台, 为空时表示支持所有平台(支持配置为: windows, linux, darwin)

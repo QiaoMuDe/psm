@@ -596,6 +596,30 @@ func (s *SkillService) TogglePinSkill(id int64) error {
 	return nil
 }
 
+// DeleteAllSkills 删除所有 Skill 记录和文件，deleteFiles 为 true 时同时删除文件系统中的文件
+func (s *SkillService) DeleteAllSkills(deleteFiles bool) (int64, error) {
+	if deleteFiles {
+		storagePath, err := s.settingsSvc.GetSkillStoragePath()
+		if err == nil {
+			skills, _ := s.GetSkills()
+			for _, sk := range skills {
+				fullPath := filepath.Join(storagePath, sk.RelativePath)
+				_ = os.RemoveAll(fullPath)
+			}
+		}
+	}
+
+	result, err := s.db.Exec("DELETE FROM skills")
+	if err != nil {
+		return 0, fmt.Errorf("删除所有 Skill 失败: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("获取删除数量失败: %w", err)
+	}
+	return affected, nil
+}
+
 // GetPinnedSkills 获取置顶的 Skill 列表
 func (s *SkillService) GetPinnedSkills(limit int) ([]db.Skill, error) {
 	if limit <= 0 {

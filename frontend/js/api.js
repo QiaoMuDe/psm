@@ -28,6 +28,7 @@ const API = {
     getDataStats: () => API.call(window.go.main.App.GetDataStats),
     getOrphanSkills: () => API.call(window.go.main.App.GetOrphanSkills),
     cleanupOrphanSkills: () => API.call(window.go.main.App.CleanupOrphanSkills),
+    resetAllData: () => API.call(window.go.main.App.ResetAllData),
 
     // ===== Prompt API =====
     createPrompt: (name, content, category, tags, isTemplate) => API.call(window.go.main.App.CreatePrompt, name, content, category, tags, isTemplate),

@@ -169,6 +169,19 @@ func (s *PromptService) BatchDeletePrompts(ids []int64) (int64, error) {
 	return affected, nil
 }
 
+// DeleteAllPrompts 删除所有 Prompt 记录，返回删除数量
+func (s *PromptService) DeleteAllPrompts() (int64, error) {
+	result, err := s.db.Exec("DELETE FROM prompts")
+	if err != nil {
+		return 0, fmt.Errorf("删除所有 Prompt 失败: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("获取删除数量失败: %w", err)
+	}
+	return affected, nil
+}
+
 // GetCategories 获取所有不重复的分类列表
 func (s *PromptService) GetCategories() ([]string, error) {
 	rows, err := s.db.Query("SELECT DISTINCT category FROM prompts ORDER BY category")

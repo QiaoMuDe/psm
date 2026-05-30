@@ -101,3 +101,45 @@ func (s *SettingsService) GetSkillStoragePath() (string, error) {
 	}
 	return expanded, nil
 }
+
+// ResetSettings 重置所有设置为默认值
+func (s *SettingsService) ResetSettings() error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("开启事务失败: %w", err)
+	}
+
+	if _, err := tx.Exec("DELETE FROM settings"); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("清空设置失败: %w", err)
+	}
+
+	defaults := map[string]string{
+		"skill_storage_path": "~/.psm/skills",
+		"app_theme":          "light",
+		"prompt_view_mode":   "card",
+		"skill_view_mode":    "card",
+		"sidebar_collapsed":  "false",
+		"font_size_offset":   "0px",
+		"font_family":        "",
+	}
+
+	stmt, err := tx.Prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)")
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("预编译语句失败: %w", err)
+	}
+	defer func() { _ = stmt.Close() }()
+
+	for key, value := range defaults {
+		if _, err := stmt.Exec(key, value); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("插入默认设置 '%s' 失败: %w", key, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("提交事务失败: %w", err)
+	}
+	return nil
+}
