@@ -11,6 +11,7 @@ import (
 	"psm/internal/db"
 	"psm/internal/service"
 	"psm/internal/utils"
+	"strings"
 
 	"gitee.com/MM-Q/verman"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -234,6 +235,10 @@ func (a *App) ImportSkillAuto(zipPath string) (*db.ImportResult, error) {
 
 	_, err := a.skillSvc.ImportSkill(zipPath)
 	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "已存在") {
+			return &db.ImportResult{Skipped: 1}, nil
+		}
 		return nil, err
 	}
 	return &db.ImportResult{Success: 1}, nil

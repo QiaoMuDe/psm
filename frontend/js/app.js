@@ -320,7 +320,7 @@ const App = {
 
                     let parts = [];
                     if (result.success > 0) parts.push(`成功 ${result.success}`);
-                    if (result.skipped > 0) parts.push(`${result.skipped} 个已存在已跳过`);
+                    if (result.skipped > 0) parts.push(`${result.skipped} 个已存在`);
                     if (result.failed > 0) parts.push(`失败 ${result.failed}`);
 
                     if (parts.length === 0) {

@@ -538,7 +538,7 @@ const PromptsView = {
 
         ShortcutManager.registerView('prompts', {
             'delete': () => { if (this.batchMode && this.selectedIds.size > 0) this.handleBatchDelete(); },
-            'ctrl+a': () => { if (this.batchMode) this.toggleSelectAll(true); },
+            'ctrl+a': (e) => { e.preventDefault(); if (this.batchMode) this.toggleSelectAll(true); },
             'ctrl+d': () => { if (this.batchMode) this.toggleSelectAll(false); },
         });
     },

@@ -391,8 +391,13 @@ func (s *SkillService) BatchImportSkills(zipPaths []string) (*db.ImportResult, e
 		} else {
 			_, err := s.ImportSkill(zipPath)
 			if err != nil {
-				result.Failed++
-				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", filepath.Base(zipPath), err))
+				errMsg := err.Error()
+				if strings.Contains(errMsg, "已存在") {
+					result.Skipped++
+				} else {
+					result.Failed++
+					result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", filepath.Base(zipPath), err))
+				}
 			} else {
 				result.Success++
 			}
