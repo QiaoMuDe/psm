@@ -38,6 +38,10 @@ export function GetDataStats():Promise<handler.DataStats>;
 
 export function GetOrphanSkills():Promise<Array<db.Skill>>;
 
+export function GetPinnedPrompts(arg1:number):Promise<Array<db.Prompt>>;
+
+export function GetPinnedSkills(arg1:number):Promise<Array<db.Skill>>;
+
 export function GetPrompt(arg1:number):Promise<db.Prompt>;
 
 export function GetPrompts(arg1:string,arg2:string):Promise<Array<db.Prompt>>;

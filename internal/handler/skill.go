@@ -104,3 +104,8 @@ func (h *SkillHandler) CountSkills() (int, error) {
 func (h *SkillHandler) TogglePinSkill(id int64) error {
 	return h.skillSvc.TogglePinSkill(id)
 }
+
+// GetPinnedSkills 获取置顶的 Skill 列表
+func (h *SkillHandler) GetPinnedSkills(limit int) ([]db.Skill, error) {
+	return h.skillSvc.GetPinnedSkills(limit)
+}

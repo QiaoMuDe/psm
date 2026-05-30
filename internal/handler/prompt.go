@@ -85,3 +85,8 @@ func (h *PromptHandler) CountPrompts() (int, error) {
 func (h *PromptHandler) TogglePinPrompt(id int64) error {
 	return h.promptSvc.TogglePinPrompt(id)
 }
+
+// GetPinnedPrompts 获取置顶的 Prompt 列表
+func (h *PromptHandler) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
+	return h.promptSvc.GetPinnedPrompts(limit)
+}

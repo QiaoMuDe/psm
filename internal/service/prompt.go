@@ -324,3 +324,28 @@ func (s *PromptService) TogglePinPrompt(id int64) error {
 	}
 	return nil
 }
+
+// GetPinnedPrompts 获取置顶的 Prompt 列表
+func (s *PromptService) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
+	if limit <= 0 {
+		limit = 3
+	}
+	rows, err := s.db.Query(`
+		SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at 
+		FROM prompts WHERE is_pinned = 1 
+		ORDER BY updated_at DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("获取置顶 Prompt 列表失败: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	prompts := []db.Prompt{}
+	for rows.Next() {
+		var p db.Prompt
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("扫描 Prompt 数据失败: %w", err)
+		}
+		prompts = append(prompts, p)
+	}
+	return prompts, nil
+}

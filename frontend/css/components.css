@@ -1622,3 +1622,64 @@ mark {
     justify-content: center;
     gap: var(--spacing-2);
 }
+
+/* ==================== 仪表盘置顶内容 ==================== */
+
+.pinned-section {
+    margin-bottom: var(--spacing-3);
+}
+
+.pinned-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pinned-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background-color var(--transition);
+}
+
+.pinned-item:hover {
+    background-color: var(--bg-page);
+}
+
+.pinned-item-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pinned-icon-blue {
+    background-color: var(--accent-light);
+    color: var(--accent);
+}
+
+.pinned-icon-teal {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.pinned-item-name {
+    flex: 1;
+    font-size: calc(14px + var(--font-size-offset));
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tag-sm {
+    padding: 2px 6px;
+    font-size: calc(11px + var(--font-size-offset));
+}

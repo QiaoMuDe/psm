@@ -70,6 +70,14 @@ export function GetOrphanSkills() {
   return window['go']['main']['App']['GetOrphanSkills']();
 }
 
+export function GetPinnedPrompts(arg1) {
+  return window['go']['main']['App']['GetPinnedPrompts'](arg1);
+}
+
+export function GetPinnedSkills(arg1) {
+  return window['go']['main']['App']['GetPinnedSkills'](arg1);
+}
+
 export function GetPrompt(arg1) {
   return window['go']['main']['App']['GetPrompt'](arg1);
 }

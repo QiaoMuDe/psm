@@ -41,6 +41,7 @@ const API = {
     getRecentPrompts: (limit) => API.call(window.go.main.App.GetRecentPrompts, limit),
     countPrompts: () => API.call(window.go.main.App.CountPrompts),
     togglePinPrompt: (id) => API.call(window.go.main.App.TogglePinPrompt, Number(id)),
+    getPinnedPrompts: (limit = 3) => API.call(window.go.main.App.GetPinnedPrompts, limit),
 
     // ===== Skill API =====
     createSkill: (name, description) => API.call(window.go.main.App.CreateSkill, name, description),
@@ -57,6 +58,7 @@ const API = {
     getRecentSkills: (limit) => API.call(window.go.main.App.GetRecentSkills, limit),
     countSkills: () => API.call(window.go.main.App.CountSkills),
     togglePinSkill: (id) => API.call(window.go.main.App.TogglePinSkill, Number(id)),
+    getPinnedSkills: (limit = 3) => API.call(window.go.main.App.GetPinnedSkills, limit),
     batchImportSkills: (zipPaths) => API.call(window.go.main.App.BatchImportSkills, zipPaths),
 
     // ===== 备份恢复 API =====

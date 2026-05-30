@@ -595,3 +595,31 @@ func (s *SkillService) TogglePinSkill(id int64) error {
 	}
 	return nil
 }
+
+// GetPinnedSkills 获取置顶的 Skill 列表
+func (s *SkillService) GetPinnedSkills(limit int) ([]db.Skill, error) {
+	if limit <= 0 {
+		limit = 3
+	}
+	rows, err := s.db.Query(`
+		SELECT id, name, description, relative_path, is_pinned, created_at, updated_at 
+		FROM skills WHERE is_pinned = 1 
+		ORDER BY updated_at DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("获取置顶 Skill 列表失败: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var skills []db.Skill
+	for rows.Next() {
+		var skill db.Skill
+		if err := rows.Scan(&skill.ID, &skill.Name, &skill.Description, &skill.RelativePath, &skill.IsPinned, &skill.CreatedAt, &skill.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("扫描 Skill 数据失败: %w", err)
+		}
+		skills = append(skills, skill)
+	}
+	if skills == nil {
+		skills = []db.Skill{}
+	}
+	return skills, nil
+}
