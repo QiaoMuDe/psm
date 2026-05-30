@@ -1,11 +1,10 @@
 # 构建产物
-build/bin/
-build/
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+*.zip
 
 # Go 依赖
 # vendor/
@@ -31,9 +30,6 @@ coverage.html
 Thumbs.db
 desktop.ini
 
-# Wails
-frontend/wailsjs/
-
 # 数据库
 *.db
 *.db-journal
@@ -42,10 +38,6 @@ frontend/wailsjs/
 
 # 日志
 *.log
-
-# 测试数据注入脚本编译产物
-seed
-tools/seed/seed
 
 # 环境变量
 .env
