@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.3.0 | 更新日期: 2026-05-30 | 分析人: AI 架构师
+> 版本: 2.4.0 | 更新日期: 2026-05-30 | 分析人: AI 架构师
 
 ---
 
@@ -9,7 +9,7 @@
 **项目名称**: PSM — Skill & Prompt Manager
 **核心定位**: 基于 Wails v2 的跨平台桌面应用，用于统一管理 AI 开发中的 Skill（技能包）和 Prompt（提示词）
 **核心业务场景**:
-- Prompt 的增删改查、分类筛选、搜索、JSON 选择性导入导出
+- Prompt 的增删改查、分类筛选、搜索（含标签匹配+高亮）、JSON 选择性导入导出、置顶
 - Skill 的元数据管理 + 文件系统存储（ZIP 批量导入导出、SKILL.md frontmatter 解析与同步）
 - 数据管理（完整备份恢复、数据统计、孤立数据清理、数据目录快捷打开）
 - 系统设置（存储路径配置、7 种主题切换、侧边栏收起持久化、版本号展示、快捷键说明）
@@ -24,20 +24,25 @@
 ```
 psm/
 ├── main.go                          # Wails 应用入口，配置窗口/生命周期/前端资源嵌入/文件拖拽
-├── app.go                           # App 主结构体，持有 db+service，暴露 40+ 个前端 API 方法
+├── app.go                           # App 主结构体，嵌入 Handler，仅保留结构体定义+生命周期
 ├── go.mod / go.sum                  # Go 模块定义与依赖锁定
 ├── wails.json                       # Wails 框架配置（应用名、版本、构建选项）
 ├── .gitignore                       # Git 忽略规则（exe/vendor/db/IDE/OS 等）
 ├── AGENTS.md                        # 本分析报告
 │
 ├── internal/                        # 后端核心业务代码（Go 标准 internal 包结构）
+│   ├── handler/                     # Handler 子包（按领域拆分，嵌入到 App）
+│   │   ├── settings.go              # SettingsHandler：设置/版本/文件对话框（15 方法）
+│   │   ├── prompt.go                # PromptHandler：Prompt CRUD/导入导出/置顶（13 方法）
+│   │   ├── skill.go                 # SkillHandler：Skill CRUD/ZIP 导入导出/置顶（15 方法）
+│   │   └── backup.go                # BackupHandler：备份恢复/数据统计/孤立清理（5 方法）
 │   ├── db/
 │   │   ├── models.go                # 数据模型：Settings/Prompt/Skill/SkillFile/ImportResult/DashboardStats
-│   │   └── sqlite.go                # SQLite 初始化：WAL 模式、建表迁移、默认设置插入
+│   │   └── sqlite.go                # SQLite 初始化：WAL 模式、建表迁移、默认设置插入、索引创建
 │   ├── service/
 │   │   ├── settings.go              # 设置服务：Get/Update/BatchUpdate/GetSkillStoragePath
-│   │   ├── prompt.go                # Prompt 服务：CRUD + 搜索筛选 + 分类查询 + 选择性 JSON 导入导出
-│   │   └── skill.go                 # Skill 服务：CRUD + 批量删除 + 双格式 ZIP 导入导出 + 文件列表
+│   │   ├── prompt.go                # Prompt 服务：CRUD + 搜索筛选(含tags) + 分类查询 + 选择性 JSON 导入导出 + 置顶
+│   │   └── skill.go                 # Skill 服务：CRUD + 批量删除 + 双格式 ZIP 导入导出 + 文件列表 + 置顶
 │   └── utils/
 │       ├── archive.go               # ZIP 压缩/解压 + SKILL.md 解析/frontmatter 读写 + 导出格式处理
 │       ├── backup.go                # 完整备份恢复：ZIP 打包 data.json + Skill 文件目录
@@ -49,10 +54,10 @@ psm/
 │   ├── css/
 │   │   ├── variables.css            # CSS 变量定义：7 种主题颜色/间距/字体/阴影/圆角
 │   │   ├── layout.css               # 布局样式：应用容器/侧边栏/主内容区/响应式/视图内容滚动
-│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/版本信息
+│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/版本信息/置顶/高亮
 │   └── js/
 │       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换
-│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化
+│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数
 │       ├── components/
 │       │   ├── toast.js             # Toast 消息组件（success/error/warning/info + SVG 图标）
 │       │   ├── modal.js             # 模态框组件（打开/关闭/内容填充）
@@ -60,8 +65,8 @@ psm/
 │       │   └── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭）
 │       └── views/
 │           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 混合最近更新列表
-│           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/分类筛选/CRUD/批量管理/右键菜单/选择性导入导出
-│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/批量管理/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览
+│           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮
+│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/批量管理/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮
 │           ├── settings.js          # 设置页：存储路径配置 + 7 种主题切换 + 版本信息展示
 │           └── data.js              # 数据管理：完整备份恢复
 │
@@ -101,7 +106,7 @@ psm/
 | 模块 | 核心功能 | 文件 | 核心依赖 |
 |------|----------|------|----------|
 | 数据库层 | SQLite 初始化、WAL 模式、建表迁移、默认设置 | `internal/db/sqlite.go` | modernc.org/sqlite |
-| 数据模型 | 6 个结构体定义（Skill 已移除 version 字段） | `internal/db/models.go` | 无 |
+| 数据模型 | 6 个结构体定义（Prompt/Skill 含 is_pinned 字段） | `internal/db/models.go` | 无 |
 | 路径工具 | ~ 展开、目录创建、路径拼接 | `internal/utils/path.go` | os/path/filepath |
 | 压缩工具 | ZIP 压缩/解压、SKILL.md 读写、frontmatter 解析、导出格式处理、目录扁平化 | `internal/utils/archive.go` | archive/zip |
 | 导入导出 | JSON 格式的 Prompt 元数据读写 | `internal/utils/export.go` | encoding/json |
@@ -141,11 +146,15 @@ psm/
 └──────────────────┬───────────────────────────────────────┘
                    │ Wails Bind (JSON-RPC)
 ┌──────────────────▼───────────────────────────────────────┐
-│                 app.go (App)                               │
-│  GetSettings / CreatePrompt / ImportSkillAuto /            │
-│  ExportSkills / BackupData / GetVersion /                  │
-│  OpenFileDialog / SaveFileDialog / ...                     │
+│              app.go (App + 嵌入 Handler)                   │
+│  SettingsHandler / PromptHandler / SkillHandler /          │
+│  BackupHandler                                            │
 └────┬─────────────┬──────────────┬─────────────────────────┘
+     │             │              │
+┌────▼────┐ ┌─────▼─────┐ ┌─────▼─────┐
+│ Settings │ │  Prompt   │ │   Skill   │
+│ Handler  │ │  Handler  │ │  Handler  │
+└────┬─────┘ └─────┬─────┘ └─────┬─────┘
      │             │              │
 ┌────▼────┐ ┌─────▼─────┐ ┌─────▼─────┐
 │ Settings │ │  Prompt   │ │   Skill   │
@@ -159,7 +168,7 @@ psm/
      │             │              │
 ┌────▼─────────────▼──────────────▼───────┐
 │            internal/db/sqlite.go         │
-│     SQLite (WAL) + models.go            │
+│     SQLite (WAL) + models.go + 索引      │
 └──────────────────┬──────────────────────┘
                    │
           ~/.psm/data.db
@@ -170,9 +179,8 @@ psm/
 
 | 模块 A | 依赖模块 B | 依赖类型 |
 |--------|-----------|----------|
-| app.go | SettingsService | 组合（startup 初始化） |
-| app.go | PromptService | 组合 |
-| app.go | SkillService | 组合（注入 SettingsService） |
+| app.go | Handler (SettingsHandler/PromptHandler/SkillHandler/BackupHandler) | 结构体嵌入 |
+| Handler | SettingsService / PromptService / SkillService | 组合（构造函数注入） |
 | app.go | verman | 构建时版本注入（`-ldflags -X`） |
 | SkillService | SettingsService | 方法调用（获取存储路径） |
 | SkillService | archive.go | 工具调用（ZIP 压缩/解压/SKILL.md 读写/导出格式） |
@@ -185,9 +193,9 @@ psm/
 
 ### 潜在问题
 
-- ✅ **无循环依赖**：`internal/` 包之间依赖方向单一（service → db, service → utils）
-- ✅ 依赖深度合理，最多 3 层（前端 → app → service → utils/db）
-- ⚠️ `app.go` 作为"上帝对象"持有所有服务实例，方法数量较多（40+），后续可考虑按领域拆分
+- ✅ **无循环依赖**：`internal/` 包之间依赖方向单一（handler → service → db, handler → utils）
+- ✅ 依赖深度合理，最多 4 层（前端 → app → handler → service → utils/db）
+- ⚠️ ~~`app.go` 作为"上帝对象"持有所有服务实例，方法数量较多（40+），后续可考虑按领域拆分~~ ✅ 已重构为 Handler 嵌入模式
 
 ---
 
@@ -197,7 +205,8 @@ psm/
 
 | 模式 | 应用位置 | 说明 |
 |------|----------|------|
-| **分层架构** | 整体 | 前端视图 → Wails 绑定层 → Service 层 → DB/Utils 层 |
+| **分层架构** | 整体 | 前端视图 → Wails 绑定层 → Handler → Service → DB/Utils |
+| **Handler 嵌入模式** | `internal/handler/` + `app.go` | 按领域拆分 Handler，嵌入到 App 结构体 |
 | **服务层模式** | `internal/service/` | SettingsService/PromptService/SkillService 封装业务逻辑 |
 | **仓库模式（简化）** | Service 层直接操作 DB | 未单独抽 Repository 层，Service 直接执行 SQL |
 | **SPA 路由** | `frontend/js/app.js` | 前端单页应用，hash-free 路由切换 |
@@ -449,13 +458,17 @@ prompts (独立表)
 ├── id (PK, AUTO_INCREMENT)
 ├── name, content, category
 ├── tags (JSON 数组字符串)
-└── created_at, updated_at
+├── is_pinned (DEFAULT 0)
+├── created_at, updated_at
+└── 索引: category, updated_at
 
 skills (独立表 + 文件系统)
 ├── id (PK, AUTO_INCREMENT)
 ├── name, description
 ├── relative_path → 拼接 skill_storage_path 得到绝对路径
-└── created_at, updated_at
+├── is_pinned (DEFAULT 0)
+├── created_at, updated_at
+└── 索引: updated_at
 ```
 
 ### 存储策略
@@ -491,19 +504,24 @@ skills (独立表 + 文件系统)
 18. **Prompt 字符计数**: 新建/编辑 Prompt 时实时显示字符数，查看详情时显示总字符数
 19. **数据统计与清理**: 数据管理页显示 Prompt/Skill 数量和数据库大小，支持检测并清理孤立 Skill 数据
 20. **搜索防抖**: 搜索输入框 100ms 防抖，减少不必要的 API 调用
+21. **标签搜索与筛选**: 搜索时匹配标签字段，点击标签自动填入搜索框筛选
+22. **Handler 嵌入模式**: app.go 按领域拆分为 SettingsHandler/PromptHandler/SkillHandler/BackupHandler，通过结构体嵌入到 App
+23. **数据库索引**: 为 prompts(category, updated_at) 和 skills(updated_at) 添加索引
+24. **置顶功能**: Prompt 和 Skill 支持置顶，置顶项优先排列
+25. **搜索高亮**: 搜索结果中关键词以红色加粗显示
 
 ---
 
 ## 十、待优化点
 
-| 优先级 | 问题 | 建议 |
-|--------|------|------|
-| P1 | app.go 方法过多（40+） | 按领域拆分为 SettingsHandler/PromptHandler/SkillHandler |
-| P2 | 无数据库版本化迁移 | 引入 goose 或自实现版本号 + ALTER TABLE |
-| P2 | 无单元测试 | 为 service 层和 utils 层补充测试 |
-| P2 | Skill 导入为同步操作 | 大 ZIP 文件可能导致 UI 卡顿，可考虑异步 |
-| P3 | 前端无骨架屏 | 加载时显示 loading 动画，提升体验 |
-| P3 | 无国际化支持 | 当前仅中文硬编码 |
+| 优先级 | 问题 | 建议 | 状态 |
+|--------|------|------|------|
+| P1 | app.go 方法过多（40+） | 按领域拆分为 Handler | ✅ 已完成 |
+| P2 | 无数据库版本化迁移 | 引入 goose 或自实现版本号 + ALTER TABLE | 待定 |
+| P2 | 无单元测试 | 为 service 层和 utils 层补充测试 | 待定 |
+| P2 | Skill 导入为同步操作 | 大 ZIP 文件可考虑异步 | 暂缓（收益低） |
+| P3 | 前端无骨架屏 | 加载时显示 loading 动画，提升体验 | 待定 |
+| P3 | 无国际化支持 | 当前仅中文硬编码 | 待定 |
 
 ---
 
@@ -520,7 +538,7 @@ skills (独立表 + 文件系统)
 9. **Go 空切片**: 所有返回前端的切片必须初始化为 `[]Type{}`，否则 JSON 输出 `null`
 10. **构建命令**: `wails dev`（开发）/ `wails build`（生产）/ `go run tools/seed/main.go`（测试数据：16 条 Prompt + 7 个 Skill）
 11. **设计系统**: Flat Design，无阴影无渐变，Space Grotesk 字体，SVG 图标
-12. **CSS 三文件**: `variables.css`（159 行变量/主题定义）、`layout.css`（377 行布局）、`components.css`（960+ 行组件样式）
+12. **CSS 三文件**: `variables.css`（159 行变量/主题定义）、`layout.css`（377 行布局）、`components.css`（1300+ 行组件样式）
 13. **前端路由**: app.js loadScript 去重机制，防止 const 重复声明
 14. **默认视图模式**: prompt_view_mode 和 skill_view_mode 默认值为 `card`（数据库 INSERT OR IGNORE，不覆盖已有设置）
 15. **批量管理模式**: `batchMode` 状态 + `.batch-mode` CSS 类切换，checkbox 默认隐藏，批量操作栏 `order:1` 固定底部
@@ -538,3 +556,8 @@ skills (独立表 + 文件系统)
 27. **Prompt 字符计数**: `input` 事件监听 textarea，`.char-count` / `.char-count-inline` 显示字符数
 28. **数据统计 API**: `GetDataStats` 返回 `{prompt_count, skill_count, db_size}`，`GetOrphanSkills` 检测孤立 Skill
 29. **搜索防抖**: 100ms `setTimeout/clearTimeout` 模式，`_searchTimer` 属性存储定时器 ID
+30. **Handler 嵌入模式**: app.go 仅 ~73 行，4 个 Handler 文件通过结构体嵌入提供方法，Wails 反射可扫描嵌入方法
+31. **数据库索引**: `idx_prompts_category`、`idx_prompts_updated_at`、`idx_skills_updated_at`
+32. **置顶功能**: `is_pinned` 字段（DEFAULT 0），排序 `is_pinned DESC, updated_at DESC`，TogglePin 方法用 CASE WHEN 切换
+33. **搜索高亮**: `highlightText(text, keyword)` 函数，先转义 HTML 再正则替换，`<mark>` 标签红色加粗显示
+34. **标签点击筛选**: 点击标签填入搜索框，复用现有搜索逻辑（tags LIKE 匹配），无需独立筛选状态
