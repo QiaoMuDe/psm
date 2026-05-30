@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.4.0 | 更新日期: 2026-05-30 | 分析人: AI 架构师
+> 版本: 2.5.0 | 更新日期: 2026-05-31 | 分析人: AI 架构师
 
 ---
 
@@ -9,13 +9,14 @@
 **项目名称**: PSM — Skill & Prompt Manager
 **核心定位**: 基于 Wails v2 的跨平台桌面应用，用于统一管理 AI 开发中的 Skill（技能包）和 Prompt（提示词）
 **核心业务场景**:
-- Prompt 的增删改查、分类筛选、搜索（含标签匹配+高亮）、JSON 选择性导入导出、置顶
+- Prompt 的增删改查、分类筛选、搜索（含标签匹配+高亮）、JSON 选择性导入导出、置顶、模板变量（`{{变量名}}`占位符）
 - Skill 的元数据管理 + 文件系统存储（ZIP 批量导入导出、SKILL.md frontmatter 解析与同步）
 - 数据管理（完整备份恢复、数据统计、孤立数据清理、数据目录快捷打开）
-- 系统设置（存储路径配置、7 种主题切换、侧边栏收起持久化、版本号展示、快捷键说明）
-- 仪表盘数据概览（统计卡片可点击跳转、最近更新混合列表）
+- 系统设置（存储路径配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制）
+- 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框）
 - 全局拖拽导入（支持拖入 ZIP 文件直接导入技能）
-- 快捷键系统（全局快捷键 + 模块快捷键）
+- 快捷键系统（全局快捷键 + 模块快捷键 + 悬停复制）
+- 关于弹窗（版本号、项目地址、快捷键帮助）
 
 ---
 
@@ -52,22 +53,22 @@ psm/
 ├── frontend/                        # 前端资源（纯 HTML + CSS + JS，无框架依赖）
 │   ├── index.html                   # 主页面：侧边栏导航 + 内容区 + Toast/Modal/Confirm/ContextMenu 容器
 │   ├── css/
-│   │   ├── variables.css            # CSS 变量定义：7 种主题颜色/间距/字体/阴影/圆角
+│   │   ├── variables.css            # CSS 变量定义：6 种主题颜色/间距/字体/阴影/圆角/全局字体偏移
 │   │   ├── layout.css               # 布局样式：应用容器/侧边栏/主内容区/响应式/视图内容滚动
-│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/版本信息/置顶/高亮
+│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索/置顶内容/跳转闪烁/动画效果
 │   └── js/
-│       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换
-│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数
+│       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换 + 获取置顶内容
+│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮
 │       ├── components/
 │       │   ├── toast.js             # Toast 消息组件（success/error/warning/info + SVG 图标）
 │       │   ├── modal.js             # 模态框组件（打开/关闭/内容填充）
 │       │   ├── confirm.js           # 确认对话框组件（Promise-based）
 │       │   └── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭）
 │       └── views/
-│           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 混合最近更新列表
-│           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮
+│           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖）
+│           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明
 │           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/批量管理/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮
-│           ├── settings.js          # 设置页：存储路径配置 + 7 种主题切换 + 版本信息展示
+│           ├── settings.js          # 设置页：存储路径配置 + 6 种主题切换 + 全局字体大小控制 + 分组卡片布局
 │           └── data.js              # 数据管理：完整备份恢复
 │
 ├── tools/
@@ -117,7 +118,7 @@ psm/
 | 模块 | 核心功能 | 文件 | 核心输入/输出 |
 |------|----------|------|---------------|
 | 设置服务 | 系统参数 CRUD、Skill 存储路径管理 | `internal/service/settings.go` | 输入: key/value → 输出: map/string |
-| Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[] |
+| Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[] |
 | Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[] |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
@@ -334,7 +335,64 @@ psm/
 → verman 库在构建时注入 Git 版本、提交哈希、构建时间等元数据
 → 运行时: API.getVersion() → app.go GetVersion()
 → 返回 verman.V 的各字段（git_version, git_commit, build_time 等）
-→ 前端 settings.js loadVersion() → 显示 "PSM v1.0.0" 或 "PSM dev"
+→ 前端 app.js showAboutDialog() → 关于弹窗显示版本信息
+```
+
+**全局字体大小控制流程**:
+```
+用户在设置页选择字体大小档位或自定义输入
+→ settings.js applyFontSize(offset) → 实时预览
+→ 设置保存到数据库 font_size_offset 字段
+→ app.js loadSettings() → 应用 CSS 变量 --font-size-offset
+→ components.css 所有 font-size 使用 calc(XXpx + var(--font-size-offset))
+→ 全局字体大小实时生效
+```
+
+**仪表盘全局搜索流程**:
+```
+用户在仪表盘搜索框输入关键词
+→ 300ms 防抖 → 调用 API.searchPrompts 和 API.searchSkills
+→ 合并结果 → 生成候选下拉菜单（最多 8 条）
+→ 高亮匹配关键词
+→ 用户点击候选项 → App.navigate(viewName, highlightId)
+→ 跳转到对应模块并闪烁显示
+```
+
+**仪表盘置顶内容跳转流程**:
+```
+仪表盘加载时获取置顶内容
+→ API.getPinnedPrompts(3) + API.getPinnedSkills(3)
+→ 显示置顶的 Prompt 和 Skill（各最多 3 个）
+→ 用户点击某项 → App.navigate(viewName, highlightId)
+→ 跳转到对应模块并闪烁显示
+```
+
+**跳转闪烁效果流程**:
+```
+App.navigate(viewName, highlightId) 传递高亮 ID
+→ 目标模块 render(container, highlightId) 接收参数
+→ highlightItem(highlightId) 查找对应元素
+→ 添加 highlight-flash 类 → CSS 动画：红色边框+背景闪烁 3 秒
+→ 动画结束后移除类
+```
+
+**悬停复制流程**:
+```
+用户鼠标悬停在 Prompt 卡片/行上
+→ mouseenter 事件 → hoveredPromptId = prompt.id
+→ 用户按 Ctrl+C → ShortcutManager 捕获
+→ copyPromptById(hoveredPromptId) → 复制内容到剪贴板
+→ Toast.success("已复制到剪贴板")
+→ mouseleave 事件 → hoveredPromptId = null
+```
+
+**关于弹窗流程**:
+```
+用户点击侧边栏 LOGO
+→ app.js showAboutDialog() → 弹出关于弹窗
+→ 显示版本号、项目简介、项目地址链接
+→ 显示快捷键帮助（全局/模块快捷键）
+→ 项目地址点击 → window.runtime.BrowserOpenURL 打开系统浏览器
 ```
 
 **SKILL.md Frontmatter 解析**:
@@ -489,16 +547,16 @@ skills (独立表 + 文件系统)
 3. **Skill 导出双格式**: 单个 Skill 导出标准格式（SKILL.md 在 ZIP 根目录）；多个 Skill 导出 PSM 格式（`.psm-skill-export` 标识文件 + 技能目录）
 4. **双格式自动导入**: 自动识别导出格式（标识文件）和公共格式（SKILL.md），统一入口 `importSkillAuto`
 5. **零前端框架**: 原生 HTML/CSS/JS，Flat Design 设计系统，Space Grotesk 字体
-6. **CSS 三文件拆分**: variables.css（变量/7 种主题）、layout.css（布局）、components.css（组件），职责清晰
+6. **CSS 三文件拆分**: variables.css（变量/6 种主题/全局字体偏移）、layout.css（布局）、components.css（组件），职责清晰
 7. **纯 Go SQLite**: modernc.org/sqlite 无需 CGO，单 exe 部署
-8. **7 种主题系统**: CSS 变量驱动（light/dark/midnight/ocean/forest/sunset），支持跟随系统，设置持久化到数据库
+8. **6 种主题系统**: CSS 变量驱动（light/dark/midnight/ocean/rose/lavender），支持跟随系统，设置持久化到数据库
 9. **卡片视图右键菜单**: 卡片/表格行右键弹出操作菜单（查看/编辑/导出/删除），替代固定按钮，界面更简洁
 10. **批量管理模式**: 工具栏"批量管理"按钮触发，底部操作栏 + 全选 + 退出管理，非批量时界面无复选框干扰
 11. **默认卡片视图**: Prompt 和 Skill 模块默认使用卡片视图（可通过设置切换）
-12. **仪表盘交互**: 统计卡片可点击跳转到对应模块，最近更新混合显示 Prompt 和 Skill（按时间排序，最多 5 条）
+12. **仪表盘交互**: 统计卡片可点击跳转到对应模块，置顶内容模块（Prompt/Skill 各最多 3 个），全局搜索框（300ms 防抖，候选下拉菜单）
 13. **导出后清空选中**: 两个模块导出完成后自动清空 selectedIds 和复选框 UI
 14. **完整备份恢复**: ZIP 格式备份（data.json + Skill 文件），恢复时自动跳过同名记录
-15. **构建时版本注入**: 通过 verman 库 + `-ldflags -X` 在构建时注入版本元数据，设置页底部展示版本号
+15. **构建时版本注入**: 通过 verman 库 + `-ldflags -X` 在构建时注入版本元数据，关于弹窗展示版本号
 16. **全局拖拽导入**: 基于 Wails `OnFileDrop` API，支持拖入 ZIP 文件直接导入技能，已存在的技能自动跳过并提示
 17. **快捷键系统**: ShortcutManager 管理全局快捷键（Ctrl+N/F/S/Esc/1-5/?）和模块快捷键（Delete/Ctrl+A/D）
 18. **Prompt 字符计数**: 新建/编辑 Prompt 时实时显示字符数，查看详情时显示总字符数
@@ -509,6 +567,16 @@ skills (独立表 + 文件系统)
 23. **数据库索引**: 为 prompts(category, updated_at) 和 skills(updated_at) 添加索引
 24. **置顶功能**: Prompt 和 Skill 支持置顶，置顶项优先排列
 25. **搜索高亮**: 搜索结果中关键词以红色加粗显示
+26. **模板变量系统**: Prompt 支持 `{{变量名}}` 占位符，启用模板后复制时弹窗填写变量，支持中文变量名
+27. **全局字体大小控制**: 设置页字体大小选择器（5 个预设档位 + 自定义输入），CSS 变量 `--font-size-offset` 控制全局
+28. **设置页分组卡片布局**: 外观/存储分组卡片，现代化视觉效果
+29. **关于弹窗**: 侧边栏 LOGO 点击触发，显示版本号、项目地址、快捷键帮助
+30. **仪表盘置顶内容模块**: 显示置顶的 Prompt 和 Skill（各最多 3 个），点击跳转并闪烁
+31. **仪表盘全局搜索框**: 替代最近更新，300ms 防抖，候选下拉菜单（最多 8 条）
+32. **跳转闪烁效果**: 从仪表盘跳转后目标项红色边框+背景闪烁 3 秒
+33. **UI 阴影系统**: 5 级阴影（sm/md/lg/xl/2xl），卡片悬停效果
+34. **动画效果系统**: 3 级过渡（fast/normal/slow），模态框滑入动画，列表项入场动画
+35. **悬停复制**: 鼠标悬停在 Prompt 上时按 Ctrl+C 可复制内容
 
 ---
 
@@ -537,7 +605,7 @@ skills (独立表 + 文件系统)
 8. **前端 ID 处理**: HTML data-id 是字符串，api.js 中所有 id 参数用 `Number()` 转换
 9. **Go 空切片**: 所有返回前端的切片必须初始化为 `[]Type{}`，否则 JSON 输出 `null`
 10. **构建命令**: `wails dev`（开发）/ `wails build`（生产）/ `go run tools/seed/main.go`（测试数据：16 条 Prompt + 7 个 Skill）
-11. **设计系统**: Flat Design，无阴影无渐变，Space Grotesk 字体，SVG 图标
+11. **设计系统**: Flat Design，5 级阴影系统，3 级动画效果，Space Grotesk 字体，SVG 图标
 12. **CSS 三文件**: `variables.css`（159 行变量/主题定义）、`layout.css`（377 行布局）、`components.css`（1300+ 行组件样式）
 13. **前端路由**: app.js loadScript 去重机制，防止 const 重复声明
 14. **默认视图模式**: prompt_view_mode 和 skill_view_mode 默认值为 `card`（数据库 INSERT OR IGNORE，不覆盖已有设置）
@@ -547,7 +615,7 @@ skills (独立表 + 文件系统)
 18. **ZIP 目录扁平化**: `FlattenIfNested` 修复 ZIP 解压后多余的目录层级嵌套问题
 19. **Prompt 卡片数据**: `allPrompts` 数组缓存加载结果，右键菜单通过 ID 查找数据
 20. **版本信息**: verman 库（`gitee.com/MM-Q/verman`）构建时注入，前端 `loadVersion()` 展示，未注入时显示 "dev"
-21. **7 种主题**: light（默认）、dark、midnight（午夜蓝）、ocean（海洋蓝）、forest（森林绿）、sunset（日落橙）+ auto（跟随系统），均在 variables.css 定义
+21. **6 种主题**: light（默认）、dark、midnight（午夜蓝）、ocean（海洋蓝）、rose（玫瑰红）、lavender（薰衣草紫）+ auto（跟随系统），均在 variables.css 定义
 22. **设置页保存按钮**: `.form-actions` 使用 `justify-content: flex-end` 右对齐
 23. **golangci-lint**: errcheck（`defer xxx.Close()` → 闭包包装，非 defer → `_ =` 前缀）+ staticcheck（错误信息小写）
 24. **全局拖拽导入**: Wails `EnableFileDrop: true` + `OnFileDrop(callback, false)` 关键：`useDropTarget` 必须为 `false`，否则回调不会触发
@@ -561,3 +629,14 @@ skills (独立表 + 文件系统)
 32. **置顶功能**: `is_pinned` 字段（DEFAULT 0），排序 `is_pinned DESC, updated_at DESC`，TogglePin 方法用 CASE WHEN 切换
 33. **搜索高亮**: `highlightText(text, keyword)` 函数，先转义 HTML 再正则替换，`<mark>` 标签红色加粗显示
 34. **标签点击筛选**: 点击标签填入搜索框，复用现有搜索逻辑（tags LIKE 匹配），无需独立筛选状态
+35. **全局字体偏移**: CSS 变量 `--font-size-offset: 0px`，所有 `font-size` 使用 `calc(XXpx + var(--font-size-offset))`
+36. **数据库字体设置**: `font_size_offset` 设置项，存储用户选择的字体大小偏移值
+37. **关于弹窗**: `app.js showAboutDialog()` 显示版本号、项目地址、快捷键帮助
+38. **仪表盘全局搜索**: 300ms 防抖，调用 `API.searchPrompts` 和 `API.searchSkills`，候选下拉菜单最多 8 条
+39. **仪表盘置顶内容**: `API.getPinnedPrompts(3)` + `API.getPinnedSkills(3)`，各最多 3 个
+40. **跳转闪烁**: `App.navigate(viewName, highlightId)` 传递 ID，`highlightItem(highlightId)` 执行高亮，3 秒动画
+41. **悬停复制**: `hoveredPromptId` 追踪悬停 ID，Ctrl+C 快捷键复制内容到剪贴板
+42. **模板变量格式**: 新建/编辑弹窗中显示 "占位符格式: `{{变量名}}`"，支持中文变量名
+43. **UI 阴影变量**: `--shadow-sm/md/lg/xl/2xl`，暗色主题阴影使用 `rgba(0,0,0,0.3)`
+44. **动画过渡变量**: `--transition-fast: 150ms`、`--transition: 250ms`、`--transition-slow: 400ms`，Material Design 缓动曲线
+45. **跳转闪烁动画**: `@keyframes highlight-flash`，红色边框+背景闪烁，3 秒后移除类
