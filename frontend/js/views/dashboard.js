@@ -3,6 +3,8 @@
  * 显示应用概览和统计数据
  */
 const DashboardView = {
+    _searchTimer: null,
+
     /**
      * 渲染仪表盘视图
      * @param {HTMLElement} container - 容器元素
@@ -37,6 +39,19 @@ const DashboardView = {
                         </div>
                     </div>
                 </div>
+
+                <div class="global-search-wrapper">
+                    <div class="global-search-box">
+                        <div class="global-search-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                        </div>
+                        <input type="text" class="global-search-input" id="global-search" placeholder="搜索提示词或技能..." autocomplete="off" />
+                        <div class="search-dropdown" id="search-dropdown" style="display: none;"></div>
+                    </div>
+                </div>
+
                 <div class="card pinned-section">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -58,31 +73,12 @@ const DashboardView = {
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">最近更新</h3>
-                    </div>
-                    <div class="card-body">
-                        <div id="recent-items">
-                            <div class="empty-state">
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-bottom: 12px;">
-                                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
-                                    <polyline points="13 2 13 9 20 9"/>
-                                </svg>
-                                <div class="empty-state-text">暂无数据</div>
-                                <div class="empty-state-hint">添加一些 Prompt 或 Skill 开始使用吧</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         `;
         try {
-            const [promptCount, skillCount, recentPrompts, recentSkills, pinnedPrompts, pinnedSkills] = await Promise.all([
+            const [promptCount, skillCount, pinnedPrompts, pinnedSkills] = await Promise.all([
                 API.countPrompts(),
                 API.countSkills(),
-                API.getRecentPrompts(5),
-                API.getRecentSkills(5),
                 API.getPinnedPrompts(3),
                 API.getPinnedSkills(3)
             ]);
@@ -91,26 +87,6 @@ const DashboardView = {
             container.querySelectorAll('.stat-card[data-view]').forEach(card => {
                 card.addEventListener('click', () => App.navigate(card.dataset.view));
             });
-            const recentItems = document.getElementById('recent-items');
-            const all = [
-                ...(recentPrompts || []).map(p => ({ name: p.name, type: 'Prompt', id: p.id, updated_at: p.updated_at })),
-                ...(recentSkills || []).map(s => ({ name: s.name, type: 'Skill', id: s.id, updated_at: s.updated_at }))
-            ].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 5);
-            if (all.length > 0) {
-                let html = '<div class="table-container"><table class="table"><thead><tr><th>名称</th><th>类型</th><th>更新时间</th></tr></thead><tbody>';
-                all.forEach(item => {
-                    const time = new Date(item.updated_at).toLocaleString('zh-CN');
-                    const tagClass = item.type === 'prompt' ? 'tag-blue' : 'tag-teal';
-                    const typeTagClass = item.type === 'Prompt' ? 'tag-blue' : 'tag-teal';
-                    html += `<tr class="recent-item-row" data-view="${item.type.toLowerCase()}s" data-id="${item.id}" style="cursor: pointer;"><td><strong>${escapeHtml(item.name)}</strong></td><td><span class="tag ${typeTagClass}">${item.type}</span></td><td class="text-secondary">${time}</td></tr>`;
-                });
-                html += '</tbody></table></div>';
-                recentItems.innerHTML = html;
-
-                recentItems.querySelectorAll('.recent-item-row').forEach(row => {
-                    row.addEventListener('click', () => App.navigate(row.dataset.view, Number(row.dataset.id)));
-                });
-            }
 
             const pinnedItems = document.getElementById('pinned-items');
             const allPinned = [
@@ -140,9 +116,133 @@ const DashboardView = {
                     el.addEventListener('click', () => App.navigate(el.dataset.view, Number(el.dataset.id)));
                 });
             }
+
+            this.bindSearchEvents();
         } catch (err) {
             console.error('加载仪表盘数据失败:', err);
         }
+    },
+
+    /**
+     * 绑定搜索框事件
+     */
+    bindSearchEvents() {
+        const searchInput = document.getElementById('global-search');
+        const dropdown = document.getElementById('search-dropdown');
+
+        if (!searchInput || !dropdown) return;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(DashboardView._searchTimer);
+            const keyword = searchInput.value.trim();
+            if (!keyword) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            DashboardView._searchTimer = setTimeout(() => {
+                DashboardView.performSearch(keyword, dropdown);
+            }, 300);
+        });
+
+        searchInput.addEventListener('focus', () => {
+            const keyword = searchInput.value.trim();
+            if (keyword && dropdown.innerHTML) {
+                dropdown.style.display = 'block';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.global-search-wrapper')) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+                searchInput.blur();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && App.currentView === 'dashboard') {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
+        });
+    },
+
+    /**
+     * 执行搜索并渲染结果
+     * @param {string} keyword - 搜索关键词
+     * @param {HTMLElement} dropdown - 下拉菜单元素
+     */
+    async performSearch(keyword, dropdown) {
+        try {
+            const [prompts, skills] = await Promise.all([
+                API.getPrompts(keyword, 'all', ''),
+                API.getSkills()
+            ]);
+
+            const lowerKeyword = keyword.toLowerCase();
+            const filteredSkills = (skills || []).filter(s =>
+                (s.name && s.name.toLowerCase().includes(lowerKeyword)) ||
+                (s.description && s.description.toLowerCase().includes(lowerKeyword))
+            );
+
+            const results = [
+                ...(prompts || []).map(p => ({ name: p.name, type: 'Prompt', id: p.id })),
+                ...filteredSkills.map(s => ({ name: s.name, type: 'Skill', id: s.id }))
+            ].slice(0, 8);
+
+            if (results.length === 0) {
+                dropdown.innerHTML = '<div class="search-dropdown-empty">未找到匹配结果</div>';
+                dropdown.style.display = 'block';
+                return;
+            }
+
+            let html = '';
+            results.forEach(item => {
+                const tagClass = item.type === 'Prompt' ? 'tag-blue' : 'tag-teal';
+                const icon = item.type === 'Prompt'
+                    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+                    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+                const highlightedName = DashboardView.highlightText(item.name, keyword);
+                html += `
+                    <div class="search-result-item" data-view="${item.type.toLowerCase()}s" data-id="${item.id}">
+                        <div class="search-result-icon ${item.type === 'Prompt' ? 'search-icon-blue' : 'search-icon-teal'}">${icon}</div>
+                        <span class="search-result-name">${highlightedName}</span>
+                        <span class="tag tag-sm ${tagClass}">${item.type}</span>
+                    </div>
+                `;
+            });
+            dropdown.innerHTML = html;
+            dropdown.style.display = 'block';
+
+            dropdown.querySelectorAll('.search-result-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    dropdown.style.display = 'none';
+                    document.getElementById('global-search').value = '';
+                    App.navigate(el.dataset.view, Number(el.dataset.id));
+                });
+            });
+        } catch (err) {
+            console.error('搜索失败:', err);
+        }
+    },
+
+    /**
+     * 高亮搜索关键词
+     * @param {string} text - 原始文本
+     * @param {string} keyword - 搜索关键词
+     * @returns {string} 高亮后的 HTML
+     */
+    highlightText(text, keyword) {
+        if (!text || !keyword) return escapeHtml(text);
+        const escaped = escapeHtml(text);
+        const escapedKeyword = escapeHtml(keyword);
+        const regex = new RegExp(`(${escapedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return escaped.replace(regex, '<span class="search-highlight">$1</span>');
     }
 };
-

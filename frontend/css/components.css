@@ -1721,3 +1721,118 @@ tr.highlight-flash {
         background-color: rgba(239, 68, 68, 0.15);
     }
 }
+
+/* ==================== 仪表盘全局搜索 ==================== */
+
+.global-search-wrapper {
+    margin-bottom: var(--spacing-3);
+}
+
+.global-search-box {
+    position: relative;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.global-search-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.global-search-icon {
+    position: absolute;
+    left: var(--spacing-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.global-search-input {
+    width: 100%;
+    padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) 48px;
+    border: none;
+    background: transparent;
+    font-size: calc(15px + var(--font-size-offset));
+    color: var(--text-primary);
+    outline: none;
+}
+
+.global-search-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.search-dropdown-empty {
+    padding: var(--spacing-4);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: calc(13px + var(--font-size-offset));
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3);
+    cursor: pointer;
+    transition: background-color var(--transition);
+}
+
+.search-result-item:hover {
+    background-color: var(--bg-page);
+}
+
+.search-result-item:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+}
+
+.search-result-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.search-icon-blue {
+    background-color: var(--accent-light);
+    color: var(--accent);
+}
+
+.search-icon-teal {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.search-result-name {
+    flex: 1;
+    font-size: calc(14px + var(--font-size-offset));
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.search-highlight {
+    color: var(--danger);
+    font-weight: 600;
+}
