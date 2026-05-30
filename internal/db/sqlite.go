@@ -155,5 +155,9 @@ func insertDefaultSettings(db *sql.DB) error {
 		return fmt.Errorf("插入默认字体大小偏移量设置失败: %w", err)
 	}
 
+	if _, err := db.Exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('font_family', '')"); err != nil {
+		return fmt.Errorf("插入默认字体族设置失败: %w", err)
+	}
+
 	return nil
 }

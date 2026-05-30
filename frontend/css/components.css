@@ -1879,3 +1879,52 @@ tr.highlight-flash {
     color: var(--danger);
     font-weight: 600;
 }
+
+/* ==================== 字体族选择器 ==================== */
+
+.settings-font-family-control {
+    width: 300px;
+}
+
+.font-family-selector {
+    position: relative;
+    width: 100%;
+}
+
+.font-family-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    display: none;
+}
+
+.font-family-dropdown.active {
+    display: block;
+}
+
+.font-family-option {
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.font-family-option:hover {
+    background: var(--accent-light);
+}
+
+.font-family-option.selected {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+.font-family-preview {
+    font-size: calc(14px + var(--font-size-offset));
+}

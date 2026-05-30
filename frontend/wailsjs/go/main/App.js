@@ -110,6 +110,10 @@ export function GetSkills() {
   return window['go']['main']['App']['GetSkills']();
 }
 
+export function GetSystemFonts() {
+  return window['go']['main']['App']['GetSystemFonts']();
+}
+
 export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }

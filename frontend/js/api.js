@@ -23,6 +23,7 @@ const API = {
     updateSetting: (key, value) => API.call(window.go.main.App.UpdateSetting, key, value),
     updateSettings: (settings) => API.call(window.go.main.App.UpdateSettings, settings),
     getSkillStoragePath: () => API.call(window.go.main.App.GetSkillStoragePath),
+    getSystemFonts: () => API.call(window.go.main.App.GetSystemFonts),
     getVersion: () => API.call(window.go.main.App.GetVersion),
     getDataStats: () => API.call(window.go.main.App.GetDataStats),
     getOrphanSkills: () => API.call(window.go.main.App.GetOrphanSkills),

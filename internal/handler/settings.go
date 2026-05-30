@@ -10,6 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"psm/internal/service"
+	"psm/internal/utils"
 )
 
 // SettingsHandler 处理设置相关的方法，嵌入到 App 结构体
@@ -142,4 +143,9 @@ func (h *SettingsHandler) SelectDirectoryDialog() (string, error) {
 	return runtime.OpenDirectoryDialog(h.ctx, runtime.OpenDialogOptions{
 		Title: "选择目录",
 	})
+}
+
+// GetSystemFonts 获取系统已安装的字体族列表
+func (h *SettingsHandler) GetSystemFonts() []string {
+	return utils.GetSystemFonts()
 }

@@ -186,6 +186,11 @@ const App = {
             // 应用字体大小偏移量
             const fontSizeOffset = App.settings.font_size_offset || '0px';
             document.documentElement.style.setProperty('--font-size-offset', fontSizeOffset);
+            // 应用字体族
+            const fontFamily = App.settings.font_family || '';
+            if (fontFamily) {
+                document.documentElement.style.setProperty('--font-family', `'${fontFamily}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`);
+            }
             if (sidebar && App.settings.sidebar_collapsed === 'true') {
                 sidebar.classList.add('collapsed');
             }

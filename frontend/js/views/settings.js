@@ -65,6 +65,23 @@ const SettingsView = {
                                 <span class="settings-unit">px</span>
                             </div>
                         </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">字体族</span>
+                                <span class="settings-row-desc">选择应用界面的字体</span>
+                            </div>
+                            <div class="settings-row-control settings-font-family-control">
+                                <div class="font-family-selector">
+                                    <input type="text" id="setting-font-family-search" class="form-input" placeholder="搜索字体..." autocomplete="off" />
+                                    <div id="setting-font-family-dropdown" class="font-family-dropdown">
+                                        <div class="font-family-option" data-value="">
+                                            <span class="font-family-preview" style="font-family: 'Space Grotesk'">默认 (Space Grotesk)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="setting-font-family" value="" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -125,7 +142,7 @@ const SettingsView = {
     },
 
     /**
-     * 加载当前设置到表单，包括主题、字体大小和存储路径
+     * 加载当前设置到表单，包括主题、字体大小、字体族和存储路径
      */
     async loadSettings() {
         try {
@@ -152,6 +169,12 @@ const SettingsView = {
             }
 
             this.applyFontSize(offsetValue);
+
+            const fontFamily = settings.font_family || '';
+            document.getElementById('setting-font-family').value = fontFamily;
+            document.getElementById('setting-font-family-search').value = fontFamily || '默认 (Space Grotesk)';
+
+            await this.loadSystemFonts(fontFamily);
         } catch (err) {
             Toast.error('加载设置失败');
         }
@@ -164,6 +187,44 @@ const SettingsView = {
     applyFontSize(offset) {
         const value = offset + 'px';
         document.documentElement.style.setProperty('--font-size-offset', value);
+    },
+
+    /**
+     * 加载系统字体列表到下拉框
+     * @param {string} selectedFont - 当前选中的字体
+     */
+    async loadSystemFonts(selectedFont) {
+        try {
+            const fonts = await API.getSystemFonts();
+            const dropdown = document.getElementById('setting-font-family-dropdown');
+            const defaultOption = dropdown.querySelector('[data-value=""]');
+            dropdown.innerHTML = '';
+            if (defaultOption) dropdown.appendChild(defaultOption);
+
+            fonts.forEach(font => {
+                if (font.startsWith('@')) return;
+                const option = document.createElement('div');
+                option.className = 'font-family-option';
+                option.dataset.value = font;
+                if (font === selectedFont) option.classList.add('selected');
+                option.innerHTML = `<span class="font-family-preview" style="font-family: '${font}'">${font}</span>`;
+                dropdown.appendChild(option);
+            });
+        } catch (err) {
+            Toast.error('加载系统字体失败');
+        }
+    },
+
+    /**
+     * 应用字体族到根元素
+     * @param {string} family - 字体族名称
+     */
+    applyFontFamily(family) {
+        if (family) {
+            document.documentElement.style.setProperty('--font-family', `'${family}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`);
+        } else {
+            document.documentElement.style.setProperty('--font-family', "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif");
+        }
     },
 
     /**
@@ -210,16 +271,57 @@ const SettingsView = {
             }
         });
 
+        const searchInput = document.getElementById('setting-font-family-search');
+        const dropdown = document.getElementById('setting-font-family-dropdown');
+        const hiddenInput = document.getElementById('setting-font-family');
+
+        searchInput.addEventListener('focus', () => {
+            dropdown.classList.add('active');
+            const selected = dropdown.querySelector('.font-family-option.selected');
+            if (selected) {
+                selected.scrollIntoView({ block: 'nearest' });
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            const options = dropdown.querySelectorAll('.font-family-option');
+            options.forEach(option => {
+                const fontName = option.dataset.value || 'Space Grotesk';
+                option.style.display = fontName.toLowerCase().includes(query) ? '' : 'none';
+            });
+        });
+
+        dropdown.addEventListener('click', (e) => {
+            const option = e.target.closest('.font-family-option');
+            if (!option) return;
+            const value = option.dataset.value;
+            hiddenInput.value = value;
+            searchInput.value = value || '默认 (Space Grotesk)';
+            dropdown.querySelectorAll('.font-family-option').forEach(opt => opt.classList.remove('selected'));
+            option.classList.add('selected');
+            this.applyFontFamily(value);
+            dropdown.classList.remove('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.font-family-selector')) {
+                dropdown.classList.remove('active');
+            }
+        });
+
         document.getElementById('save-settings-btn').addEventListener('click', async () => {
             const theme = document.getElementById('setting-theme').value;
             const skillPath = document.getElementById('setting-skill-path').value;
             const fontSizeOffset = document.getElementById('setting-font-size-custom').value + 'px';
+            const fontFamily = document.getElementById('setting-font-family').value;
 
             try {
                 await API.updateSettings({
                     app_theme: theme,
                     skill_storage_path: skillPath,
                     font_size_offset: fontSizeOffset,
+                    font_family: fontFamily,
                 });
                 document.documentElement.setAttribute('data-theme', theme);
                 Toast.success('保存成功');

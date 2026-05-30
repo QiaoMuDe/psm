@@ -12,7 +12,7 @@
 - Prompt 的增删改查、分类筛选、搜索（含标签匹配+高亮）、JSON 选择性导入导出、置顶、模板变量（`{{变量名}}`占位符）
 - Skill 的元数据管理 + 文件系统存储（ZIP 批量导入导出、SKILL.md frontmatter 解析与同步）
 - 数据管理（完整备份恢复、数据统计、孤立数据清理、数据目录快捷打开）
-- 系统设置（存储路径配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制）
+- 系统设置（存储路径配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置）
 - 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框）
 - 全局拖拽导入（支持拖入 ZIP 文件直接导入技能）
 - 快捷键系统（全局快捷键 + 模块快捷键 + 悬停复制）
@@ -47,6 +47,7 @@ psm/
 │   └── utils/
 │       ├── archive.go               # ZIP 压缩/解压 + SKILL.md 解析/frontmatter 读写 + 导出格式处理
 │       ├── backup.go                # 完整备份恢复：ZIP 打包 data.json + Skill 文件目录
+│       ├── font.go                  # 字体工具：系统字体族列表获取（Windows API）
 │       ├── export.go                # Prompt JSON 导入导出格式处理
 │       └── path.go                  # 路径工具：ExpandHome/EnsureDir/JoinPath
 │
@@ -68,7 +69,7 @@ psm/
 │           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖）
 │           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明
 │           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/批量管理/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮
-│           ├── settings.js          # 设置页：存储路径配置 + 6 种主题切换 + 全局字体大小控制 + 分组卡片布局
+│           ├── settings.js          # 设置页：存储路径配置 + 6 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局
 │           └── data.js              # 数据管理：完整备份恢复
 │
 ├── tools/
@@ -112,6 +113,7 @@ psm/
 | 压缩工具 | ZIP 压缩/解压、SKILL.md 读写、frontmatter 解析、导出格式处理、目录扁平化 | `internal/utils/archive.go` | archive/zip |
 | 导入导出 | JSON 格式的 Prompt 元数据读写 | `internal/utils/export.go` | encoding/json |
 | 备份恢复 | 完整备份（data.json + Skill 文件）、恢复（跳过同名） | `internal/utils/backup.go` | archive/zip, encoding/json |
+| 字体工具 | 系统字体族列表获取（Windows API EnumFontFamiliesW） | `internal/utils/font.go` | syscall (Windows GDI) |
 
 ### 业务核心模块
 
@@ -577,6 +579,7 @@ skills (独立表 + 文件系统)
 33. **UI 阴影系统**: 5 级阴影（sm/md/lg/xl/2xl），卡片悬停效果
 34. **动画效果系统**: 3 级过渡（fast/normal/slow），模态框滑入动画，列表项入场动画
 35. **悬停复制**: 鼠标悬停在 Prompt 上时按 Ctrl+C 可复制内容
+36. **全局字体族设置**: 设置页字体族选择器（系统字体列表 + 搜索过滤），CSS 变量 `--font-family` 控制全局，自动滚动到选中项
 
 ---
 
@@ -640,3 +643,8 @@ skills (独立表 + 文件系统)
 43. **UI 阴影变量**: `--shadow-sm/md/lg/xl/2xl`，暗色主题阴影使用 `rgba(0,0,0,0.3)`
 44. **动画过渡变量**: `--transition-fast: 150ms`、`--transition: 250ms`、`--transition-slow: 400ms`，Material Design 缓动曲线
 45. **跳转闪烁动画**: `@keyframes highlight-flash`，红色边框+背景闪烁，3 秒后移除类
+46. **全局字体族变量**: CSS 变量 `--font-family`，默认 `'Space Grotesk', -apple-system, ...`
+47. **数据库字体族设置**: `font_family` 设置项，存储用户选择的字体族名称
+48. **系统字体获取**: `internal/utils/font.go` 使用 Windows API `EnumFontFamiliesW` 获取系统字体列表
+49. **字体下拉滚动**: 下拉框显示时 `scrollIntoView({ block: 'nearest' })` 自动滚动到选中项
+50. **字体回退机制**: 如果用户选择的字体不存在，自动回退到默认字体
