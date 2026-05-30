@@ -124,6 +124,7 @@ func createTables(db *sql.DB) error {
 }
 
 // insertDefaultSettings 插入默认的系统设置项，已存在的设置不会被覆盖
+// 其中 font_size_offset 用于控制前端全局字体大小偏移量（支持 CSS 单位）
 func insertDefaultSettings(db *sql.DB) error {
 	skillPath, err := expandHome("~/.psm/skills")
 	if err != nil {
@@ -148,6 +149,10 @@ func insertDefaultSettings(db *sql.DB) error {
 		if _, err := stmt.Exec(key, value); err != nil {
 			return fmt.Errorf("插入默认设置 [%s=%s] 失败: %w", key, value, err)
 		}
+	}
+
+	if _, err := db.Exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('font_size_offset', '0px')"); err != nil {
+		return fmt.Errorf("插入默认字体大小偏移量设置失败: %w", err)
 	}
 
 	return nil

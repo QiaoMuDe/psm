@@ -38,14 +38,14 @@
 }
 
 .app-title {
-    font-size: 20px;
+    font-size: calc(20px + var(--font-size-offset));
     font-weight: 700;
     color: #FFFFFF;
     letter-spacing: -0.5px;
 }
 
 .app-subtitle {
-    font-size: 11px;
+    font-size: calc(11px + var(--font-size-offset));
     color: var(--text-sidebar);
     margin-top: 2px;
     opacity: 0.6;
@@ -104,7 +104,7 @@
 }
 
 .nav-text {
-    font-size: 14px;
+    font-size: calc(14px + var(--font-size-offset));
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;

@@ -183,6 +183,9 @@ const App = {
         try {
             App.settings = await API.getSettings();
             document.documentElement.setAttribute('data-theme', App.settings.app_theme || 'light');
+            // 应用字体大小偏移量
+            const fontSizeOffset = App.settings.font_size_offset || '0px';
+            document.documentElement.style.setProperty('--font-size-offset', fontSizeOffset);
             if (sidebar && App.settings.sidebar_collapsed === 'true') {
                 sidebar.classList.add('collapsed');
             }
@@ -192,6 +195,11 @@ const App = {
         App.navigate('dashboard');
         ContextMenu.init();
         ShortcutManager.init();
+        // 绑定 LOGO 点击事件
+        const logoBtn = document.getElementById('app-logo-btn');
+        const titleGroup = document.querySelector('.app-title-group');
+        if (logoBtn) logoBtn.addEventListener('click', () => App.showAboutDialog());
+        if (titleGroup) titleGroup.addEventListener('click', () => App.showAboutDialog());
         App.initGlobalDragDrop();
     },
 
@@ -259,6 +267,71 @@ const App = {
                     <div class="empty-state-hint">${escapeHtml(err.message || '请检查后端服务是否启动')}</div>
                 </div>`;
         }
+    },
+
+    /**
+     * 显示关于弹窗（展示应用名称、版本号及快捷键说明入口）
+     */
+    async showAboutDialog() {
+        let version = 'dev';
+        try {
+            const v = await API.getVersion();
+            version = v.git_version && v.git_version !== 'unknown' ? v.git_version : 'dev';
+        } catch (err) {
+            // 使用默认值
+        }
+
+        const content = `
+            <div class="about-dialog">
+                <div class="about-logo">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <div class="about-name">PSM</div>
+                <div class="about-fullname">Skill & Prompt Manager</div>
+                <div class="about-version">v${escapeHtml(version)}</div>
+                <div class="about-desc">统一管理 AI 开发中的 Skill（技能包）和 Prompt（提示词）</div>
+                <div class="about-link">
+                    <a href="#" id="about-project-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                        </svg>
+                        gitee.com/MM-Q/psm
+                    </a>
+                </div>
+                <div class="about-divider"></div>
+                <div class="about-actions">
+                    <button class="btn btn-default" id="about-shortcut-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        快捷键说明
+                    </button>
+                </div>
+            </div>
+        `;
+
+        Modal.open('关于 PSM', content, { width: '360px' });
+
+        document.getElementById('about-shortcut-btn').addEventListener('click', () => {
+            Modal.close();
+            setTimeout(() => {
+                if (typeof ShortcutManager !== 'undefined') ShortcutManager.showHelp();
+            }, 200);
+        });
+
+        document.getElementById('about-project-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.runtime && window.runtime.BrowserOpenURL) {
+                window.runtime.BrowserOpenURL('https://gitee.com/MM-Q/psm');
+            }
+        });
     },
 
     _dragCounter: 0,

@@ -30,6 +30,8 @@
     --spacing-6: 48px;
     --sidebar-width: 220px;
     --sidebar-collapsed: 60px;
+    /* 全局字体大小偏移量，用于统一缩放所有字号，配合 calc() 使用 */
+    --font-size-offset: 0px;
 }
 
 [data-theme="dark"] {
@@ -140,7 +142,7 @@ body {
     background-color: var(--bg-page);
     color: var(--text-primary);
     line-height: 1.5;
-    font-size: 14px;
+    font-size: calc(14px + var(--font-size-offset));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
