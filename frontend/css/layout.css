@@ -1,8 +1,9 @@
 /* ==================== 侧边栏 ==================== */
 
+/* 侧边栏容器 - 使用渐变背景增强视觉层次 */
 .sidebar {
     width: var(--sidebar-width);
-    background-color: var(--bg-sidebar);
+    background: linear-gradient(180deg, var(--bg-sidebar) 0%, #0a0f1a 100%);
     color: var(--text-sidebar);
     display: flex;
     flex-direction: column;
@@ -58,6 +59,7 @@
     overflow-x: hidden;
 }
 
+/* 导航项 - 支持平滑过渡和悬停位移动画 */
 .nav-item {
     display: flex;
     align-items: center;
@@ -65,16 +67,19 @@
     color: var(--text-sidebar);
     text-decoration: none;
     border-radius: var(--radius);
-    transition: background-color var(--transition), color var(--transition);
+    transition: all var(--transition);
     margin-bottom: 2px;
     position: relative;
     cursor: pointer;
     gap: var(--spacing-2);
+    transform: translateX(0);
 }
 
+/* 导航项悬停 - 向右微移增强交互反馈 */
 .nav-item:hover {
     background-color: var(--bg-sidebar-hover);
     color: var(--text-sidebar-active);
+    transform: translateX(4px);
 }
 
 .nav-item.active {
@@ -82,6 +87,7 @@
     color: var(--text-sidebar-active);
 }
 
+/* 活动状态指示器 - 左侧竖条带平滑高度过渡 */
 .nav-item.active::before {
     content: '';
     position: absolute;
@@ -92,6 +98,7 @@
     height: 20px;
     background-color: var(--accent);
     border-radius: 0 2px 2px 0;
+    transition: height var(--transition);
 }
 
 .nav-icon {
