@@ -8,6 +8,7 @@ const PromptsView = {
     currentView: App.settings.prompt_view_mode || 'card',
     selectedIds: new Set(),
     batchMode: false,
+    currentTag: '',
     allPrompts: [],
 
     /**
@@ -134,7 +135,7 @@ const PromptsView = {
         listEl.innerHTML = '<div class="loading">加载中...</div>';
 
         try {
-            const prompts = await API.getPrompts(PromptsView.currentKeyword, PromptsView.currentCategory);
+            const prompts = await API.getPrompts(PromptsView.currentKeyword, PromptsView.currentCategory, PromptsView.currentTag);
             this.allPrompts = prompts;
 
             if (prompts.length === 0) {
@@ -173,7 +174,7 @@ const PromptsView = {
             const time = new Date(p.updated_at).toLocaleString('zh-CN');
             let tags = [];
             try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
-            const tagsHtml = tags.map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('');
+            const tagsHtml = tags.map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('');
             const contentEscaped = escapeHtml(p.content);
             html += `<tr data-id="${p.id}">
                 <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${p.id}" /></td>
@@ -217,7 +218,7 @@ const PromptsView = {
         prompts.forEach(p => {
             let tags = [];
             try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
-            const tagsHtml = tags.slice(0, 4).map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('');
+            const tagsHtml = tags.slice(0, 4).map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('');
             const contentEscaped = escapeHtml(p.content);
             html += `<div class="item-card" data-id="${p.id}">
                 <div class="card-checkbox-wrap">
@@ -481,6 +482,10 @@ const PromptsView = {
     bindEvents() {
         document.getElementById('prompt-search').addEventListener('input', (e) => {
             PromptsView.currentKeyword = e.target.value;
+            if (e.target.value) {
+                PromptsView.currentTag = '';
+                PromptsView.updateTagFilter();
+            }
             clearTimeout(PromptsView._searchTimer);
             PromptsView._searchTimer = setTimeout(() => this.loadPrompts(), 100);
         });
@@ -540,6 +545,18 @@ const PromptsView = {
             'delete': () => { if (this.batchMode && this.selectedIds.size > 0) this.handleBatchDelete(); },
             'ctrl+a': (e) => { e.preventDefault(); if (this.batchMode) this.toggleSelectAll(true); },
             'ctrl+d': () => { if (this.batchMode) this.toggleSelectAll(false); },
+        });
+
+        document.getElementById('prompt-list').addEventListener('click', (e) => {
+            const tagEl = e.target.closest('.tag-clickable');
+            if (!tagEl) return;
+            e.stopPropagation();
+            const tag = tagEl.dataset.tag;
+            if (tag) {
+                PromptsView.currentKeyword = tag;
+                document.getElementById('prompt-search').value = tag;
+                this.loadPrompts();
+            }
         });
     },
 

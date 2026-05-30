@@ -67,9 +67,9 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 	var args []interface{}
 
 	if keyword != "" {
-		query += " AND (name LIKE ? OR content LIKE ?)"
+		query += " AND (name LIKE ? OR content LIKE ? OR tags LIKE ?)"
 		like := "%" + keyword + "%"
-		args = append(args, like, like)
+		args = append(args, like, like, like)
 	}
 
 	if category != "" && category != "all" {

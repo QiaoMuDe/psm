@@ -123,7 +123,7 @@ func (a *App) GetPrompt(id int64) (*db.Prompt, error) {
 	return a.promptSvc.GetPrompt(id)
 }
 
-// GetPrompts 获取 Prompt 列表
+// GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
 func (a *App) GetPrompts(keyword, category string) ([]db.Prompt, error) {
 	return a.promptSvc.GetPrompts(keyword, category)
 }
