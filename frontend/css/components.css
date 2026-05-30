@@ -571,6 +571,120 @@
     color: var(--danger);
 }
 
+/* ==================== 详情视图 ==================== */
+
+.detail-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+.detail-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.detail-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.detail-meta-item svg {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.detail-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.detail-content {
+    background-color: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+.detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-2);
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.detail-files-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.detail-files-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background-color: var(--bg-page);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.detail-file-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.detail-file-icon svg {
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
 /* ==================== 分隔线 ==================== */
 
 .divider {

@@ -260,12 +260,17 @@ const SkillsView = {
 
         container.querySelectorAll('tr[data-id]').forEach(row => {
             row.addEventListener('click', (e) => {
+                if (!this.batchMode) return;
                 if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
                 const cb = row.querySelector('.row-checkbox');
                 if (cb) {
                     cb.checked = !cb.checked;
                     cb.dispatchEvent(new Event('change'));
                 }
+            });
+            row.addEventListener('dblclick', (e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
+                this.viewSkill(Number(row.dataset.id));
             });
             row.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -275,12 +280,17 @@ const SkillsView = {
 
         container.querySelectorAll('.item-card[data-id]').forEach(card => {
             card.addEventListener('click', (e) => {
+                if (!this.batchMode) return;
                 if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
                 const cb = card.querySelector('.card-checkbox');
                 if (cb) {
                     cb.checked = !cb.checked;
                     cb.dispatchEvent(new Event('change'));
                 }
+            });
+            card.addEventListener('dblclick', (e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
+                this.viewSkill(Number(card.dataset.id));
             });
             card.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -596,45 +606,77 @@ const SkillsView = {
             const skill = await API.getSkill(id);
             const files = await API.listSkillFiles(id);
 
-            let filesHtml = '<div class="mt-16"><h4>文件列表</h4>';
-            if (files.length === 0) {
-                filesHtml += '<p class="text-secondary mt-8">暂无文件</p>';
-            } else {
-                filesHtml += '<div class="table-container mt-8"><table class="table"><thead><tr><th>名称</th><th>类型</th><th>大小</th><th>修改时间</th></tr></thead><tbody>';
-                files.forEach(f => {
+            const createdTime = new Date(skill.created_at).toLocaleString('zh-CN');
+            const updatedTime = new Date(skill.updated_at).toLocaleString('zh-CN');
+
+            const folderIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+            const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+
+            let filesHtml = '';
+            if (files.length > 0) {
+                const rows = files.map(f => {
                     const size = f.is_dir ? '-' : (f.size > 1024 ? (f.size / 1024).toFixed(1) + ' KB' : f.size + ' B');
-                    const typeLabel = f.is_dir
-                        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 目录`
-                        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg> 文件`;
-                    filesHtml += `<tr><td>${escapeHtml(f.name)}</td><td>${typeLabel}</td><td>${size}</td><td>${f.mod_time}</td></tr>`;
-                });
-                filesHtml += '</tbody></table></div>';
+                    const icon = f.is_dir ? folderIcon : fileIcon;
+                    const typeText = f.is_dir ? '目录' : '文件';
+                    return `<tr>
+                        <td><span class="detail-file-icon">${icon} ${escapeHtml(f.name)}</span></td>
+                        <td>${typeText}</td>
+                        <td>${size}</td>
+                        <td>${f.mod_time}</td>
+                    </tr>`;
+                }).join('');
+
+                filesHtml = `
+                    <div class="detail-section">
+                        <div class="detail-files-header">
+                            <div class="detail-section-title">文件列表</div>
+                            <span class="detail-files-count">${files.length} 项</span>
+                        </div>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr><th>名称</th><th>类型</th><th>大小</th><th>修改时间</th></tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            } else {
+                filesHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-title">文件列表</div>
+                        <p class="text-secondary" style="font-size:13px">该技能暂无文件</p>
+                    </div>`;
             }
-            filesHtml += '</div>';
 
             const content = `
-                <div>
-                    <div class="form-group">
-                        <label class="form-label">名称</label>
-                        <div>${escapeHtml(skill.name)}</div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">描述</label>
-                        <div>${escapeHtml(skill.description || '-')}</div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">创建时间</label>
-                        <div>${new Date(skill.created_at).toLocaleString('zh-CN')}</div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">更新时间</label>
-                        <div>${new Date(skill.updated_at).toLocaleString('zh-CN')}</div>
+                <div class="detail-view">
+                    <div class="detail-header">
+                        <div class="detail-title">${escapeHtml(skill.name)}</div>
+                        ${skill.description ? `<div class="detail-description">${escapeHtml(skill.description)}</div>` : ''}
+                        <div class="detail-meta">
+                            <div class="detail-meta-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                创建于 ${createdTime}
+                            </div>
+                            <div class="detail-meta-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                </svg>
+                                更新于 ${updatedTime}
+                            </div>
+                        </div>
                     </div>
                     ${filesHtml}
+                    <div class="detail-actions">
+                        <button class="btn btn-default" onclick="Modal.close()">关闭</button>
+                    </div>
                 </div>
             `;
 
-            Modal.open('Skill 详情', content, { width: '500px' });
+            Modal.open('Skill 详情', content, { width: '600px' });
         } catch (err) {
             Toast.error('获取 Skill 详情失败');
         }

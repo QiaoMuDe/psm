@@ -269,12 +269,22 @@ const PromptsView = {
 
         container.querySelectorAll('tr[data-id]').forEach(row => {
             row.addEventListener('click', (e) => {
+                if (!this.batchMode) return;
                 if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
                 const cb = row.querySelector('.row-checkbox');
                 if (cb) {
                     cb.checked = !cb.checked;
                     cb.dispatchEvent(new Event('change'));
                 }
+            });
+            row.addEventListener('dblclick', (e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
+                const id = Number(row.dataset.id);
+                const prompt = this.allPrompts.find(p => p.id === id);
+                if (!prompt) return;
+                let tags = [];
+                try { tags = typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : (prompt.tags || []); } catch(err) { tags = []; }
+                this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', ') });
             });
             row.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -284,12 +294,22 @@ const PromptsView = {
 
         container.querySelectorAll('.item-card[data-id]').forEach(card => {
             card.addEventListener('click', (e) => {
+                if (!this.batchMode) return;
                 if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
                 const cb = card.querySelector('.card-checkbox');
                 if (cb) {
                     cb.checked = !cb.checked;
                     cb.dispatchEvent(new Event('change'));
                 }
+            });
+            card.addEventListener('dblclick', (e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.type === 'checkbox') return;
+                const id = Number(card.dataset.id);
+                const prompt = this.allPrompts.find(p => p.id === id);
+                if (!prompt) return;
+                let tags = [];
+                try { tags = typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : (prompt.tags || []); } catch(err) { tags = []; }
+                this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', ') });
             });
             card.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -623,33 +643,63 @@ const PromptsView = {
      * @param {Object} dataset - 按钮的 dataset 属性（name, content, category, tags）
      */
     viewPrompt(dataset) {
-        const tagsHtml = dataset.tags
-            ? dataset.tags.split(', ').filter(Boolean).map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join(' ')
-            : '<span class="tag">无</span>';
+        const tags = dataset.tags ? dataset.tags.split(', ').filter(Boolean) : [];
+        const tagsHtml = tags.length > 0
+            ? `<div class="detail-tags">${tags.map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('')}</div>`
+            : '<span class="tag">无标签</span>';
+
+        const category = dataset.category || '未分类';
 
         const content = `
-            <div class="form-group">
-                <label class="form-label">名称</label>
-                <div style="font-size:16px;font-weight:600;color:var(--text-primary)">${escapeHtml(dataset.name)}</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">分类</label>
-                <div><span class="tag">${escapeHtml(dataset.category || '未分类')}</span></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">标签</label>
-                <div>${tagsHtml}</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">内容</label>
-                <pre style="white-space:pre-wrap;word-wrap:break-word;background:var(--bg-page);padding:12px;border-radius:var(--radius);font-size:13px;line-height:1.6;color:var(--text-primary);border:1px solid var(--border);max-height:400px;overflow-y:auto;margin:0">${escapeHtml(dataset.content)}</pre>
-            </div>
-            <div class="form-actions">
-                <button class="btn btn-default" onclick="Modal.close()">关闭</button>
+            <div class="detail-view">
+                <div class="detail-header">
+                    <div class="detail-title">${escapeHtml(dataset.name)}</div>
+                    <div class="detail-meta">
+                        <div class="detail-meta-item">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span class="tag">${escapeHtml(category)}</span>
+                        </div>
+                    </div>
+                </div>
+                ${tags.length > 0 ? `
+                <div class="detail-section">
+                    <div class="detail-section-title">标签</div>
+                    ${tagsHtml}
+                </div>` : ''}
+                <div class="detail-section">
+                    <div class="detail-section-title">内容</div>
+                    <div class="detail-content">${escapeHtml(dataset.content)}</div>
+                </div>
+                <div class="detail-actions">
+                    <button class="btn btn-default" id="prompt-copy-btn">复制</button>
+                    <button class="btn btn-default" onclick="Modal.close()">关闭</button>
+                </div>
             </div>
         `;
 
         Modal.open('查看 Prompt', content);
+
+        const copyBtn = document.getElementById('prompt-copy-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(dataset.content);
+                    Toast.success('内容已复制到剪贴板');
+                } catch (err) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = dataset.content;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    Toast.success('内容已复制到剪贴板');
+                }
+            });
+        }
     },
 
     /**
@@ -693,7 +743,7 @@ const PromptsView = {
 
         ContextMenu.show(e.clientX, e.clientY, [
             { label: '查看', icon: viewIcon, action: () => this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', ') }) },
-            { label: '复制内容', icon: copyIcon, action: async () => {
+            { label: '复制', icon: copyIcon, action: async () => {
                 try {
                     await navigator.clipboard.writeText(prompt.content);
                     Toast.success('内容已复制到剪贴板');
