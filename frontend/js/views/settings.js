@@ -63,7 +63,11 @@ const SettingsView = {
                         </div>
                     </div>
                 </div>
-                <div class="version-info" id="version-info"></div>
+                <div class="version-info" id="version-info">
+                    <button class="shortcut-help-btn" id="shortcut-help-btn" title="快捷键说明">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </button>
+                </div>
             </div>
         `;
 
@@ -80,10 +84,15 @@ const SettingsView = {
             const el = document.getElementById('version-info');
             if (!el) return;
             const version = v.git_version && v.git_version !== 'unknown' ? v.git_version : 'dev';
+            const btn = el.querySelector('.shortcut-help-btn');
             el.textContent = `PSM ${version}`;
+            if (btn) el.appendChild(btn);
         } catch (err) {
             const el = document.getElementById('version-info');
-            if (el) el.textContent = 'PSM dev';
+            if (!el) return;
+            const btn = el.querySelector('.shortcut-help-btn');
+            el.textContent = 'PSM dev';
+            if (btn) el.appendChild(btn);
         }
     },
 
@@ -138,6 +147,10 @@ const SettingsView = {
             } catch (err) {
                 // 错误已由 API.call 处理
             }
+        });
+
+        document.getElementById('shortcut-help-btn').addEventListener('click', () => {
+            if (typeof ShortcutManager !== 'undefined') ShortcutManager.showHelp();
         });
 
     }

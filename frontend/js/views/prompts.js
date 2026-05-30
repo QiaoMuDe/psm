@@ -434,6 +434,28 @@ const PromptsView = {
     },
 
     /**
+     * 切换全选/取消全选状态
+     * @param {boolean} checked - true 全选，false 取消全选
+     */
+    toggleSelectAll(checked) {
+        const container = document.getElementById('prompt-list');
+        if (!container) return;
+        const cbSelector = this.currentView === 'card' ? '.card-checkbox' : '.row-checkbox';
+        container.querySelectorAll(cbSelector).forEach(cb => {
+            cb.checked = checked;
+            const id = Number(cb.dataset.id);
+            if (checked) {
+                this.selectedIds.add(id);
+            } else {
+                this.selectedIds.delete(id);
+            }
+        });
+        const selectAll = document.getElementById('prompt-select-all');
+        if (selectAll) selectAll.checked = checked;
+        this.updateBatchBar();
+    },
+
+    /**
      * 处理批量删除 Prompt 操作
      */
     async handleBatchDelete() {
@@ -512,6 +534,12 @@ const PromptsView = {
         document.getElementById('batch-manage-prompt-btn').addEventListener('click', () => this.toggleBatchMode());
 
         document.getElementById('prompt-exit-batch-btn').addEventListener('click', () => this.exitBatchMode());
+
+        ShortcutManager.registerView('prompts', {
+            'delete': () => { if (this.batchMode && this.selectedIds.size > 0) this.handleBatchDelete(); },
+            'ctrl+a': () => { if (this.batchMode) this.toggleSelectAll(true); },
+            'ctrl+d': () => { if (this.batchMode) this.toggleSelectAll(false); },
+        });
     },
 
     /**

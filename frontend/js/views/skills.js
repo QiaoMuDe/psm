@@ -415,6 +415,28 @@ const SkillsView = {
     },
 
     /**
+     * 切换全选/取消全选状态
+     * @param {boolean} checked - true 全选，false 取消全选
+     */
+    toggleSelectAll(checked) {
+        const container = document.getElementById('skill-list');
+        if (!container) return;
+        const cbSelector = this.currentView === 'card' ? '.card-checkbox' : '.row-checkbox';
+        container.querySelectorAll(cbSelector).forEach(cb => {
+            cb.checked = checked;
+            const id = Number(cb.dataset.id);
+            if (checked) {
+                this.selectedIds.add(id);
+            } else {
+                this.selectedIds.delete(id);
+            }
+        });
+        const selectAll = document.getElementById('skill-select-all');
+        if (selectAll) selectAll.checked = checked;
+        this.updateBatchBar();
+    },
+
+    /**
      * 处理批量删除 Skill 操作
      */
     async handleBatchDelete() {
@@ -510,6 +532,12 @@ const SkillsView = {
         document.getElementById('batch-manage-skill-btn').addEventListener('click', () => this.toggleBatchMode());
 
         document.getElementById('skill-exit-batch-btn').addEventListener('click', () => this.exitBatchMode());
+
+        ShortcutManager.registerView('skills', {
+            'delete': () => { if (this.batchMode && this.selectedIds.size > 0) this.handleBatchDelete(); },
+            'ctrl+a': () => { if (this.batchMode) this.toggleSelectAll(true); },
+            'ctrl+d': () => { if (this.batchMode) this.toggleSelectAll(false); },
+        });
     },
 
     /**
