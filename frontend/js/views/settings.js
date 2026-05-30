@@ -41,8 +41,8 @@ const SettingsView = {
                                     <option value="dark">暗色</option>
                                     <option value="midnight">午夜蓝</option>
                                     <option value="ocean">海洋蓝</option>
-                                    <option value="forest">森林绿</option>
-                                    <option value="sunset">日落橙</option>
+                                    <option value="rose">玫瑰红</option>
+                                    <option value="lavender">薰衣草紫</option>
                                     <option value="auto">跟随系统</option>
                                 </select>
                             </div>
