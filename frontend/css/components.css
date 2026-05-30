@@ -1290,12 +1290,12 @@
 /* ==================== 置顶样式 ==================== */
 
 .card-pinned {
-    border-color: var(--accent);
-    background-color: var(--accent-light);
+    border-color: var(--success);
+    background-color: rgba(16, 185, 129, 0.06);
 }
 
 .row-pinned {
-    background-color: var(--accent-light);
+    background-color: rgba(16, 185, 129, 0.06);
 }
 
 .pin-prompt-btn:hover,
@@ -1682,4 +1682,42 @@ mark {
 .tag-sm {
     padding: 2px 6px;
     font-size: calc(11px + var(--font-size-offset));
+}
+
+/* ==================== 高亮闪烁动画 ==================== */
+
+@keyframes highlight-flash {
+    0%, 100% {
+        background-color: transparent;
+        border-color: var(--border);
+    }
+    25%, 75% {
+        background-color: rgba(239, 68, 68, 0.08);
+        border-color: var(--danger);
+    }
+    50% {
+        background-color: rgba(239, 68, 68, 0.15);
+        border-color: var(--danger-hover);
+    }
+}
+
+.highlight-flash {
+    animation: highlight-flash 1s ease-in-out 3;
+    border-radius: var(--radius);
+}
+
+tr.highlight-flash {
+    animation: highlight-flash-row 1s ease-in-out 3;
+}
+
+@keyframes highlight-flash-row {
+    0%, 100% {
+        background-color: transparent;
+    }
+    25%, 75% {
+        background-color: rgba(239, 68, 68, 0.08);
+    }
+    50% {
+        background-color: rgba(239, 68, 68, 0.15);
+    }
 }

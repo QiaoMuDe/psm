@@ -93,18 +93,23 @@ const DashboardView = {
             });
             const recentItems = document.getElementById('recent-items');
             const all = [
-                ...(recentPrompts || []).map(p => ({ name: p.name, type: 'Prompt', updated_at: p.updated_at })),
-                ...(recentSkills || []).map(s => ({ name: s.name, type: 'Skill', updated_at: s.updated_at }))
+                ...(recentPrompts || []).map(p => ({ name: p.name, type: 'Prompt', id: p.id, updated_at: p.updated_at })),
+                ...(recentSkills || []).map(s => ({ name: s.name, type: 'Skill', id: s.id, updated_at: s.updated_at }))
             ].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 5);
             if (all.length > 0) {
                 let html = '<div class="table-container"><table class="table"><thead><tr><th>名称</th><th>类型</th><th>更新时间</th></tr></thead><tbody>';
                 all.forEach(item => {
                     const time = new Date(item.updated_at).toLocaleString('zh-CN');
-                    const tagClass = item.type === 'Prompt' ? 'tag-blue' : 'tag-teal';
-                    html += `<tr><td><strong>${escapeHtml(item.name)}</strong></td><td><span class="tag ${tagClass}">${item.type}</span></td><td class="text-secondary">${time}</td></tr>`;
+                    const tagClass = item.type === 'prompt' ? 'tag-blue' : 'tag-teal';
+                    const typeTagClass = item.type === 'Prompt' ? 'tag-blue' : 'tag-teal';
+                    html += `<tr class="recent-item-row" data-view="${item.type.toLowerCase()}s" data-id="${item.id}" style="cursor: pointer;"><td><strong>${escapeHtml(item.name)}</strong></td><td><span class="tag ${typeTagClass}">${item.type}</span></td><td class="text-secondary">${time}</td></tr>`;
                 });
                 html += '</tbody></table></div>';
                 recentItems.innerHTML = html;
+
+                recentItems.querySelectorAll('.recent-item-row').forEach(row => {
+                    row.addEventListener('click', () => App.navigate(row.dataset.view, Number(row.dataset.id)));
+                });
             }
 
             const pinnedItems = document.getElementById('pinned-items');
@@ -121,7 +126,7 @@ const DashboardView = {
                         ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
                         : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
                     pinnedHtml += `
-                        <div class="pinned-item" data-view="${item.type.toLowerCase()}s">
+                        <div class="pinned-item" data-view="${item.type.toLowerCase()}s" data-id="${item.id}">
                             <div class="pinned-item-icon ${item.type === 'Prompt' ? 'pinned-icon-blue' : 'pinned-icon-teal'}">${icon}</div>
                             <span class="pinned-item-name">${escapeHtml(item.name)}</span>
                             <span class="tag tag-sm ${tagClass}">${item.type}</span>
@@ -132,7 +137,7 @@ const DashboardView = {
                 pinnedItems.innerHTML = pinnedHtml;
 
                 pinnedItems.querySelectorAll('.pinned-item').forEach(el => {
-                    el.addEventListener('click', () => App.navigate(el.dataset.view));
+                    el.addEventListener('click', () => App.navigate(el.dataset.view, Number(el.dataset.id)));
                 });
             }
         } catch (err) {

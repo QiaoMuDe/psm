@@ -16,7 +16,10 @@ const PromptsView = {
      * 渲染 Prompt 管理视图
      * @param {HTMLElement} container - 容器元素
      */
-    async render(container) {
+    highlightId: null,
+
+    async render(container, highlightId = null) {
+        this.highlightId = highlightId;
         container.innerHTML = `
             <div class="page-header">
                 <h2 class="page-title">Prompt 管理</h2>
@@ -158,6 +161,11 @@ const PromptsView = {
                 this.renderCards(listEl, prompts);
             } else {
                 this.renderTable(listEl, prompts);
+            }
+
+            if (this.highlightId) {
+                this.highlightItem(this.highlightId);
+                this.highlightId = null;
             }
         } catch (err) {
             listEl.innerHTML = `<div class="empty-state">加载失败: ${escapeHtml(err.message)}</div>`;
@@ -345,6 +353,21 @@ const PromptsView = {
                 }
             });
         });
+    },
+
+    /**
+     * 高亮指定 ID 的项目并闪烁 3 秒
+     * @param {number} id - 要高亮的项目 ID
+     */
+    highlightItem(id) {
+        const el = document.querySelector(`[data-id="${id}"]`);
+        if (el) {
+            el.classList.add('highlight-flash');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                el.classList.remove('highlight-flash');
+            }, 3000);
+        }
     },
 
     /**

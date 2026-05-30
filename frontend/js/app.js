@@ -223,7 +223,7 @@ const App = {
     },
 
     /** 导航到指定视图 */
-    async navigate(viewName) {
+    async navigate(viewName, highlightId = null) {
         App.currentView = viewName;
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.view === viewName);
@@ -238,11 +238,11 @@ const App = {
                     break;
                 case 'prompts':
                     await App.loadScript('js/views/prompts.js');
-                    await PromptsView.render(container);
+                    await PromptsView.render(container, highlightId);
                     break;
                 case 'skills':
                     await App.loadScript('js/views/skills.js');
-                    await SkillsView.render(container);
+                    await SkillsView.render(container, highlightId);
                     break;
                 case 'data':
                     await App.loadScript('js/views/data.js');

@@ -9,12 +9,15 @@ const SkillsView = {
     allSkills: [],
     batchMode: false,
     _searchTimer: null,
+    highlightId: null,
 
     /**
      * 渲染 Skill 管理视图
      * @param {HTMLElement} container - 容器元素
+     * @param {number} highlightId - 要高亮的项目 ID
      */
-    async render(container) {
+    async render(container, highlightId = null) {
+        this.highlightId = highlightId;
         container.innerHTML = `
             <div class="page-header">
                 <h2 class="page-title">Skill 管理</h2>
@@ -108,6 +111,21 @@ const SkillsView = {
     },
 
     /**
+     * 高亮指定 ID 的项目并闪烁 3 秒
+     * @param {number} id - 要高亮的项目 ID
+     */
+    highlightItem(id) {
+        const el = document.querySelector(`[data-id="${id}"]`);
+        if (el) {
+            el.classList.add('highlight-flash');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                el.classList.remove('highlight-flash');
+            }, 3000);
+        }
+    },
+
+    /**
      * 加载 Skill 列表并根据当前视图模式渲染
      */
     async loadSkills() {
@@ -146,6 +164,11 @@ const SkillsView = {
                 this.renderCards(listEl, skills);
             } else {
                 this.renderTable(listEl, skills);
+            }
+
+            if (this.highlightId) {
+                this.highlightItem(this.highlightId);
+                this.highlightId = null;
             }
         } catch (err) {
             listEl.innerHTML = `<div class="empty-state">加载失败: ${escapeHtml(err.message)}</div>`;
