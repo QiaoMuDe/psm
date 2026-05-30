@@ -18,6 +18,10 @@ export function BatchImportSkills(arg1) {
   return window['go']['main']['App']['BatchImportSkills'](arg1);
 }
 
+export function CleanupOrphanSkills() {
+  return window['go']['main']['App']['CleanupOrphanSkills']();
+}
+
 export function CountPrompts() {
   return window['go']['main']['App']['CountPrompts']();
 }
@@ -56,6 +60,14 @@ export function ExportSkills(arg1, arg2) {
 
 export function GetCategories() {
   return window['go']['main']['App']['GetCategories']();
+}
+
+export function GetDataStats() {
+  return window['go']['main']['App']['GetDataStats']();
+}
+
+export function GetOrphanSkills() {
+  return window['go']['main']['App']['GetOrphanSkills']();
 }
 
 export function GetPrompt(arg1) {

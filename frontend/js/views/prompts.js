@@ -481,7 +481,8 @@ const PromptsView = {
     bindEvents() {
         document.getElementById('prompt-search').addEventListener('input', (e) => {
             PromptsView.currentKeyword = e.target.value;
-            this.loadPrompts();
+            clearTimeout(PromptsView._searchTimer);
+            PromptsView._searchTimer = setTimeout(() => this.loadPrompts(), 100);
         });
 
         document.getElementById('prompt-category').addEventListener('change', (e) => {
@@ -559,6 +560,7 @@ const PromptsView = {
                 <div class="form-group">
                     <label class="form-label">内容 *</label>
                     <textarea class="form-textarea" id="prompt-content" rows="6" required></textarea>
+                    <div class="char-count" id="prompt-char-count">0 字符</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">标签（逗号分隔）</label>
@@ -572,6 +574,14 @@ const PromptsView = {
         `;
 
         Modal.open('新建 Prompt', content);
+
+        const textarea = document.getElementById('prompt-content');
+        const charCount = document.getElementById('prompt-char-count');
+        if (textarea && charCount) {
+            const updateCount = () => { charCount.textContent = textarea.value.length + ' 字符'; };
+            textarea.addEventListener('input', updateCount);
+            updateCount();
+        }
 
         document.getElementById('prompt-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -613,6 +623,7 @@ const PromptsView = {
                     <div class="form-group">
                         <label class="form-label">内容 *</label>
                         <textarea class="form-textarea" id="prompt-content" rows="6" required>${escapeHtml(prompt.content)}</textarea>
+                        <div class="char-count" id="prompt-char-count">${prompt.content.length} 字符</div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">标签（逗号分隔）</label>
@@ -626,6 +637,13 @@ const PromptsView = {
             `;
 
             Modal.open('编辑 Prompt', content);
+
+            const textarea = document.getElementById('prompt-content');
+            const charCount = document.getElementById('prompt-char-count');
+            if (textarea && charCount) {
+                const updateCount = () => { charCount.textContent = textarea.value.length + ' 字符'; };
+                textarea.addEventListener('input', updateCount);
+            }
 
             document.getElementById('prompt-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -697,7 +715,7 @@ const PromptsView = {
                     ${tagsHtml}
                 </div>` : ''}
                 <div class="detail-section">
-                    <div class="detail-section-title">内容</div>
+                    <div class="detail-section-title">内容 <span class="char-count-inline">${dataset.content.length} 字符</span></div>
                     <div class="detail-content">${escapeHtml(dataset.content)}</div>
                 </div>
                 <div class="detail-actions">

@@ -85,8 +85,6 @@ const ShortcutManager = {
         if (combo === 'ctrl+n') {
             if (App.currentView === 'prompts') {
                 PromptsView.openCreateModal();
-            } else if (App.currentView === 'skills') {
-                SkillsView.openCreateModal();
             }
             e.preventDefault();
             return;
@@ -194,6 +192,7 @@ const App = {
         App.navigate('dashboard');
         ContextMenu.init();
         ShortcutManager.init();
+        App.initGlobalDragDrop();
     },
 
     /**
@@ -259,6 +258,92 @@ const App = {
                     <div class="empty-state-text">加载失败</div>
                     <div class="empty-state-hint">${escapeHtml(err.message || '请检查后端服务是否启动')}</div>
                 </div>`;
+        }
+    },
+
+    _dragCounter: 0,
+
+    initGlobalDragDrop() {
+        let dragBound = false;
+        if (dragBound) return;
+        dragBound = true;
+
+        document.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            App._dragCounter++;
+            if (App._dragCounter === 1) {
+                const dz = document.getElementById('global-drop-zone');
+                if (dz) dz.classList.add('active');
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        document.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            App._dragCounter--;
+            if (App._dragCounter <= 0) {
+                App._dragCounter = 0;
+                const dz = document.getElementById('global-drop-zone');
+                if (dz) dz.classList.remove('active');
+            }
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            App._dragCounter = 0;
+            const dz = document.getElementById('global-drop-zone');
+            if (dz) dz.classList.remove('active');
+        });
+
+        if (window.runtime && window.runtime.OnFileDrop) {
+            console.log('[拖拽] 注册 OnFileDrop 回调 (useDropTarget=false)');
+            window.runtime.OnFileDrop(async (x, y, paths) => {
+                console.log('[拖拽] OnFileDrop 触发, paths:', paths);
+                const zipPaths = paths.filter(p => p.toLowerCase().endsWith('.zip'));
+                if (zipPaths.length === 0) {
+                    Toast.warning('未检测到 ZIP 文件，请拖入 .zip 格式的技能包');
+                    return;
+                }
+
+                Toast.info(`正在导入 ${zipPaths.length} 个 ZIP 文件...`);
+
+                try {
+                    let result;
+                    if (zipPaths.length === 1) {
+                        result = await API.importSkillAuto(zipPaths[0]);
+                    } else {
+                        result = await API.batchImportSkills(zipPaths);
+                    }
+
+                    let parts = [];
+                    if (result.success > 0) parts.push(`成功 ${result.success}`);
+                    if (result.skipped > 0) parts.push(`${result.skipped} 个已存在已跳过`);
+                    if (result.failed > 0) parts.push(`失败 ${result.failed}`);
+
+                    if (parts.length === 0) {
+                        Toast.info('没有需要导入的技能');
+                    } else if (result.failed > 0) {
+                        let msg = `导入完成：${parts.join('，')}`;
+                        if (result.errors && result.errors.length > 0) {
+                            msg += '\n' + result.errors.slice(0, 3).join('\n');
+                        }
+                        Toast.warning(msg);
+                    } else {
+                        Toast.success(`导入完成：${parts.join('，')}`);
+                    }
+
+                    if (App.currentView !== 'skills') {
+                        App.navigate('skills');
+                    } else if (typeof SkillsView !== 'undefined') {
+                        SkillsView.loadSkills();
+                    }
+                } catch (err) {
+                    Toast.error(`导入失败：${err.message || '未知错误'}`);
+                }
+            }, false);
         }
     }
 };

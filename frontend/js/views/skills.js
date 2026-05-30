@@ -8,6 +8,7 @@ const SkillsView = {
     selectedIds: new Set(),
     allSkills: [],
     batchMode: false,
+    _searchTimer: null,
 
     /**
      * 渲染 Skill 管理视图
@@ -65,13 +66,6 @@ const SkillsView = {
                                 </button>
                             </div>
                             <div class="toolbar-separator"></div>
-                            <button class="btn btn-primary btn-sm" id="add-skill-btn">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19"/>
-                                    <line x1="5" y1="12" x2="19" y2="12"/>
-                                </svg>
-                                新建 Skill
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -461,11 +455,12 @@ const SkillsView = {
      */
     bindEvents() {
         document.getElementById('skill-search').addEventListener('input', (e) => {
-            SkillsView.currentKeyword = e.target.value.toLowerCase();
-            this.loadSkills();
+            clearTimeout(SkillsView._searchTimer);
+            SkillsView._searchTimer = setTimeout(() => {
+                SkillsView.currentKeyword = e.target.value.toLowerCase();
+                this.loadSkills();
+            }, 100);
         });
-
-        document.getElementById('add-skill-btn').addEventListener('click', () => this.openCreateModal());
 
         document.querySelectorAll('.view-toggle-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -537,45 +532,6 @@ const SkillsView = {
             'delete': () => { if (this.batchMode && this.selectedIds.size > 0) this.handleBatchDelete(); },
             'ctrl+a': () => { if (this.batchMode) this.toggleSelectAll(true); },
             'ctrl+d': () => { if (this.batchMode) this.toggleSelectAll(false); },
-        });
-    },
-
-    /**
-     * 打开新建 Skill 模态框
-     */
-    openCreateModal() {
-        const content = `
-            <form id="skill-form">
-                <div class="form-group">
-                    <label class="form-label">名称 *</label>
-                    <input type="text" class="form-input" id="skill-name" required />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">描述</label>
-                    <textarea class="form-textarea" id="skill-description" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
-                    <button type="submit" class="btn btn-primary">保存</button>
-                </div>
-            </form>
-        `;
-
-        Modal.open('新建 Skill', content);
-
-        document.getElementById('skill-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('skill-name').value.trim();
-            const description = document.getElementById('skill-description').value.trim();
-
-            try {
-                await API.createSkill(name, description);
-                Toast.success('创建成功');
-                Modal.close();
-                await this.loadSkills();
-            } catch (err) {
-                // 错误已由 API.call 处理
-            }
         });
     },
 

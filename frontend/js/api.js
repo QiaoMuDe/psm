@@ -24,6 +24,9 @@ const API = {
     updateSettings: (settings) => API.call(window.go.main.App.UpdateSettings, settings),
     getSkillStoragePath: () => API.call(window.go.main.App.GetSkillStoragePath),
     getVersion: () => API.call(window.go.main.App.GetVersion),
+    getDataStats: () => API.call(window.go.main.App.GetDataStats),
+    getOrphanSkills: () => API.call(window.go.main.App.GetOrphanSkills),
+    cleanupOrphanSkills: () => API.call(window.go.main.App.CleanupOrphanSkills),
 
     // ===== Prompt API =====
     createPrompt: (name, content, category, tags) => API.call(window.go.main.App.CreatePrompt, name, content, category, tags),

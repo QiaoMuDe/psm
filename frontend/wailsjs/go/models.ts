@@ -85,6 +85,27 @@ export namespace db {
 
 }
 
+export namespace main {
+	
+	export class DataStats {
+	    prompt_count: number;
+	    skill_count: number;
+	    db_size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DataStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.prompt_count = source["prompt_count"];
+	        this.skill_count = source["skill_count"];
+	        this.db_size = source["db_size"];
+	    }
+	}
+
+}
+
 export namespace utils {
 	
 	export class BackupRestoreResult {

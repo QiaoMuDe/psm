@@ -444,3 +444,61 @@ func (a *App) SelectDirectoryDialog() (string, error) {
 		Title: "选择目录",
 	})
 }
+
+// DataStats 数据统计信息
+type DataStats struct {
+	PromptCount int   `json:"prompt_count"`
+	SkillCount  int   `json:"skill_count"`
+	DBSize      int64 `json:"db_size"`
+}
+
+// GetDataStats 获取数据统计信息
+func (a *App) GetDataStats() (*DataStats, error) {
+	promptCount, err := a.promptSvc.CountPrompts()
+	if err != nil {
+		return nil, fmt.Errorf("统计 Prompt 失败: %w", err)
+	}
+	skillCount, err := a.skillSvc.CountSkills()
+	if err != nil {
+		return nil, fmt.Errorf("统计 Skill 失败: %w", err)
+	}
+
+	var dbSize int64
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		dbPath := filepath.Join(homeDir, ".psm", "data.db")
+		if info, err := os.Stat(dbPath); err == nil {
+			dbSize = info.Size()
+		}
+	}
+
+	return &DataStats{
+		PromptCount: promptCount,
+		SkillCount:  skillCount,
+		DBSize:      dbSize,
+	}, nil
+}
+
+// GetOrphanSkills 获取文件已不存在的孤立 Skill 列表
+func (a *App) GetOrphanSkills() ([]db.Skill, error) {
+	return a.skillSvc.GetOrphanSkills()
+}
+
+// CleanupOrphanSkills 清理孤立 Skill 数据（删除数据库中文件已不存在的记录）
+func (a *App) CleanupOrphanSkills() (int, error) {
+	orphans, err := a.skillSvc.GetOrphanSkills()
+	if err != nil {
+		return 0, fmt.Errorf("检测孤立 Skill 失败: %w", err)
+	}
+	if len(orphans) == 0 {
+		return 0, nil
+	}
+	ids := make([]int64, len(orphans))
+	for i, sk := range orphans {
+		ids[i] = sk.ID
+	}
+	if err := a.skillSvc.DeleteSkills(ids); err != nil {
+		return 0, fmt.Errorf("删除孤立 Skill 失败: %w", err)
+	}
+	return len(orphans), nil
+}

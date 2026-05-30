@@ -532,3 +532,42 @@ func (s *SkillService) CountSkills() (int, error) {
 	}
 	return count, nil
 }
+
+// GetOrphanSkills 检测文件目录已不存在的 Skill 记录
+func (s *SkillService) GetOrphanSkills() ([]db.Skill, error) {
+	storagePath, err := s.settingsSvc.GetSkillStoragePath()
+	if err != nil {
+		return nil, fmt.Errorf("获取存储路径失败: %w", err)
+	}
+
+	skills, err := s.GetSkills()
+	if err != nil {
+		return nil, err
+	}
+
+	orphans := []db.Skill{}
+	for _, sk := range skills {
+		skillDir := filepath.Join(storagePath, sk.RelativePath)
+		if _, err := os.Stat(skillDir); os.IsNotExist(err) {
+			orphans = append(orphans, sk)
+		}
+	}
+	return orphans, nil
+}
+
+// DeleteSkills 批量删除指定 ID 的 Skill 记录
+func (s *SkillService) DeleteSkills(ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	query := "DELETE FROM skills WHERE id IN (" + strings.Repeat("?,", len(ids)-1) + "?)"
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	_, err := s.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("批量删除 Skill 失败: %w", err)
+	}
+	return nil
+}
