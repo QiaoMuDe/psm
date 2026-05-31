@@ -126,17 +126,15 @@ func createTables(db *sql.DB) error {
 // insertDefaultSettings 插入默认的系统设置项，已存在的设置不会被覆盖
 // 其中 font_size_offset 用于控制前端全局字体大小偏移量（支持 CSS 单位）
 func insertDefaultSettings(db *sql.DB) error {
-	skillPath, err := expandHome("~/.psm/skills")
-	if err != nil {
-		return fmt.Errorf("展开默认技能路径失败: %w", err)
-	}
+	homeDir, _ := os.UserHomeDir()
+	appHome := filepath.Join(homeDir, ".psm")
 
 	defaults := map[string]string{
-		"skill_storage_path": skillPath,
-		"app_theme":          "light",
-		"prompt_view_mode":   "card",
-		"skill_view_mode":    "card",
-		"sidebar_collapsed":  "false",
+		"app_home":          appHome,
+		"app_theme":         "light",
+		"prompt_view_mode":  "card",
+		"skill_view_mode":   "card",
+		"sidebar_collapsed": "false",
 	}
 
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)")

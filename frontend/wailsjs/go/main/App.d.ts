@@ -32,6 +32,8 @@ export function ExportSkill(arg1:number,arg2:string):Promise<void>;
 
 export function ExportSkills(arg1:Array<number>,arg2:string):Promise<void>;
 
+export function GetAppHome():Promise<string>;
+
 export function GetCategories():Promise<Array<string>>;
 
 export function GetDataStats():Promise<handler.DataStats>;
@@ -53,8 +55,6 @@ export function GetRecentSkills(arg1:number):Promise<Array<db.Skill>>;
 export function GetSettings():Promise<Record<string, string>>;
 
 export function GetSkill(arg1:number):Promise<db.Skill>;
-
-export function GetSkillStoragePath():Promise<string>;
 
 export function GetSkills():Promise<Array<db.Skill>>;
 
@@ -101,6 +101,8 @@ export function SaveJSONFileDialog(arg1:string):Promise<string>;
 export function SaveZIPFileDialog(arg1:string):Promise<string>;
 
 export function SelectDirectoryDialog():Promise<string>;
+
+export function SetAppHome(arg1:string):Promise<void>;
 
 export function TogglePinPrompt(arg1:number):Promise<void>;
 

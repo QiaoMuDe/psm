@@ -96,18 +96,18 @@ const SettingsView = {
                         </div>
                         <div class="settings-section-info">
                             <h3 class="settings-section-title">存储</h3>
-                            <p class="settings-section-desc">管理 Skill 文件的存储位置</p>
+                            <p class="settings-section-desc">管理程序家目录，Skill 和备份文件跟随此目录</p>
                         </div>
                     </div>
                     <div class="settings-section-body">
                         <div class="settings-row settings-row-column">
                             <div class="settings-row-label">
-                                <span class="settings-row-title">Skill 存储路径</span>
-                                <span class="settings-row-desc">Skill 文件的本地存储目录</span>
+                                <span class="settings-row-title">程序家目录</span>
+                                <span class="settings-row-desc">Skill 和备份文件将存储在此目录下</span>
                             </div>
                             <div class="settings-path-row">
-                                <input type="text" class="form-input" id="setting-skill-path" readonly />
-                                <button class="btn btn-default" id="open-skill-path-btn" title="在文件管理器中打开">
+                                <input type="text" class="form-input" id="setting-app-home" readonly />
+                                <button class="btn btn-default" id="open-app-home-btn" title="在文件管理器中打开">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                                         <polyline points="15 3 21 3 21 9"/>
@@ -115,7 +115,7 @@ const SettingsView = {
                                     </svg>
                                     打开
                                 </button>
-                                <button class="btn btn-default" id="change-skill-path-btn">
+                                <button class="btn btn-default" id="change-app-home-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                                     </svg>
@@ -149,10 +149,10 @@ const SettingsView = {
     async loadSettings() {
         try {
             const settings = await API.getSettings();
-            const path = await API.getSkillStoragePath();
+            const appHome = await API.getAppHome();
 
             document.getElementById('setting-theme').value = settings.app_theme || 'light';
-            document.getElementById('setting-skill-path').value = path;
+            document.getElementById('setting-app-home').value = appHome;
 
             const fontSizeOffset = settings.font_size_offset || '0px';
             const offsetValue = parseInt(fontSizeOffset) || 0;
@@ -271,19 +271,22 @@ const SettingsView = {
             this.applyFontSize(val);
         });
 
-        document.getElementById('open-skill-path-btn').addEventListener('click', async () => {
+        document.getElementById('open-app-home-btn').addEventListener('click', async () => {
             try {
-                await API.openDataDirectory();
+                const appHome = await API.getAppHome();
+                await API.revealInExplorer(appHome);
             } catch (err) {
                 // 错误已由 API.call 处理
             }
         });
 
-        document.getElementById('change-skill-path-btn').addEventListener('click', async () => {
+        document.getElementById('change-app-home-btn').addEventListener('click', async () => {
             try {
                 const dir = await API.selectDirectoryDialog();
                 if (!dir) return;
-                document.getElementById('setting-skill-path').value = dir;
+                await API.setAppHome(dir);
+                document.getElementById('setting-app-home').value = dir;
+                Toast.success('程序家目录已更新，Skill 和备份文件已迁移');
             } catch (err) {
                 // 错误已由 API.call 处理
             }
@@ -357,14 +360,12 @@ const SettingsView = {
 
         document.getElementById('save-settings-btn').addEventListener('click', async () => {
             const theme = document.getElementById('setting-theme').value;
-            const skillPath = document.getElementById('setting-skill-path').value;
             const fontSizeOffset = document.getElementById('setting-font-size-custom').value + 'px';
             const fontFamily = document.getElementById('setting-font-family').value;
 
             try {
                 await API.updateSettings({
                     app_theme: theme,
-                    skill_storage_path: skillPath,
                     font_size_offset: fontSizeOffset,
                     font_family: fontFamily,
                 });

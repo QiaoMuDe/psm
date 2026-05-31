@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -40,16 +42,48 @@ func (h *SettingsHandler) UpdateSettings(settings map[string]string) error {
 	return h.settingsSvc.UpdateSettings(settings)
 }
 
-// GetSkillStoragePath 获取 Skill 存储的绝对路径
-func (h *SettingsHandler) GetSkillStoragePath() (string, error) {
-	return h.settingsSvc.GetSkillStoragePath()
+// GetAppHome 获取程序家目录路径
+func (h *SettingsHandler) GetAppHome() (string, error) {
+	return h.settingsSvc.GetAppHome()
 }
 
-// OpenDataDirectory 在系统文件管理器中打开数据目录
-func (h *SettingsHandler) OpenDataDirectory() error {
-	path, err := h.settingsSvc.GetSkillStoragePath()
+// SetAppHome 设置程序家目录路径，迁移 skills 和 backup 目录到新位置
+func (h *SettingsHandler) SetAppHome(newPath string) error {
+	oldPath, err := h.settingsSvc.GetAppHome()
 	if err != nil {
-		return fmt.Errorf("获取数据目录路径失败: %w", err)
+		return fmt.Errorf("获取旧家目录失败: %w", err)
+	}
+
+	if oldPath == newPath {
+		return nil
+	}
+
+	dirsToMigrate := []string{"skills", "backup"}
+	for _, dir := range dirsToMigrate {
+		src := filepath.Join(oldPath, dir)
+		dst := filepath.Join(newPath, dir)
+
+		if _, err := os.Stat(src); os.IsNotExist(err) {
+			continue
+		}
+
+		if err := utils.EnsureDir(dst); err != nil {
+			return fmt.Errorf("创建目标目录失败: %w", err)
+		}
+
+		if err := copyDir(src, dst); err != nil {
+			return fmt.Errorf("迁移 %s 目录失败: %w", dir, err)
+		}
+	}
+
+	return h.settingsSvc.UpdateSetting("app_home", newPath)
+}
+
+// OpenDataDirectory 在系统文件管理器中打开程序家目录
+func (h *SettingsHandler) OpenDataDirectory() error {
+	path, err := h.settingsSvc.GetAppHome()
+	if err != nil {
+		return fmt.Errorf("获取家目录路径失败: %w", err)
 	}
 	return exec.Command("explorer", filepath.FromSlash(path)).Start()
 }
@@ -160,4 +194,43 @@ func (h *SettingsHandler) RevealInExplorer(path string) error {
 func (h *SettingsHandler) OpenFile(path string) error {
 	cmd := exec.Command("cmd", "/c", "start", "", path)
 	return cmd.Start()
+}
+
+// copyDir 递归复制目录
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(dst, relPath)
+
+		if info.IsDir() {
+			return utils.EnsureDir(dstPath)
+		}
+
+		return copyFile(path, dstPath)
+	})
+}
+
+// copyFile 复制单个文件
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = in.Close() }()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = out.Close() }()
+
+	_, err = io.Copy(out, in)
+	return err
 }

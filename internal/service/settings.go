@@ -3,6 +3,8 @@ package service
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 	"psm/internal/utils"
 )
 
@@ -89,17 +91,23 @@ func (s *SettingsService) UpdateSettings(settings map[string]string) error {
 	return nil
 }
 
-// GetSkillStoragePath 获取 Skill 存储的绝对路径
+// GetAppHome 获取程序家目录路径
+func (s *SettingsService) GetAppHome() (string, error) {
+	path, err := s.GetSetting("app_home")
+	if err != nil {
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, ".psm"), nil
+	}
+	return utils.ExpandHome(path)
+}
+
+// GetSkillStoragePath 获取 Skill 存储的绝对路径（始终为 app_home/skills）
 func (s *SettingsService) GetSkillStoragePath() (string, error) {
-	path, err := s.GetSetting("skill_storage_path")
+	appHome, err := s.GetAppHome()
 	if err != nil {
 		return "", err
 	}
-	expanded, err := utils.ExpandHome(path)
-	if err != nil {
-		return "", fmt.Errorf("展开路径失败: %w", err)
-	}
-	return expanded, nil
+	return filepath.Join(appHome, "skills"), nil
 }
 
 // ResetSettings 重置所有设置为默认值
@@ -114,14 +122,17 @@ func (s *SettingsService) ResetSettings() error {
 		return fmt.Errorf("清空设置失败: %w", err)
 	}
 
+	homeDir, _ := os.UserHomeDir()
+	appHome := filepath.Join(homeDir, ".psm")
+
 	defaults := map[string]string{
-		"skill_storage_path": "~/.psm/skills",
-		"app_theme":          "light",
-		"prompt_view_mode":   "card",
-		"skill_view_mode":    "card",
-		"sidebar_collapsed":  "false",
-		"font_size_offset":   "0px",
-		"font_family":        "",
+		"app_home":          appHome,
+		"app_theme":         "light",
+		"prompt_view_mode":  "card",
+		"skill_view_mode":   "card",
+		"sidebar_collapsed": "false",
+		"font_size_offset":  "0px",
+		"font_family":       "",
 	}
 
 	stmt, err := tx.Prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)")

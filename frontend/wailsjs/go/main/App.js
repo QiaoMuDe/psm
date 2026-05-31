@@ -58,6 +58,10 @@ export function ExportSkills(arg1, arg2) {
   return window['go']['main']['App']['ExportSkills'](arg1, arg2);
 }
 
+export function GetAppHome() {
+  return window['go']['main']['App']['GetAppHome']();
+}
+
 export function GetCategories() {
   return window['go']['main']['App']['GetCategories']();
 }
@@ -100,10 +104,6 @@ export function GetSettings() {
 
 export function GetSkill(arg1) {
   return window['go']['main']['App']['GetSkill'](arg1);
-}
-
-export function GetSkillStoragePath() {
-  return window['go']['main']['App']['GetSkillStoragePath']();
 }
 
 export function GetSkills() {
@@ -196,6 +196,10 @@ export function SaveZIPFileDialog(arg1) {
 
 export function SelectDirectoryDialog() {
   return window['go']['main']['App']['SelectDirectoryDialog']();
+}
+
+export function SetAppHome(arg1) {
+  return window['go']['main']['App']['SetAppHome'](arg1);
 }
 
 export function TogglePinPrompt(arg1) {
