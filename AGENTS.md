@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.8.0 | 更新日期: 2026-05-31 | 分析人: AI 架构师
+> 版本: 2.9.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
 
 ---
 
@@ -11,9 +11,10 @@
 **核心业务场景**:
 - Prompt 的增删改查、分类筛选、搜索（含标签匹配+高亮）、JSON 选择性导入导出、置顶、模板变量（`{{变量名}}` / `{{变量名|默认值}}` 占位符）
 - Skill 的元数据管理 + 文件系统存储（ZIP 批量导入导出、SKILL.md frontmatter 解析与同步、标签系统）
+- AI 功能（设置页配置 API 地址/Key/模型、一键生成提示词、优化提示词、模型列表获取、连接测试）
 - 数据管理（完整备份恢复、一键备份还原、数据统计、孤立数据清理、数据重置、数据目录快捷打开）
-- 系统设置（程序家目录配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置）
-- 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框）
+- 系统设置（程序家目录配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置、AI 配置）
+- 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框、最常用提示词）
 - 全局拖拽导入（支持拖入 ZIP 文件直接导入技能）
 - 快捷键系统（全局快捷键 + 模块快捷键 + 悬停复制）
 - 批量操作增强（批量修改分类/添加移除标签/置顶取消置顶，下拉菜单交互）
@@ -37,7 +38,8 @@ psm/
 │   │   ├── settings.go              # SettingsHandler：设置/版本/文件对话框/文件操作/程序家目录管理（17 方法）
 │   │   ├── prompt.go                # PromptHandler：Prompt CRUD/导入导出/置顶（13 方法）
 │   │   ├── skill.go                 # SkillHandler：Skill CRUD/ZIP 导入导出/置顶（15 方法）
-│   │   └── backup.go                # BackupHandler：备份恢复/一键备份还原/数据统计/孤立清理（8 方法）
+│   │   ├── backup.go                # BackupHandler：备份恢复/一键备份还原/数据统计/孤立清理（8 方法）
+│   │   └── ai.go                    # AIHandler：AI 流式生成/优化/模型列表/连接测试（6 方法）
 │   ├── db/
 │   │   ├── models.go                # GORM 数据模型：Settings/Prompt(含usage_count)/Skill/SkillFile(含full_path)/ImportResult/DashboardStats
 │   │   └── gorm.go                  # GORM 初始化：数据库连接、AutoMigrate、默认设置插入
@@ -124,6 +126,7 @@ psm/
 | 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置 | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
 | Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶) | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
 | Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
+| AI 服务 | 流式生成提示词、流式优化提示词、获取模型列表、测试连接 | `internal/handler/ai.go` | 输入: 描述/内容 → 输出: Events 流式推送 |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
 | 前端 SPA | 路由管理、视图切换、组件系统（含右键菜单） | `frontend/js/app.js` + views/ | 用户交互 → API 调用 |
@@ -154,16 +157,16 @@ psm/
 ┌──────────────────▼───────────────────────────────────────┐
 │              app.go (App + 嵌入 Handler)                   │
 │  SettingsHandler / PromptHandler / SkillHandler /          │
-│  BackupHandler                                            │
-└────┬─────────────┬──────────────┬─────────────────────────┘
-     │             │              │
-┌────▼────┐ ┌─────▼─────┐ ┌─────▼─────┐
-│ Settings │ │  Prompt   │ │   Skill   │
-│ Handler  │ │  Handler  │ │  Handler  │
-└────┬─────┘ └─────┬─────┘ └─────┬─────┘
-     │             │              │
-┌────▼────┐ ┌─────▼─────┐ ┌─────▼─────┐
-│ Settings │ │  Prompt   │ │   Skill   │
+│  BackupHandler / AIHandler                                │
+└────┬─────────────┬──────────────┬──────────────┬─────────┘
+     │             │              │              │
+┌────▼────┐ ┌─────▼─────┐ ┌─────▼─────┐ ┌─────▼─────┐
+│ Settings │ │  Prompt   │ │   Skill   │ │    AI     │
+│ Handler  │ │  Handler  │ │  Handler  │ │  Handler  │
+└────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
+     │             │              │              │
+┌────▼────┐ ┌─────▼─────┐ ┌─────▼─────┐    外部 API
+│ Settings │ │  Prompt   │ │   Skill   │    (OpenAI)
 │ Service  │ │  Service  │ │  Service  │
 └────┬─────┘ └─────┬─────┘ └─────┬─────┘
      │             │              │
@@ -185,9 +188,10 @@ psm/
 
 | 模块 A | 依赖模块 B | 依赖类型 |
 |--------|-----------|----------|
-| app.go | Handler (SettingsHandler/PromptHandler/SkillHandler/BackupHandler) | 结构体嵌入 |
+| app.go | Handler (SettingsHandler/PromptHandler/SkillHandler/BackupHandler/AIHandler) | 结构体嵌入 |
 | Handler | SettingsService / PromptService / SkillService | 组合（构造函数注入） |
 | app.go | verman | 构建时版本注入（`-ldflags -X`） |
+| AIHandler | SettingsService | 方法调用（获取 API 配置） |
 | SkillService | SettingsService | 方法调用（获取存储路径） |
 | SkillService | archive.go | 工具调用（ZIP 压缩/解压/SKILL.md 读写/导出格式） |
 | PromptService | export.go | 工具调用（JSON 导入导出） |
@@ -362,6 +366,65 @@ psm/
   → 复制到新位置（copyDir）
   → 更新 settings 表 app_home 值
 → 前端刷新显示
+```
+
+**AI 一键生成提示词流程**:
+```
+用户点击工具栏"AI 生成"按钮
+→ 弹出 AI 生成模态框，输入一句话描述
+→ 点击"生成"按钮 → API.generatePrompt(description)
+→ AIHandler.GeneratePrompt:
+  → 从 settings 读取 ai_generate_prompt（系统提示词）
+  → streamChat(systemMsg, userMsg):
+    → 从 settings 读取 ai_api_url / ai_api_key / ai_model
+    → buildChatURL(apiURL) 拼接 /chat/completions
+    → POST 请求（SSE 流式响应）
+    → bufio.Scanner 逐行读取 data: 前缀
+    → 解析 choices[0].delta.content
+    → runtime.EventsEmit("ai:token", content) 推送到前端
+    → 结束时 Emit("ai:done")
+→ 前端监听 ai:token 事件，累加显示在 textarea 中
+→ 完成后解析 JSON，展示可编辑的名称+内容（淡入动画）
+→ 用户确认后打开新建表单，预填充 AI 生成结果
+```
+
+**AI 优化提示词流程**:
+```
+用户点击 Prompt 内容旁的"优化"按钮
+→ API.optimizePrompt(content) → AIHandler.OptimizePrompt
+→ 从 settings 读取 ai_optimize_prompt（系统提示词）
+→ streamChat(systemMsg, content) 流式请求
+→ 前端监听 ai:token 事件，实时覆盖 textarea 内容
+→ textarea 上方显示半透明遮罩（.ai-optimize-loading）
+→ 按钮文字从"优化"变为"还原"
+→ 用户点击"还原"→ 恢复 originalContent 闭包中的原始内容
+```
+
+**AI 获取模型列表流程**:
+```
+用户点击设置页模型名称旁的"获取模型"按钮
+→ 按钮变为旋转动画 + "获取中..."
+→ API.getAIModels() → AIHandler.GetAIModels:
+  → 从 settings 读取 ai_api_url / ai_api_key
+  → buildModelsURL(apiURL) 拼接 /models
+  → GET 请求（Authorization: Bearer apiKey）
+  → 解析响应 data[].id 列表
+→ 弹出下拉列表（.model-dropdown），顶部搜索框可过滤
+→ 当前选中模型高亮显示 ✓
+→ 点击模型项 → 自动填充到输入框
+```
+
+**AI 测试连接流程**:
+```
+用户点击设置页 API 地址旁的"测试连接"按钮
+→ 按钮变为旋转动画 + "测试中..."
+→ API.testAIConnection(apiURL, apiKey) → AIHandler.TestAIConnection
+  → buildModelsURL(apiURL) 拼接 /models
+  → GET 请求
+  → HTTP 200 → 返回"连接成功"
+  → 非 200 → 返回错误（HTTP 状态码）
+→ 成功: Toast.success("连接成功")
+→ 失败: Toast.error 错误信息
 ```
 
 **版本信息注入流程**:
@@ -547,7 +610,12 @@ settings (KV 存储)
 ├── skill_view_mode: card/list       (默认 card)
 ├── sidebar_collapsed: true/false
 ├── font_size_offset: 0px            (全局字体大小偏移)
-└── font_family: Space Grotesk       (全局字体族)
+├── font_family: Space Grotesk       (全局字体族)
+├── ai_api_url: https://api.openai.com/v1  (AI API 基础路径)
+├── ai_api_key:                     (AI API 密钥)
+├── ai_model: gpt-4o-mini           (AI 模型标识)
+├── ai_generate_prompt: ...         (AI 生成系统提示词)
+└── ai_optimize_prompt: ...         (AI 优化系统提示词)
 
 prompts (独立表)
 ├── id (PK, AUTO_INCREMENT)
@@ -702,3 +770,27 @@ skills (独立表 + 文件系统)
 51. **DropdownMenu 组件**: `DropdownMenu.show(x, y, items)` API，items 支持 `{label, action, separator}` 格式
 52. **parseTags 函数**: `parseTags(tagsValue)` 统一处理 null/"null"/"[]"/数组，返回安全数组
 53. **批量操作下拉菜单**: "更多操作"按钮位于批量操作栏右侧，点击弹出 DropdownMenu，包含修改分类/添加标签/移除标签/置顶/取消置顶
+54. **AI Handler**: `internal/handler/ai.go`，AIHandler 结构体嵌入 App，通过 `Init(ctx, settingsSvc)` 初始化
+55. **AI 流式通信**: Go 端 `runtime.EventsEmit("ai:token", content)` → JS 端 `window.runtime.EventsOn("ai:token", callback)`
+56. **AI URL 拼接**: API 地址只需配置基础路径（如 `/v1`），后端 `buildChatURL` 拼接 `/chat/completions`，`buildModelsURL` 拼接 `/models`
+57. **AI 取消机制**: `context.WithCancel` + `h.cancelFunc` 引用，`CancelAIGeneration()` 调用 cancel 终止 HTTP 请求
+58. **AI 模型列表**: `GetAIModels()` 请求 `/v1/models` 端点，返回 `[]string` 模型 ID 列表
+59. **AI 测试连接**: `TestAIConnection(apiURL, apiKey)` 接收前端输入的值（非从库读取），请求 `/v1/models` 验证
+60. **默认设置函数**: `db.DefaultSettings(appHome string) []Settings` 在 models.go 中定义，gorm 初始化和 settings 重置都引用
+61. **备份结构体字段**: `BackupPrompt` 含 Name/Content/Category/Tags/IsPinned/IsTemplate/UsageCount；`BackupSkill` 含 Name/Description/RelativePath/Tags/IsPinned
+62. **备份恢复精确去重**: 使用 `db.DB.Where("name = ?", name).Count()` 精确匹配，不再用 `GetPrompts` 的 LIKE 查询
+63. **Skill PSM 导出格式**: `.psm-skill-export` 标识文件 JSON 包含 `skills`（map[name][]tags）和 `pinned`（[]name）
+64. **Prompt JSON 导入**: Tags 直接使用 `p.Tags`（已是 JSON 字符串），不再 `MustMarshalJSON`；保留 UsageCount/CreatedAt/UpdatedAt
+65. **仪表盘隐藏滚动条**: `#view-container > .view-content` 子元素选择器精确匹配，不影响其他视图
+66. **AI 一键生成提示词**: 设置页配置 API 地址/Key/模型，Prompt 管理页工具栏"AI 生成"按钮，输入一句话描述→流式生成→审查名称+内容→确认使用
+67. **AI 优化提示词**: Prompt 新建/编辑模态框内容标签旁"优化"按钮，流式覆盖 textarea，支持还原，textarea 遮罩动画
+68. **AI 系统提示词可配置**: 设置页 AI 分组中配置生成/优化系统提示词，存入数据库 settings 表
+69. **AI 模型列表获取**: 设置页模型名称旁"获取模型"按钮，调用 `/v1/models` 端点，弹出下拉列表+搜索过滤
+70. **AI 测试连接**: 设置页 API 地址旁"测试连接"按钮，请求 `/v1/models` 验证连通性
+71. **AI 流式架构**: Go→JS 通过 Wails Events（`ai:token`/`ai:done`/`ai:error`）推送，context.WithCancel 实现请求取消
+72. **默认设置统一管理**: `db.DefaultSettings(appHome)` 函数统一定义默认设置，gorm 初始化和 settings 重置都引用此函数
+73. **备份恢复字段完整**: BackupPrompt 含 IsPinned/IsTemplate/UsageCount，BackupSkill 含 IsPinned，恢复时完整还原
+74. **Prompt JSON 导入修复**: Tags 不再双重编码，UsageCount/CreatedAt/UpdatedAt 完整保留
+75. **备份恢复精确去重**: Prompt 恢复时使用 `WHERE name = ?` 精确匹配，不再使用 LIKE 模糊匹配
+76. **Skill PSM 格式保留置顶**: `.psm-skill-export` 标识文件新增 `pinned` 字段，导入时恢复 IsPinned 状态
+77. **仪表盘滚动条隐藏**: `#view-container > .view-content` 子元素选择器精确匹配仪表盘滚动容器
