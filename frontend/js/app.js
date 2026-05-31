@@ -445,10 +445,19 @@ function parseTemplateVars(content) {
     if (!matches) return [];
     const seen = new Set();
     return matches.map(m => {
-        const name = m.slice(2, -2).trim();
+        const inner = m.slice(2, -2).trim();
+        const pipeIndex = inner.indexOf('|');
+        let name, defaultValue;
+        if (pipeIndex === -1) {
+            name = inner;
+            defaultValue = '';
+        } else {
+            name = inner.substring(0, pipeIndex).trim();
+            defaultValue = inner.substring(pipeIndex + 1).trim();
+        }
         if (seen.has(name)) return null;
         seen.add(name);
-        return name;
+        return { name, defaultValue };
     }).filter(Boolean);
 }
 
@@ -462,12 +471,16 @@ function replaceTemplateVars(content, vars) {
 }
 
 function showTemplateVarsModal(vars, callback) {
-    let fieldsHtml = vars.map(v => `
-        <div class="template-var-row">
-            <label class="var-label">{{${escapeHtml(v)}}}</label>
-            <input type="text" class="form-input template-var-input" data-var="${escapeHtml(v)}" placeholder="留空则移除" />
-        </div>
-    `).join('');
+    let fieldsHtml = vars.map(v => {
+        const hasDefault = v.defaultValue !== '';
+        const placeholder = hasDefault ? `留空则使用 ${v.defaultValue}` : '留空则移除';
+        return `
+            <div class="template-var-row">
+                <label class="var-label">{{${escapeHtml(v.name)}}}</label>
+                <input type="text" class="form-input template-var-input" data-var="${escapeHtml(v.name)}" data-default="${escapeHtml(v.defaultValue)}" placeholder="${placeholder}" />
+            </div>
+        `;
+    }).join('');
 
     const content = `
         <div class="template-vars-form">
@@ -486,7 +499,8 @@ function showTemplateVarsModal(vars, callback) {
     document.getElementById('template-copy-btn').addEventListener('click', () => {
         const values = {};
         document.querySelectorAll('.template-var-input').forEach(input => {
-            values[input.dataset.var] = input.value.trim();
+            const val = input.value.trim();
+            values[input.dataset.var] = val || input.dataset.default;
         });
         Modal.close();
         callback(values);

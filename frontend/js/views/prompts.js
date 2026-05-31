@@ -641,7 +641,7 @@ const PromptsView = {
                         <input type="checkbox" id="prompt-is-template" />
                         <span class="toggle-slider"></span>
                     </label>
-                    <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code></span>
+                    <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code> 或 <code>{{变量名|默认值}}</code></span>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
@@ -713,46 +713,46 @@ const PromptsView = {
                             <input type="checkbox" id="prompt-is-template" ${prompt.is_template ? 'checked' : ''} />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code></span>
+                        <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code> 或 <code>{{变量名|默认值}}</code></span>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
                         <button type="submit" class="btn btn-primary">保存</button>
                     </div>
                 </form>
-            `;
+        `;
 
-            Modal.open('编辑 Prompt', content);
+        Modal.open('编辑 Prompt', content);
 
-            const textarea = document.getElementById('prompt-content');
-            const charCount = document.getElementById('prompt-char-count');
-            if (textarea && charCount) {
-                const updateCount = () => { charCount.textContent = textarea.value.length + ' 字符'; };
-                textarea.addEventListener('input', updateCount);
-            }
-
-            document.getElementById('prompt-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('prompt-name').value.trim();
-                const content = document.getElementById('prompt-content').value.trim();
-                const category = document.getElementById('prompt-category-input').value.trim();
-                const tagsStr = document.getElementById('prompt-tags').value.trim();
-                const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
-                const isTemplate = document.getElementById('prompt-is-template').checked;
-
-                try {
-                    await API.updatePrompt(id, name, content, category, tags, isTemplate);
-                    Toast.success('更新成功');
-                    Modal.close();
-                    await this.loadPrompts();
-                } catch (err) {
-                    // 错误已由 API.call 处理
-                }
-            });
-        } catch (err) {
-            Toast.error('获取 Prompt 详情失败');
+        const textarea = document.getElementById('prompt-content');
+        const charCount = document.getElementById('prompt-char-count');
+        if (textarea && charCount) {
+            const updateCount = () => { charCount.textContent = textarea.value.length + ' 字符'; };
+            textarea.addEventListener('input', updateCount);
         }
-    },
+
+        document.getElementById('prompt-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('prompt-name').value.trim();
+            const content = document.getElementById('prompt-content').value.trim();
+            const category = document.getElementById('prompt-category-input').value.trim();
+            const tagsStr = document.getElementById('prompt-tags').value.trim();
+            const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
+            const isTemplate = document.getElementById('prompt-is-template').checked;
+
+            try {
+                await API.updatePrompt(id, name, content, category, tags, isTemplate);
+                Toast.success('更新成功');
+                Modal.close();
+                await this.loadPrompts();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        });
+    } catch (err) {
+        Toast.error('获取 Prompt 详情失败');
+    }
+},
 
     /**
      * 处理删除 Prompt 操作

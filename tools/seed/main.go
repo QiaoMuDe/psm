@@ -14,10 +14,11 @@ import (
 
 // testPrompt 测试用 Prompt 数据
 type testPrompt struct {
-	Name     string
-	Content  string
-	Category string
-	Tags     string
+	Name       string
+	Content    string
+	Category   string
+	Tags       string
+	IsTemplate bool
 }
 
 // testSkill 测试用 Skill 数据
@@ -71,12 +72,6 @@ var testPrompts = []testPrompt{
 		Tags:     `["性能","优化","运维"]`,
 	},
 	{
-		Name:     "多语言翻译",
-		Content:  "请将以下内容翻译成{目标语言}，保持专业术语的准确性，同时确保译文自然流畅：\n\n",
-		Category: "通用",
-		Tags:     `["翻译","多语言","通用"]`,
-	},
-	{
 		Name:     "正则表达式生成",
 		Content:  "请根据以下需求生成对应的正则表达式，并解释每个部分的含义：\n\n匹配需求：\n\n同时提供几个测试用例验证正则的正确性。",
 		Category: "开发",
@@ -123,6 +118,48 @@ var testPrompts = []testPrompt{
 		Content:  "请根据以下接口定义生成前后端联调文档：\n\n接口路径：\n请求方法：\n请求参数：\n返回结构：\n\n要求包含：请求示例、响应示例、错误码说明。",
 		Category: "开发",
 		Tags:     `["接口","联调","前后端"]`,
+	},
+	{
+		Name:       "多语言翻译",
+		Content:    "请将以下内容翻译成{{目标语言}}，保持专业术语的准确性，同时确保译文自然流畅：\n\n",
+		Category:   "通用",
+		Tags:       `["翻译","多语言","通用"]`,
+		IsTemplate: true,
+	},
+	{
+		Name:       "代码助手",
+		Content:    "你是一个{{语言|Go}}专家，请用{{风格|简洁专业}}的风格回答以下问题：\n\n",
+		Category:   "通用",
+		Tags:       `["通用","AI","角色扮演"]`,
+		IsTemplate: true,
+	},
+	{
+		Name:       "Prompt 优化器",
+		Content:    "请帮我优化以下 Prompt，使其更加{{目标|清晰有效}}：\n\n原始 Prompt：\n\n优化要求：\n- 保持{{语言|中文}}表达\n- 增加{{方面|结构化}}\n- 控制在 {{字数|500}} 字以内\n\n输出优化后的 Prompt 并说明改进点。",
+		Category:   "产品",
+		Tags:       `["Prompt","优化","AI"]`,
+		IsTemplate: true,
+	},
+	{
+		Name:       "API 接口设计",
+		Content:    "请为以下业务场景设计 RESTful API 接口：\n\n业务场景：{{场景}}\n\n要求：\n- 使用 {{风格|RESTful}} 风格\n- 返回格式统一为 JSON\n- 包含 {{版本|v1}} 版本号\n- 考虑分页（每页 {{页大小|20}} 条）\n\n请输出：接口路径、请求方法、参数说明、返回结构。",
+		Category:   "开发",
+		Tags:       `["API","设计","接口"]`,
+		IsTemplate: true,
+	},
+	{
+		Name:       "技术文档撰写",
+		Content:    "请根据以下信息撰写一份技术文档：\n\n主题：{{主题}}\n目标读者：{{读者|开发者}}\n文档深度：{{深度|中等}}\n\n要求：\n- 使用 {{格式|Markdown}} 格式\n- 包含概述、架构、使用指南、常见问题\n- 语言{{语言|中文}}",
+		Category:   "开发",
+		Tags:       `["文档","技术","写作"]`,
+		IsTemplate: true,
+	},
+	{
+		Name:       "Bug 分析报告",
+		Content:    "请分析以下 Bug 并生成结构化报告：\n\nBug 描述：{{描述}}\n复现步骤：{{步骤}}\n期望行为：{{期望}}\n实际行为：{{实际}}\n\n请从以下维度分析：\n1. 根因分析（{{分析深度|初步分析}}）\n2. 影响范围（{{影响|单个功能}}）\n3. 修复方案\n4. 预防措施",
+		Category:   "开发",
+		Tags:       `["Bug","调试","分析"]`,
+		IsTemplate: true,
 	},
 }
 
@@ -333,6 +370,195 @@ Mutex、RWMutex、WaitGroup、Once、Map 的使用场景。
 atomic 操作、无锁数据结构、context 取消传播。
 `,
 	},
+	{
+		Name:        "vue3-ts",
+		Description: "Vue 3 + TypeScript 前端开发技能。包含 Composition API、Pinia 状态管理、Vue Router、组件库集成等现代 Vue 开发实践。",
+		SKILLMD: `---
+name: vue3-ts
+description: Vue 3 + TypeScript 前端开发技能。包含 Composition API、Pinia 状态管理、Vue Router、组件库集成等现代 Vue 开发实践。
+---
+
+# vue3-ts
+
+## Composition API
+
+ref、reactive、computed、watch 的使用模式。
+
+## Pinia 状态管理
+
+Store 定义、Getters、Actions、模块化。
+
+## Vue Router
+
+路由守卫、动态路由、嵌套路由。
+
+## TypeScript 集成
+
+Props 类型定义、Emits 类型、Provide/Inject 类型。
+`,
+	},
+	{
+		Name:        "grpc-go",
+		Description: "gRPC Go 开发技能。包含 Protobuf 定义、服务端/客户端实现、拦截器、流式传输、负载均衡等 gRPC 全栈开发指南。",
+		SKILLMD: `---
+name: grpc-go
+description: gRPC Go 开发技能。包含 Protobuf 定义、服务端/客户端实现、拦截器、流式传输、负载均衡等 gRPC 全栈开发指南。
+---
+
+# grpc-go
+
+## Protobuf 定义
+
+.proto 文件编写、消息类型、服务定义。
+
+## 服务端实现
+
+gRPC Server 启动、服务注册、优雅关闭。
+
+## 拦截器
+
+Unary/Stream 拦截器实现日志、认证、限流。
+
+## 流式传输
+
+Server Streaming、Client Streaming、Bidirectional Streaming。
+`,
+	},
+	{
+		Name:        "pytest-best",
+		Description: "Python pytest 测试技能。包含 fixture、参数化、mock、插件使用、测试覆盖率分析等 Python 测试最佳实践。",
+		SKILLMD: `---
+name: pytest-best
+description: Python pytest 测试技能。包含 fixture、参数化、mock、插件使用、测试覆盖率分析等 Python 测试最佳实践。
+---
+
+# pytest-best
+
+## Fixture
+
+setup/teardown、作用域、依赖注入。
+
+## 参数化测试
+
+@pytest.mark.parametrize 多组数据驱动测试。
+
+## Mock
+
+unittest.mock / pytest-mock 模拟外部依赖。
+
+## 覆盖率
+
+pytest-cov 生成覆盖率报告，配置排除规则。
+`,
+	},
+	{
+		Name:        "terraform-aws",
+		Description: "Terraform AWS 基础设施即代码技能。包含 Provider 配置、资源定义、模块化、状态管理、CI/CD 集成等云基础设施管理指南。",
+		SKILLMD: `---
+name: terraform-aws
+description: Terraform AWS 基础设施即代码技能。包含 Provider 配置、资源定义、模块化、状态管理、CI/CD 集成等云基础设施管理指南。
+---
+
+# terraform-aws
+
+## Provider 配置
+
+AWS Provider 版本锁定、认证配置、区域设置。
+
+## 资源管理
+
+EC2、RDS、S3、VPC 等核心资源定义。
+
+## 模块化
+
+可复用模块设计、输入输出变量、模块版本管理。
+
+## 状态管理
+
+远程状态存储、状态锁、导入已有资源。
+`,
+	},
+	{
+		Name:        "tailwind-css",
+		Description: "Tailwind CSS 原子化样式技能。包含配置优化、响应式设计、暗色模式、自定义主题、组件封装等实用优先 CSS 开发指南。",
+		SKILLMD: `---
+name: tailwind-css
+description: Tailwind CSS 原子化样式技能。包含配置优化、响应式设计、暗色模式、自定义主题、组件封装等实用优先 CSS 开发指南。
+---
+
+# tailwind-css
+
+## 配置优化
+
+tailwind.config.js 自定义主题、插件、内容扫描路径。
+
+## 响应式设计
+
+sm/md/lg/xl 断点使用、移动端优先策略。
+
+## 暗色模式
+
+dark: 变体、class/媒体查询切换策略。
+
+## 组件封装
+
+@apply 指令、组件提取模式、CVA 变体管理。
+`,
+	},
+	{
+		Name:        "github-actions",
+		Description: "GitHub Actions CI/CD 技能。包含工作流编写、矩阵构建、缓存策略、Secrets 管理、自定义 Action 开发等自动化流水线指南。",
+		SKILLMD: `---
+name: github-actions
+description: GitHub Actions CI/CD 技能。包含工作流编写、矩阵构建、缓存策略、Secrets 管理、自定义 Action 开发等自动化流水线指南。
+---
+
+# github-actions
+
+## 工作流编写
+
+YAML 语法、触发器、Jobs、Steps。
+
+## 矩阵构建
+
+多平台/多版本并行测试策略。
+
+## 缓存
+
+actions/cache 加速依赖安装、构建缓存。
+
+## 自定义 Action
+
+JavaScript/Composite/Docker Action 开发与发布。
+`,
+	},
+	{
+		Name:        "flutter-mobile",
+		Description: "Flutter 移动端开发技能。包含 Widget 体系、状态管理、路由导航、原生集成、性能优化等跨平台移动应用开发指南。",
+		SKILLMD: `---
+name: flutter-mobile
+description: Flutter 移动端开发技能。包含 Widget 体系、状态管理、路由导航、原生集成、性能优化等跨平台移动应用开发指南。
+---
+
+# flutter-mobile
+
+## Widget 体系
+
+StatelessWidget / StatefulWidget、BuildContext。
+
+## 状态管理
+
+Provider / Riverpod / BLoC 模式选择。
+
+## 路由导航
+
+Navigator 2.0、命名路由、路由守卫。
+
+## 性能优化
+
+const 构造函数、RepaintBoundary、DevTools 分析。
+`,
+	},
 }
 
 func main() {
@@ -371,7 +597,7 @@ func main() {
 	fmt.Println("完成")
 
 	fmt.Print("[2/3] 注入测试 Prompt... ")
-	stmt, err := db.Prepare("INSERT INTO prompts (name, content, category, tags) VALUES (?, ?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO prompts (name, content, category, tags, is_template) VALUES (?, ?, ?, ?, ?)")
 	if err != nil {
 		fmt.Printf("失败: %v\n", err)
 		os.Exit(1)
@@ -379,12 +605,16 @@ func main() {
 	defer func() { _ = stmt.Close() }()
 
 	for _, p := range testPrompts {
-		if _, err := stmt.Exec(p.Name, p.Content, p.Category, p.Tags); err != nil {
+		isTemplate := 0
+		if p.IsTemplate {
+			isTemplate = 1
+		}
+		if _, err := stmt.Exec(p.Name, p.Content, p.Category, p.Tags, isTemplate); err != nil {
 			fmt.Printf("失败: %v\n", err)
 			os.Exit(1)
 		}
 	}
-	fmt.Printf("完成 (共 %d 条)\n", len(testPrompts))
+	fmt.Printf("完成 (共 %d 条，其中模板 %d 条)\n", len(testPrompts), countTemplates(testPrompts))
 
 	fmt.Print("[3/3] 注入测试 Skill... ")
 
@@ -416,7 +646,18 @@ func main() {
 	fmt.Printf("完成 (共 %d 个)\n\n", len(testSkills))
 
 	fmt.Println("=== 注入完成 ===")
-	fmt.Printf("Prompt: %d 条\n", len(testPrompts))
+	fmt.Printf("Prompt: %d 条 (普通 %d + 模板 %d)\n", len(testPrompts), len(testPrompts)-countTemplates(testPrompts), countTemplates(testPrompts))
 	fmt.Printf("Skill:  %d 个\n", len(testSkills))
 	fmt.Println("\n提示: 请重启 PSM 应用或刷新页面查看测试数据")
+}
+
+// countTemplates 统计模板 Prompt 的数量
+func countTemplates(prompts []testPrompt) int {
+	count := 0
+	for _, p := range prompts {
+		if p.IsTemplate {
+			count++
+		}
+	}
+	return count
 }
