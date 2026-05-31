@@ -214,3 +214,55 @@ func (h *BackupHandler) CleanupOrphanSkills() (int, error) {
 	}
 	return len(orphans), nil
 }
+
+// getBackupPath 获取一键备份的固定存储路径
+func getBackupPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("获取用户主目录失败: %w", err)
+	}
+	return filepath.Join(homeDir, ".psm", "backup", "psm-backup.zip"), nil
+}
+
+// QuickBackupInfo 获取一键备份的状态信息
+func (h *BackupHandler) QuickBackupInfo() (map[string]interface{}, error) {
+	backupPath, err := getBackupPath()
+	if err != nil {
+		return nil, err
+	}
+
+	info, statErr := os.Stat(backupPath)
+	result := map[string]interface{}{
+		"exists": statErr == nil,
+	}
+
+	if statErr == nil && info != nil {
+		result["backup_time"] = info.ModTime().Format("2006-01-02 15:04:05")
+		result["file_size"] = info.Size()
+	}
+
+	return result, nil
+}
+
+// QuickBackup 一键备份到固定路径，覆盖上次备份
+func (h *BackupHandler) QuickBackup() error {
+	backupPath, err := getBackupPath()
+	if err != nil {
+		return err
+	}
+	return h.BackupData(backupPath)
+}
+
+// QuickRestore 从固定备份路径一键还原
+func (h *BackupHandler) QuickRestore() (*utils.BackupRestoreResult, error) {
+	backupPath, err := getBackupPath()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("备份文件不存在，请先执行一键备份")
+	}
+
+	return h.RestoreData(backupPath)
+}

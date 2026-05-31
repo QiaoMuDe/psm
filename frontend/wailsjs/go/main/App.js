@@ -158,6 +158,18 @@ export function OpenZIPFileDialog() {
   return window['go']['main']['App']['OpenZIPFileDialog']();
 }
 
+export function QuickBackup() {
+  return window['go']['main']['App']['QuickBackup']();
+}
+
+export function QuickBackupInfo() {
+  return window['go']['main']['App']['QuickBackupInfo']();
+}
+
+export function QuickRestore() {
+  return window['go']['main']['App']['QuickRestore']();
+}
+
 export function ResetAllData() {
   return window['go']['main']['App']['ResetAllData']();
 }

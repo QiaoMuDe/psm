@@ -82,6 +82,12 @@ export function OpenMultiZIPFileDialog():Promise<Array<string>>;
 
 export function OpenZIPFileDialog():Promise<string>;
 
+export function QuickBackup():Promise<void>;
+
+export function QuickBackupInfo():Promise<Record<string, any>>;
+
+export function QuickRestore():Promise<utils.BackupRestoreResult>;
+
 export function ResetAllData():Promise<Record<string, number>>;
 
 export function RestoreData(arg1:string):Promise<utils.BackupRestoreResult>;

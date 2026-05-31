@@ -68,6 +68,9 @@ const API = {
     // ===== 备份恢复 API =====
     backupData: (savePath) => API.call(window.go.main.App.BackupData, savePath),
     restoreData: (zipPath) => API.call(window.go.main.App.RestoreData, zipPath),
+    quickBackupInfo: () => API.call(window.go.main.App.QuickBackupInfo),
+    quickBackup: () => API.call(window.go.main.App.QuickBackup),
+    quickRestore: () => API.call(window.go.main.App.QuickRestore),
     openDataDirectory: () => API.call(window.go.main.App.OpenDataDirectory),
 
     // ===== 文件对话框 API =====

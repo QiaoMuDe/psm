@@ -27,6 +27,23 @@ const DataView = {
                         <div class="data-stat-label">数据库大小</div>
                     </div>
                 </div>
+                <div class="card" style="border: 1px solid var(--primary);">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                            快速备份
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="quick-backup-status" style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">检测中...</div>
+                        <div style="display: flex; gap: var(--spacing-2);">
+                            <button class="btn btn-primary" id="quick-backup-btn">一键备份</button>
+                            <button class="btn btn-default" id="quick-restore-btn" disabled>一键还原</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="grid grid-3">
                     <div class="card">
                         <div class="card-header">
@@ -107,6 +124,7 @@ const DataView = {
 
         this.bindEvents(container);
         this.loadStats();
+        this.loadBackupStatus();
         this.loadOrphanStatus(container);
     },
 
@@ -118,6 +136,27 @@ const DataView = {
             document.getElementById('stat-db-size').textContent = DataView.formatSize(stats.db_size);
         } catch (err) {
             // 错误已由 API.call 处理
+        }
+    },
+
+    async loadBackupStatus() {
+        try {
+            const info = await API.quickBackupInfo();
+            const statusEl = document.getElementById('quick-backup-status');
+            const restoreBtn = document.getElementById('quick-restore-btn');
+            if (!statusEl) return;
+
+            if (info.exists) {
+                const size = DataView.formatSize(info.file_size);
+                statusEl.innerHTML = `<span style="color: var(--success);">✓ 已有备份</span> — ${info.backup_time}，${size}`;
+                if (restoreBtn) restoreBtn.disabled = false;
+            } else {
+                statusEl.innerHTML = `<span style="color: var(--danger);">暂无本地备份</span>`;
+                if (restoreBtn) restoreBtn.disabled = true;
+            }
+        } catch (err) {
+            const statusEl = document.getElementById('quick-backup-status');
+            if (statusEl) statusEl.textContent = '检测备份状态失败';
         }
     },
 
@@ -143,6 +182,29 @@ const DataView = {
     },
 
     bindEvents(container) {
+        container.querySelector('#quick-backup-btn').addEventListener('click', async () => {
+            try {
+                await API.quickBackup();
+                Toast.success('一键备份成功');
+                this.loadBackupStatus();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        });
+
+        container.querySelector('#quick-restore-btn').addEventListener('click', async () => {
+            const confirmed = await Confirm.show('将从本地备份恢复数据，同名记录会被跳过。确定继续吗？', { confirmText: '确定恢复', type: 'danger' });
+            if (!confirmed) return;
+
+            try {
+                const result = await API.quickRestore();
+                Toast.success(`恢复完成：${result.prompts_restored} 条提示词，${result.skills_restored} 个技能已恢复`);
+                this.loadStats();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        });
+
         container.querySelector('#backup-data-btn').addEventListener('click', async () => {
             try {
                 const savePath = await API.saveZIPFileDialog('psm-backup.zip');
