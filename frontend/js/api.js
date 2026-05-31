@@ -86,6 +86,13 @@ const API = {
     saveJSONFileDialog: (filename) => API.call(window.go.main.App.SaveJSONFileDialog, filename),
     selectDirectoryDialog: () => API.call(window.go.main.App.SelectDirectoryDialog),
 
+    // ===== AI API =====
+    generatePrompt: (description) => API.call(window.go.main.App.GeneratePrompt, description),
+    optimizePrompt: (content) => API.call(window.go.main.App.OptimizePrompt, content),
+    cancelAIGeneration: () => API.call(window.go.main.App.CancelAIGeneration),
+    getAIModels: () => API.call(window.go.main.App.GetAIModels),
+    testAIConnection: (apiURL, apiKey) => API.call(window.go.main.App.TestAIConnection, apiURL, apiKey),
+
     // ===== 批量操作 API =====
     // 批量更新 Prompt 分类
     batchUpdateCategory: (ids, category) => API.call(window.go.main.App.BatchUpdateCategory, ids, category),

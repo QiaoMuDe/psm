@@ -240,6 +240,9 @@
 
 .main-content > .page-header,
 #view-container > .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     flex-shrink: 0;
     margin-bottom: var(--spacing-3);
 }
@@ -284,6 +287,14 @@
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
+}
+
+#view-container > .view-content::-webkit-scrollbar {
+    display: none;
+}
+
+#view-container > .view-content {
+    scrollbar-width: none;
 }
 
 ::-webkit-scrollbar-track {

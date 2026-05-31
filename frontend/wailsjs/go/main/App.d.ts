@@ -26,6 +26,8 @@ export function BatchSetPinSkill(arg1:Array<number>,arg2:boolean):Promise<void>;
 
 export function BatchUpdateCategory(arg1:Array<number>,arg2:string):Promise<void>;
 
+export function CancelAIGeneration():Promise<void>;
+
 export function CleanupOrphanSkills():Promise<number>;
 
 export function CountPrompts():Promise<number>;
@@ -45,6 +47,10 @@ export function ExportPrompts(arg1:Array<number>,arg2:string):Promise<void>;
 export function ExportSkill(arg1:number,arg2:string):Promise<void>;
 
 export function ExportSkills(arg1:Array<number>,arg2:string):Promise<void>;
+
+export function GeneratePrompt(arg1:string):Promise<void>;
+
+export function GetAIModels():Promise<Array<string>>;
 
 export function GetAppHome():Promise<string>;
 
@@ -100,6 +106,8 @@ export function OpenMultiZIPFileDialog():Promise<Array<string>>;
 
 export function OpenZIPFileDialog():Promise<string>;
 
+export function OptimizePrompt(arg1:string):Promise<void>;
+
 export function QuickBackup():Promise<void>;
 
 export function QuickBackupInfo():Promise<Record<string, any>>;
@@ -121,6 +129,8 @@ export function SaveZIPFileDialog(arg1:string):Promise<string>;
 export function SelectDirectoryDialog():Promise<string>;
 
 export function SetAppHome(arg1:string):Promise<void>;
+
+export function TestAIConnection(arg1:string,arg2:string):Promise<string>;
 
 export function TogglePinPrompt(arg1:number):Promise<void>;
 

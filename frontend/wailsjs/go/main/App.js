@@ -46,6 +46,10 @@ export function BatchUpdateCategory(arg1, arg2) {
   return window['go']['main']['App']['BatchUpdateCategory'](arg1, arg2);
 }
 
+export function CancelAIGeneration() {
+  return window['go']['main']['App']['CancelAIGeneration']();
+}
+
 export function CleanupOrphanSkills() {
   return window['go']['main']['App']['CleanupOrphanSkills']();
 }
@@ -84,6 +88,14 @@ export function ExportSkill(arg1, arg2) {
 
 export function ExportSkills(arg1, arg2) {
   return window['go']['main']['App']['ExportSkills'](arg1, arg2);
+}
+
+export function GeneratePrompt(arg1) {
+  return window['go']['main']['App']['GeneratePrompt'](arg1);
+}
+
+export function GetAIModels() {
+  return window['go']['main']['App']['GetAIModels']();
 }
 
 export function GetAppHome() {
@@ -194,6 +206,10 @@ export function OpenZIPFileDialog() {
   return window['go']['main']['App']['OpenZIPFileDialog']();
 }
 
+export function OptimizePrompt(arg1) {
+  return window['go']['main']['App']['OptimizePrompt'](arg1);
+}
+
 export function QuickBackup() {
   return window['go']['main']['App']['QuickBackup']();
 }
@@ -236,6 +252,10 @@ export function SelectDirectoryDialog() {
 
 export function SetAppHome(arg1) {
   return window['go']['main']['App']['SetAppHome'](arg1);
+}
+
+export function TestAIConnection(arg1, arg2) {
+  return window['go']['main']['App']['TestAIConnection'](arg1, arg2);
 }
 
 export function TogglePinPrompt(arg1) {

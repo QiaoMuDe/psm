@@ -7,7 +7,7 @@
 # 工作目录
 work_dir = '.'
 # 超时时间
-timeout = '30s'
+timeout = '60s'
 # 是否显示输出
 show_output = false
 # 任务执行失败时是否退出程序

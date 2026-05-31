@@ -90,16 +90,7 @@ func (s *SettingsService) ResetSettings() error {
 
 		homeDir, _ := os.UserHomeDir()
 		appHome := filepath.Join(homeDir, ".psm")
-
-		defaults := []db.Settings{
-			{Key: "app_home", Value: appHome},
-			{Key: "app_theme", Value: "light"},
-			{Key: "prompt_view_mode", Value: "card"},
-			{Key: "skill_view_mode", Value: "card"},
-			{Key: "sidebar_collapsed", Value: "false"},
-			{Key: "font_size_offset", Value: "0px"},
-			{Key: "font_family", Value: ""},
-		}
+		defaults := db.DefaultSettings(appHome)
 
 		if err := tx.Create(&defaults).Error; err != nil {
 			return fmt.Errorf("插入默认设置失败: %w", err)

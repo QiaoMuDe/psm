@@ -59,21 +59,11 @@ func initDefaultSettings() error {
 	homeDir, _ := os.UserHomeDir()
 	appHome := filepath.Join(homeDir, ".psm")
 
-	defaults := map[string]string{
-		"app_home":          appHome,
-		"app_theme":         "light",
-		"prompt_view_mode":  "card",
-		"skill_view_mode":   "card",
-		"sidebar_collapsed": "false",
-		"font_size_offset":  "0px",
-		"font_family":       "",
-	}
-
-	for key, value := range defaults {
+	for _, s := range DefaultSettings(appHome) {
 		var count int64
-		DB.Model(&Settings{}).Where("key = ?", key).Count(&count)
+		DB.Model(&Settings{}).Where("key = ?", s.Key).Count(&count)
 		if count == 0 {
-			DB.Create(&Settings{Key: key, Value: value})
+			DB.Create(&s)
 		}
 	}
 

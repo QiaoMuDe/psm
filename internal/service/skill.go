@@ -232,6 +232,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 
 	type exportMarkerData struct {
 		Skills map[string][]string `json:"skills"`
+		Pinned []string            `json:"pinned"`
 	}
 	markerData := exportMarkerData{Skills: make(map[string][]string)}
 	for _, file := range zipReader.File {
@@ -297,11 +298,19 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 		}
 
 		tags := markerData.Skills[dirName]
+		isPinned := false
+		for _, name := range markerData.Pinned {
+			if name == dirName {
+				isPinned = true
+				break
+			}
+		}
 		skill := &db.Skill{
 			Name:         name,
 			Description:  description,
 			RelativePath: dirName,
 			Tags:         utils.MustMarshalJSON(tags),
+			IsPinned:     isPinned,
 		}
 		if err := db.DB.Create(skill).Error; err != nil {
 			result.Failed++
@@ -384,6 +393,7 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 
 	skillDirs := make(map[string]string, len(skills))
 	skillTags := make(map[string][]string, len(skills))
+	var skillPinned []string
 	for _, sk := range skills {
 		skillDirs[sk.Name] = filepath.Join(storagePath, sk.RelativePath)
 		var tags []string
@@ -391,9 +401,12 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 		if len(tags) > 0 {
 			skillTags[sk.Name] = tags
 		}
+		if sk.IsPinned {
+			skillPinned = append(skillPinned, sk.Name)
+		}
 	}
 
-	return utils.CreateSkillExportZip(skillDirs, skillTags, savePath)
+	return utils.CreateSkillExportZip(skillDirs, skillTags, skillPinned, savePath)
 }
 
 // ExportSkill 导出单个 Skill 为标准格式 ZIP 文件

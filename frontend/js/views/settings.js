@@ -13,6 +13,14 @@ const SettingsView = {
         container.innerHTML = `
             <div class="page-header">
                 <h2 class="page-title">设置</h2>
+                <button class="btn btn-primary btn-sm" id="save-settings-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    保存设置
+                </button>
             </div>
             <div class="view-content">
                 <div class="settings-section">
@@ -126,15 +134,90 @@ const SettingsView = {
                     </div>
                 </div>
 
-                <div class="settings-save-bar">
-                    <button class="btn btn-primary" id="save-settings-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                            <polyline points="17 21 17 13 7 13 7 21"/>
-                            <polyline points="7 3 7 8 15 8"/>
-                        </svg>
-                        保存设置
-                    </button>
+                <div class="settings-section ai-section">
+                    <div class="settings-section-header">
+                        <div class="settings-section-icon settings-section-icon-purple">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                        </div>
+                        <div class="settings-section-info">
+                            <h3 class="settings-section-title">AI</h3>
+                            <p class="settings-section-desc">配置 AI 模型，用于一键生成提示词</p>
+                        </div>
+                    </div>
+                    <div class="settings-section-body">
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">API 地址</span>
+                                <span class="settings-row-desc">OpenAI 兼容的基础路径，如 https://api.openai.com/v1</span>
+                            </div>
+                            <div class="settings-row-control settings-api-url-control">
+                                <input type="text" class="form-input" id="setting-ai-api-url" placeholder="https://api.openai.com/v1" />
+                                <button type="button" class="btn btn-default" id="test-ai-connection-btn" title="测试 API 连接">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                        <polyline points="22 4 12 14.01 9 11.01"/>
+                                    </svg>
+                                    测试连接
+                                </button>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">API Key</span>
+                                <span class="settings-row-desc">模型服务的访问密钥</span>
+                            </div>
+                            <div class="settings-row-control settings-api-key-control">
+                                <input type="password" class="form-input" id="setting-ai-api-key" placeholder="sk-..." />
+                                <button type="button" class="btn btn-default btn-icon" id="toggle-ai-api-key-btn" title="显示/隐藏">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">模型名称</span>
+                                <span class="settings-row-desc">使用的模型标识，如 gpt-4o-mini、deepseek-chat</span>
+                            </div>
+                            <div class="settings-row-control settings-model-control">
+                                <input type="text" class="form-input" id="setting-ai-model" placeholder="gpt-4o-mini" />
+                                <button type="button" class="btn btn-default" id="fetch-models-btn" title="获取可用模型列表">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                    </svg>
+                                    获取模型
+                                </button>
+                                <div id="model-dropdown" class="model-dropdown">
+                                    <div class="model-dropdown-search">
+                                        <input type="text" class="form-input" id="model-search-input" placeholder="搜索模型..." />
+                                    </div>
+                                    <div class="model-dropdown-list" id="model-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-column">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">生成提示词系统提示</span>
+                                <span class="settings-row-desc">AI 生成提示词时使用的系统提示词，可自定义修改</span>
+                            </div>
+                            <div class="settings-row-control settings-row-control-full">
+                                <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-generate-prompt" rows="6"></textarea>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-column">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">优化提示词系统提示</span>
+                                <span class="settings-row-desc">AI 优化提示词时使用的系统提示词，可自定义修改</span>
+                            </div>
+                            <div class="settings-row-control settings-row-control-full">
+                                <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-prompt" rows="6"></textarea>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -175,6 +258,12 @@ const SettingsView = {
             const fontFamily = settings.font_family || '';
             document.getElementById('setting-font-family').value = fontFamily;
             document.getElementById('setting-font-family-search').value = fontFamily || '默认 (Space Grotesk)';
+
+            document.getElementById('setting-ai-api-url').value = settings.ai_api_url || '';
+            document.getElementById('setting-ai-api-key').value = settings.ai_api_key || '';
+            document.getElementById('setting-ai-model').value = settings.ai_model || '';
+            document.getElementById('setting-ai-generate-prompt').value = settings.ai_generate_prompt || '';
+            document.getElementById('setting-ai-optimize-prompt').value = settings.ai_optimize_prompt || '';
 
             await this.loadSystemFonts(fontFamily);
         } catch (err) {
@@ -368,7 +457,13 @@ const SettingsView = {
                     app_theme: theme,
                     font_size_offset: fontSizeOffset,
                     font_family: fontFamily,
+                    ai_api_url: document.getElementById('setting-ai-api-url').value.trim(),
+                    ai_api_key: document.getElementById('setting-ai-api-key').value.trim(),
+                    ai_model: document.getElementById('setting-ai-model').value.trim(),
+                    ai_generate_prompt: document.getElementById('setting-ai-generate-prompt').value,
+                    ai_optimize_prompt: document.getElementById('setting-ai-optimize-prompt').value,
                 });
+                App.settings = await API.getSettings();
                 document.documentElement.setAttribute('data-theme', theme);
                 Toast.success('保存成功');
             } catch (err) {
@@ -376,5 +471,134 @@ const SettingsView = {
             }
         });
 
+        document.getElementById('toggle-ai-api-key-btn').addEventListener('click', () => {
+            const input = document.getElementById('setting-ai-api-key');
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+        });
+
+        document.getElementById('test-ai-connection-btn').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const apiURL = document.getElementById('setting-ai-api-url').value.trim();
+            const apiKey = document.getElementById('setting-ai-api-key').value.trim();
+
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                测试中...
+            `;
+
+            try {
+                await API.testAIConnection(apiURL, apiKey);
+                Toast.success('连接成功');
+            } catch (err) {
+                // 错误已由 API.call 处理
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    测试连接
+                `;
+            }
+        });
+
+        this.bindModelFetcher();
+    },
+
+    /**
+     * 绑定模型列表获取和选择事件
+     */
+    bindModelFetcher() {
+        const fetchBtn = document.getElementById('fetch-models-btn');
+        const dropdown = document.getElementById('model-dropdown');
+        const modelList = document.getElementById('model-list');
+        const searchInput = document.getElementById('model-search-input');
+        const modelInput = document.getElementById('setting-ai-model');
+        let allModels = [];
+
+        fetchBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (dropdown.classList.contains('active')) {
+                dropdown.classList.remove('active');
+                return;
+            }
+
+            fetchBtn.disabled = true;
+            fetchBtn.innerHTML = `
+                <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                获取中...
+            `;
+
+            try {
+                allModels = await API.getAIModels();
+                this.renderModelList(modelList, allModels, modelInput.value, searchInput.value);
+                dropdown.classList.add('active');
+                searchInput.value = '';
+                searchInput.focus();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            } finally {
+                fetchBtn.disabled = false;
+                fetchBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    获取模型
+                `;
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            this.renderModelList(modelList, allModels, modelInput.value, searchInput.value);
+        });
+
+        searchInput.addEventListener('click', (e) => e.stopPropagation());
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dropdown.classList.remove('active');
+            }
+        });
+
+        modelList.addEventListener('click', (e) => {
+            const item = e.target.closest('.model-dropdown-item');
+            if (!item) return;
+            modelInput.value = item.dataset.model;
+            dropdown.classList.remove('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.settings-model-control')) {
+                dropdown.classList.remove('active');
+            }
+        });
+    },
+
+    /**
+     * 渲染模型下拉列表
+     * @param {HTMLElement} container - 列表容器
+     * @param {string[]} models - 模型 ID 列表
+     * @param {string} currentModel - 当前选中的模型
+     * @param {string} filter - 搜索过滤关键词
+     */
+    renderModelList(container, models, currentModel, filter) {
+        const query = (filter || '').toLowerCase();
+        const filtered = models.filter(m => m.toLowerCase().includes(query));
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="model-dropdown-empty">${models.length === 0 ? '暂无可用模型' : '未找到匹配模型'}</div>`;
+            return;
+        }
+
+        container.innerHTML = filtered.map(m =>
+            `<div class="model-dropdown-item${m === currentModel ? ' active' : ''}" data-model="${m}">${m}${m === currentModel ? ' ✓' : ''}</div>`
+        ).join('');
     }
 };

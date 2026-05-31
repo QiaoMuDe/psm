@@ -4,7 +4,7 @@
  */
 const SkillsView = {
     currentKeyword: '',
-    currentView: App.settings.skill_view_mode || 'card',
+    currentView: App.settings?.skill_view_mode || 'card',
     selectedIds: new Set(),
     allSkills: [],
     batchMode: false,
@@ -747,14 +747,15 @@ const SkillsView = {
                     <label class="form-label">标签（逗号分隔）</label>
                     <input type="text" class="form-input" id="skill-tags" value="${escapeHtml(skillTags.join(', '))}" placeholder="tag1, tag2, tag3" />
                 </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
-                    <button type="submit" class="btn btn-primary">保存</button>
-                </div>
             </form>
         `;
 
-        Modal.open('编辑 Skill', content);
+        const footer = `
+            <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
+            <button type="submit" class="btn btn-primary" form="skill-form">保存</button>
+        `;
+
+        Modal.open('编辑 Skill', content, { footer });
 
         document.getElementById('skill-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -826,14 +827,14 @@ const SkillsView = {
                         ${filesListHtml}
                     </div>
                     ` : `<div class="skill-detail-files-empty">该技能暂无文件</div>`}
-                    <div class="skill-detail-divider"></div>
-                    <div class="skill-detail-actions">
-                        <button class="btn btn-default" onclick="Modal.close()">关闭</button>
-                    </div>
                 </div>
             `;
 
-            Modal.open('Skill 详情', content, { width: '560px' });
+            const footer = `
+                <button class="btn btn-default" onclick="Modal.close()">关闭</button>
+            `;
+
+            Modal.open('Skill 详情', content, { width: '560px', footer });
 
             document.querySelectorAll('.skill-detail-file-item').forEach(item => {
                 item.addEventListener('dblclick', async () => {

@@ -65,3 +65,21 @@ type DashboardStats struct {
 	RecentPrompts []Prompt `json:"recent_prompts"` // 最近的提示词列表
 	RecentSkills  []Skill  `json:"recent_skills"`  // 最近的技能列表
 }
+
+// DefaultSettings 返回系统的默认设置列表，appHome 需由调用方传入
+func DefaultSettings(appHome string) []Settings {
+	return []Settings{
+		{Key: "app_home", Value: appHome},
+		{Key: "app_theme", Value: "light"},
+		{Key: "prompt_view_mode", Value: "card"},
+		{Key: "skill_view_mode", Value: "card"},
+		{Key: "sidebar_collapsed", Value: "false"},
+		{Key: "font_size_offset", Value: "0px"},
+		{Key: "font_family", Value: ""},
+		{Key: "ai_api_url", Value: "https://api.openai.com/v1"},
+		{Key: "ai_api_key", Value: ""},
+		{Key: "ai_model", Value: "gpt-4o-mini"},
+		{Key: "ai_generate_prompt", Value: "你是一个提示词生成器。根据用户的一句话描述，生成一个可直接使用的高质量提示词。\n\n生成要求：\n- 提示词应清晰、具体、可执行，避免模糊笼统的描述\n- 包含明确的角色设定和任务目标\n- 如适用，补充必要的约束条件、输入输出格式或示例\n- 内容应为中文\n\n返回格式（严格 JSON，不要包含其他内容）：\n{\"name\": \"简短概括性名称\", \"content\": \"完整提示词内容\"}"},
+		{Key: "ai_optimize_prompt", Value: "你是一个提示词优化专家。用户会给你一个已有的提示词，请你在保留原始意图的基础上，对其进行优化。\n\n优化方向：\n- 使表述更清晰、更具体、更易执行\n- 补充缺失的约束条件或上下文\n- 改善结构和逻辑，使其更专业\n- 不要改变原始的核心意图\n- 内容应为中文\n\n直接返回优化后的完整提示词内容，不要包含解释、前缀或 JSON 格式。"},
+	}
+}

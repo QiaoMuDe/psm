@@ -5,7 +5,7 @@
 const PromptsView = {
     currentKeyword: '',
     currentCategory: 'all',
-    currentView: App.settings.prompt_view_mode || 'card',
+    currentView: App.settings?.prompt_view_mode || 'card',
     selectedIds: new Set(),
     batchMode: false,
     currentTag: '',
@@ -58,6 +58,12 @@ const PromptsView = {
                                 </button>
                             </div>
                             <div class="toolbar-separator"></div>
+                            <button class="btn btn-default btn-sm" id="ai-generate-prompt-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                                AI 生成
+                            </button>
                             <button class="btn btn-primary btn-sm" id="add-prompt-btn">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -544,6 +550,8 @@ const PromptsView = {
 
         document.getElementById('add-prompt-btn').addEventListener('click', () => this.openCreateModal());
 
+        document.getElementById('ai-generate-prompt-btn').addEventListener('click', () => this.openAIGenerateModal());
+
         document.getElementById('import-prompt-btn').addEventListener('click', async () => {
             try {
                 const filePath = await API.openJSONFileDialog();
@@ -627,6 +635,115 @@ const PromptsView = {
         });
     },
 
+    bindCharCount(textareaId, countId) {
+        const textarea = document.getElementById(textareaId);
+        const countEl = document.getElementById(countId);
+        if (textarea && countEl) {
+            const update = () => { countEl.textContent = textarea.value.length + ' 字符'; };
+            textarea.addEventListener('input', update);
+            update();
+        }
+    },
+
+    bindOptimizeButton(btnId, textareaId) {
+        const btn = document.getElementById(btnId);
+        const textarea = document.getElementById(textareaId);
+        if (!btn || !textarea) return;
+
+        let originalContent = null;
+        let tokenUnlisten = null;
+        let doneUnlisten = null;
+        let errorUnlisten = null;
+        let accumulated = '';
+
+        const cleanup = () => {
+            if (tokenUnlisten) tokenUnlisten();
+            if (doneUnlisten) doneUnlisten();
+            if (errorUnlisten) errorUnlisten();
+            tokenUnlisten = doneUnlisten = errorUnlisten = null;
+        };
+
+        const setOptimizing = (optimizing) => {
+            const row = textarea.closest('.ai-optimize-row');
+            btn.disabled = optimizing;
+            textarea.disabled = optimizing;
+            if (row) row.classList.toggle('ai-optimize-loading', optimizing);
+            if (optimizing) {
+                btn.innerHTML = `<div class="ai-gen-spinner" style="width:14px;height:14px;border-width:2px;"></div> 优化中...`;
+            } else if (originalContent !== null) {
+                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 还原`;
+            } else {
+                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 优化`;
+            }
+        };
+
+        btn.addEventListener('click', async () => {
+            if (originalContent !== null) {
+                textarea.value = originalContent;
+                originalContent = null;
+                textarea.dispatchEvent(new Event('input'));
+                setOptimizing(false);
+                return;
+            }
+
+            const currentContent = textarea.value.trim();
+            if (!currentContent) {
+                Toast.warning('请先输入提示词内容');
+                return;
+            }
+
+            const settings = (await API.getSettings()) || {};
+            if (!settings.ai_api_key) {
+                Toast.warning('请先在设置页配置 AI API Key');
+                return;
+            }
+
+            originalContent = textarea.value;
+            accumulated = '';
+            setOptimizing(true);
+
+            if (window.runtime && window.runtime.EventsOn) {
+                tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
+                    accumulated += token;
+                    textarea.value = accumulated;
+                    textarea.dispatchEvent(new Event('input'));
+                });
+
+                doneUnlisten = window.runtime.EventsOn('ai:done', () => {
+                    const result = accumulated;
+                    cleanup();
+                    textarea.disabled = false;
+                    if (result) {
+                        textarea.value = result;
+                        textarea.dispatchEvent(new Event('input'));
+                        Toast.success('优化完成');
+                    }
+                    setOptimizing(false);
+                });
+
+                errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
+                    cleanup();
+                    textarea.value = originalContent;
+                    originalContent = null;
+                    textarea.dispatchEvent(new Event('input'));
+                    setOptimizing(false);
+                    Toast.error(errMsg);
+                });
+            }
+
+            try {
+                await API.optimizePrompt(currentContent);
+            } catch (err) {
+                cleanup();
+                textarea.value = originalContent;
+                originalContent = null;
+                textarea.dispatchEvent(new Event('input'));
+                setOptimizing(false);
+                Toast.error(err.message || '优化失败');
+            }
+        });
+    },
+
     /**
      * 打开新建 Prompt 模态框
      */
@@ -643,7 +760,15 @@ const PromptsView = {
                 </div>
                 <div class="form-group">
                     <label class="form-label">内容 <span class="required-mark">*</span></label>
-                    <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required></textarea>
+                    <div class="ai-optimize-row">
+                        <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required></textarea>
+                        <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-content" title="AI 优化此提示词">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            优化
+                        </button>
+                    </div>
                     <div class="char-count" id="prompt-char-count">0 字符</div>
                 </div>
                 <div class="form-group">
@@ -658,22 +783,18 @@ const PromptsView = {
                     </label>
                     <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code> 或 <code>{{变量名|默认值}}</code></span>
                 </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
-                    <button type="submit" class="btn btn-primary">保存</button>
-                </div>
             </form>
         `;
 
-        Modal.open('新建 Prompt', content);
+        const footer = `
+            <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
+            <button type="submit" class="btn btn-primary" form="prompt-form">保存</button>
+        `;
 
-        const textarea = document.getElementById('prompt-content');
-        const charCount = document.getElementById('prompt-char-count');
-        if (textarea && charCount) {
-            const updateCount = () => { charCount.textContent = textarea.value.length + ' 字符'; };
-            textarea.addEventListener('input', updateCount);
-            updateCount();
-        }
+        Modal.open('新建 Prompt', content, { footer });
+
+        PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
+        PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
 
         document.getElementById('prompt-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -686,6 +807,238 @@ const PromptsView = {
 
             try {
                 await API.createPrompt(name, content, category, tags, isTemplate);
+                Toast.success('创建成功');
+                Modal.close();
+                await this.loadPrompts();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        });
+    },
+
+    /**
+     * 打开 AI 生成 Prompt 模态框
+     */
+    async openAIGenerateModal() {
+        const settings = App.settings || {};
+        if (!settings.ai_api_key) {
+            Toast.warning('请先在设置页配置 AI API Key');
+            return;
+        }
+
+        const content = `
+            <div class="ai-generate-form">
+                <div id="ai-gen-input-section">
+                    <div class="form-group">
+                        <label class="form-label">一句话描述你想要的提示词</label>
+                        <input type="text" class="form-input" id="ai-gen-description" placeholder="例如：帮我写一个代码审查的提示词" />
+                    </div>
+                    <div class="ai-gen-loading-state" id="ai-gen-loading" style="display:none;">
+                        <div class="ai-gen-wave">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <div class="ai-gen-loading-text">AI 正在思考中</div>
+                        <div class="ai-gen-loading-hint">正在分析需求并生成提示词，请稍候...</div>
+                    </div>
+                </div>
+                <div id="ai-gen-review-section" class="ai-gen-fade-in" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">名称 <span class="required-mark">*</span></label>
+                        <input type="text" class="form-input" id="ai-gen-name" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">内容 <span class="required-mark">*</span></label>
+                        <textarea class="form-textarea" id="ai-gen-content" rows="8"></textarea>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const footer = `
+            <button type="button" class="btn btn-default" id="ai-gen-cancel-btn">取消</button>
+            <button type="button" class="btn btn-danger" id="ai-gen-stop-btn" style="display:none;">停止生成</button>
+            <button type="button" class="btn btn-primary" id="ai-gen-start-btn">生成</button>
+            <button type="button" class="btn btn-primary" id="ai-gen-confirm-btn" style="display:none;">确认使用</button>
+        `;
+
+        Modal.open('AI 生成提示词', content, { width: '560px', footer });
+
+        let tokenUnlisten = null;
+        let doneUnlisten = null;
+        let errorUnlisten = null;
+        let accumulated = '';
+
+        const cleanup = () => {
+            if (tokenUnlisten) tokenUnlisten();
+            if (doneUnlisten) doneUnlisten();
+            if (errorUnlisten) errorUnlisten();
+            tokenUnlisten = doneUnlisten = errorUnlisten = null;
+            accumulated = '';
+        };
+
+        const setLoading = (loading) => {
+            document.getElementById('ai-gen-start-btn').style.display = loading ? 'none' : '';
+            document.getElementById('ai-gen-stop-btn').style.display = loading ? '' : 'none';
+            document.getElementById('ai-gen-description').disabled = loading;
+            document.getElementById('ai-gen-loading').style.display = loading ? '' : 'none';
+        };
+
+        document.getElementById('ai-gen-cancel-btn').addEventListener('click', () => {
+            cleanup();
+            Modal.close();
+        });
+
+        document.getElementById('ai-gen-stop-btn').addEventListener('click', async () => {
+            await API.cancelAIGeneration();
+            cleanup();
+            setLoading(false);
+        });
+
+        document.getElementById('ai-gen-start-btn').addEventListener('click', async () => {
+            const desc = document.getElementById('ai-gen-description').value.trim();
+            if (!desc) {
+                Toast.warning('请输入描述');
+                return;
+            }
+
+            accumulated = '';
+            setLoading(true);
+
+            if (window.runtime && window.runtime.EventsOn) {
+                tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
+                    accumulated += token;
+                });
+
+                doneUnlisten = window.runtime.EventsOn('ai:done', () => {
+                    const result = accumulated;
+                    cleanup();
+                    setLoading(false);
+                    if (result) {
+                        PromptsView.showAIReviewSection(result);
+                    }
+                });
+
+                errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
+                    cleanup();
+                    setLoading(false);
+                    Toast.error(errMsg);
+                });
+            }
+
+            try {
+                await API.generatePrompt(desc);
+            } catch (err) {
+                cleanup();
+                setLoading(false);
+                Toast.error(err.message || '生成失败');
+            }
+        });
+
+        document.getElementById('ai-gen-confirm-btn').addEventListener('click', () => {
+            const name = document.getElementById('ai-gen-name').value.trim();
+            const content = document.getElementById('ai-gen-content').value.trim();
+            if (!name || !content) {
+                Toast.warning('名称和内容不能为空');
+                return;
+            }
+            Modal.close();
+            PromptsView.openCreateModalWithData(name, content);
+        });
+
+        setTimeout(() => {
+            const input = document.getElementById('ai-gen-description');
+            if (input) input.focus();
+        }, 100);
+    },
+
+    showAIReviewSection(rawOutput) {
+        let name = '';
+        let content = '';
+
+        try {
+            const jsonStr = rawOutput.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(jsonStr);
+            name = parsed.name || '';
+            content = parsed.content || '';
+        } catch (e) {
+            content = rawOutput;
+        }
+
+        const inputSection = document.getElementById('ai-gen-input-section');
+        const reviewSection = document.getElementById('ai-gen-review-section');
+
+        inputSection.style.display = 'none';
+        reviewSection.style.display = '';
+        reviewSection.classList.remove('ai-gen-fade-in');
+        void reviewSection.offsetWidth;
+        reviewSection.classList.add('ai-gen-fade-in');
+
+        document.getElementById('ai-gen-name').value = name;
+        document.getElementById('ai-gen-content').value = content;
+        document.getElementById('ai-gen-confirm-btn').style.display = '';
+        Toast.success('提示词生成完成，请检查并确认');
+    },
+
+    openCreateModalWithData(name, content) {
+        const formContent = `
+            <form id="prompt-form">
+                <div class="form-group">
+                    <label class="form-label">名称 <span class="required-mark">*</span></label>
+                    <input type="text" class="form-input" id="prompt-name" value="${escapeHtml(name)}" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <input type="text" class="form-input" id="prompt-category-input" placeholder="输入分类名称" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">内容 <span class="required-mark">*</span></label>
+                    <div class="ai-optimize-row">
+                        <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required>${escapeHtml(content)}</textarea>
+                        <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-content" title="AI 优化此提示词">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            优化
+                        </button>
+                    </div>
+                    <div class="char-count" id="prompt-char-count">${content.length} 字符</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">标签（逗号分隔）</label>
+                    <input type="text" class="form-input" id="prompt-tags" placeholder="tag1, tag2, tag3" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模板</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="prompt-is-template" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code> 或 <code>{{变量名|默认值}}</code></span>
+                </div>
+            </form>
+        `;
+
+        const footer = `
+            <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
+            <button type="submit" class="btn btn-primary" form="prompt-form">保存</button>
+        `;
+
+        Modal.open('新建 Prompt（AI 生成）', formContent, { footer });
+
+        PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
+        PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
+
+        document.getElementById('prompt-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pName = document.getElementById('prompt-name').value.trim();
+            const pContent = document.getElementById('prompt-content').value.trim();
+            const pCategory = document.getElementById('prompt-category-input').value.trim();
+            const pTagsStr = document.getElementById('prompt-tags').value.trim();
+            const pTags = pTagsStr ? pTagsStr.split(',').map(t => t.trim()) : [];
+            const pIsTemplate = document.getElementById('prompt-is-template').checked;
+
+            try {
+                await API.createPrompt(pName, pContent, pCategory, pTags, pIsTemplate);
                 Toast.success('创建成功');
                 Modal.close();
                 await this.loadPrompts();
@@ -715,7 +1068,15 @@ const PromptsView = {
                     </div>
                     <div class="form-group">
                         <label class="form-label">内容 <span class="required-mark">*</span></label>
-                        <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required>${escapeHtml(prompt.content)}</textarea>
+                        <div class="ai-optimize-row">
+                            <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required>${escapeHtml(prompt.content)}</textarea>
+                            <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-content" title="AI 优化此提示词">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                                优化
+                            </button>
+                        </div>
                         <div class="char-count" id="prompt-char-count">${prompt.content.length} 字符</div>
                     </div>
                     <div class="form-group">
@@ -730,21 +1091,18 @@ const PromptsView = {
                         </label>
                         <span class="toggle-label">启用后复制时弹窗填写变量，占位符格式: <code>{{变量名}}</code> 或 <code>{{变量名|默认值}}</code></span>
                     </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
-                        <button type="submit" class="btn btn-primary">保存</button>
-                    </div>
                 </form>
         `;
 
-        Modal.open('编辑 Prompt', content);
+        const footer = `
+            <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
+            <button type="submit" class="btn btn-primary" form="prompt-form">保存</button>
+        `;
 
-        const textarea = document.getElementById('prompt-content');
-        const charCount = document.getElementById('prompt-char-count');
-        if (textarea && charCount) {
-            const updateCount = () => { charCount.textContent = textarea.value.length + ' 字符'; };
-            textarea.addEventListener('input', updateCount);
-        }
+        Modal.open('编辑 Prompt', content, { footer });
+
+        PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
+        PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
 
         document.getElementById('prompt-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -821,14 +1179,15 @@ const PromptsView = {
                     <div class="detail-section-title">内容 <span class="char-count-inline">${dataset.content.length} 字符</span></div>
                     <div class="detail-content">${escapeHtml(dataset.content)}</div>
                 </div>
-                <div class="detail-actions">
-                    <button class="btn btn-default" id="prompt-copy-btn" data-content="${escapeHtml(dataset.content)}" data-is-template="${isTemplate}">复制</button>
-                    <button class="btn btn-default" onclick="Modal.close()">关闭</button>
-                </div>
             </div>
         `;
 
-        Modal.open('查看 Prompt', content);
+        const footer = `
+            <button class="btn btn-default" id="prompt-copy-btn" data-content="${escapeHtml(dataset.content)}" data-is-template="${isTemplate}">复制</button>
+            <button class="btn btn-default" onclick="Modal.close()">关闭</button>
+        `;
+
+        Modal.open('查看 Prompt', content, { footer });
 
         const copyBtn = document.getElementById('prompt-copy-btn');
         if (copyBtn) {

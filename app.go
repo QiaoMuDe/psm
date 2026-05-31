@@ -18,6 +18,7 @@ type App struct {
 	handler.PromptHandler
 	handler.SkillHandler
 	handler.BackupHandler
+	handler.AIHandler
 }
 
 // NewApp 创建应用实例
@@ -49,6 +50,7 @@ func (a *App) startup(ctx context.Context) {
 	a.PromptHandler.Init(promptSvc)
 	a.SkillHandler.Init(skillSvc)
 	a.BackupHandler.Init(settingsSvc, promptSvc, skillSvc)
+	a.AIHandler.Init(ctx, settingsSvc)
 }
 
 // shutdown 应用关闭生命周期回调，关闭数据库连接

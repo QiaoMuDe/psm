@@ -45,12 +45,15 @@ func (h *BackupHandler) BackupData(savePath string) error {
 	backupPrompts := make([]utils.BackupPrompt, 0, len(prompts))
 	for _, p := range prompts {
 		backupPrompts = append(backupPrompts, utils.BackupPrompt{
-			Name:      p.Name,
-			Content:   p.Content,
-			Category:  p.Category,
-			Tags:      p.Tags,
-			CreatedAt: p.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: p.UpdatedAt.Format(time.RFC3339),
+			Name:       p.Name,
+			Content:    p.Content,
+			Category:   p.Category,
+			Tags:       p.Tags,
+			IsPinned:   p.IsPinned,
+			IsTemplate: p.IsTemplate,
+			UsageCount: p.UsageCount,
+			CreatedAt:  p.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:  p.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 
@@ -61,6 +64,7 @@ func (h *BackupHandler) BackupData(savePath string) error {
 			Description:  s.Description,
 			RelativePath: s.RelativePath,
 			Tags:         s.Tags,
+			IsPinned:     s.IsPinned,
 			CreatedAt:    s.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:    s.UpdatedAt.Format(time.RFC3339),
 		})
@@ -104,16 +108,27 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 	result := &utils.BackupRestoreResult{}
 
 	for _, p := range backupData.Prompts {
-		existing, _ := h.promptSvc.GetPrompts(p.Name, "")
-		if len(existing) > 0 {
+		var count int64
+		_ = db.DB.Model(&db.Prompt{}).Where("name = ?", p.Name).Count(&count).Error
+		if count > 0 {
 			result.PromptsSkipped++
 			continue
 		}
 		var tags []string
 		_ = json.Unmarshal([]byte(p.Tags), &tags)
-		_, err := h.promptSvc.CreatePrompt(p.Name, p.Content, p.Category, tags, false)
+		created, err := h.promptSvc.CreatePrompt(p.Name, p.Content, p.Category, tags, p.IsTemplate)
 		if err != nil {
 			continue
+		}
+		if p.IsPinned || p.UsageCount > 0 {
+			updates := map[string]interface{}{}
+			if p.IsPinned {
+				updates["is_pinned"] = true
+			}
+			if p.UsageCount > 0 {
+				updates["usage_count"] = p.UsageCount
+			}
+			_ = db.DB.Model(&db.Prompt{}).Where("id = ?", created.ID).Updates(updates).Error
 		}
 		result.PromptsRestored++
 	}
@@ -133,9 +148,12 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 		}
 		var tags []string
 		_ = json.Unmarshal([]byte(s.Tags), &tags)
-		_, err := h.skillSvc.CreateSkill(s.Name, s.Description, tags)
+		created, err := h.skillSvc.CreateSkill(s.Name, s.Description, tags)
 		if err != nil {
 			continue
+		}
+		if s.IsPinned {
+			_ = db.DB.Model(&db.Skill{}).Where("id = ?", created.ID).Update("is_pinned", true).Error
 		}
 		result.SkillsRestored++
 	}

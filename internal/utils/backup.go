@@ -23,12 +23,15 @@ type BackupData struct {
 
 // BackupPrompt 表示备份中的提示词数据（不含自增 ID）
 type BackupPrompt struct {
-	Name      string `json:"name"`
-	Content   string `json:"content"`
-	Category  string `json:"category"`
-	Tags      string `json:"tags"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	Name       string `json:"name"`
+	Content    string `json:"content"`
+	Category   string `json:"category"`
+	Tags       string `json:"tags"`
+	IsPinned   bool   `json:"is_pinned"`
+	IsTemplate bool   `json:"is_template"`
+	UsageCount int    `json:"usage_count"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
 }
 
 // BackupSkill 表示备份中的技能数据（不含自增 ID）
@@ -37,6 +40,7 @@ type BackupSkill struct {
 	Description  string `json:"description"`
 	RelativePath string `json:"relative_path"`
 	Tags         string `json:"tags"`
+	IsPinned     bool   `json:"is_pinned"`
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
 }

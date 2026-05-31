@@ -12,6 +12,7 @@ const Modal = {
     open(title, content, options = {}) {
         const container = document.getElementById('modal-container');
         const width = options.width || '600px';
+        const footerHtml = options.footer ? `<div class="modal-footer">${options.footer}</div>` : '';
         container.innerHTML = `
             <div class="modal-overlay" id="modal-overlay">
                 <div class="modal" style="max-width: ${width}">
@@ -25,6 +26,7 @@ const Modal = {
                         </button>
                     </div>
                     <div class="modal-body">${content}</div>
+                    ${footerHtml}
                 </div>
             </div>
         `;

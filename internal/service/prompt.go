@@ -151,9 +151,12 @@ func (s *PromptService) ImportPrompts(filePath string) (int, error) {
 			Name:       p.Name,
 			Content:    p.Content,
 			Category:   p.Category,
-			Tags:       utils.MustMarshalJSON(p.Tags),
+			Tags:       p.Tags,
 			IsPinned:   p.IsPinned,
 			IsTemplate: p.IsTemplate,
+			UsageCount: p.UsageCount,
+			CreatedAt:  p.CreatedAt,
+			UpdatedAt:  p.UpdatedAt,
 		}
 		if err := db.DB.Create(&newPrompt).Error; err != nil {
 			continue
