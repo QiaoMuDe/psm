@@ -47,25 +47,15 @@ const SkillsView = {
                             </div>
                             <div class="toolbar-separator"></div>
                             <div class="action-buttons">
+                                <button class="btn btn-primary btn-sm" id="add-skill-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                                    </svg>
+                                    新增
+                                </button>
                                 <button class="btn btn-default btn-sm" id="batch-manage-skill-btn">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                                     批量管理
-                                </button>
-                                <button class="btn btn-default btn-sm" id="import-skill-btn">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                        <polyline points="17 8 12 3 7 8"/>
-                                        <line x1="12" y1="3" x2="12" y2="15"/>
-                                    </svg>
-                                    导入
-                                </button>
-                                <button class="btn btn-default btn-sm" id="export-skill-btn">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                        <polyline points="7 10 12 15 17 10"/>
-                                        <line x1="12" y1="15" x2="12" y2="3"/>
-                                    </svg>
-                                    导出
                                 </button>
                             </div>
                             <div class="toolbar-separator"></div>
@@ -81,6 +71,22 @@ const SkillsView = {
                         <span id="skill-selected-count">0 项已选</span>
                     </div>
                     <div class="batch-bar-right">
+                        <button class="btn btn-default btn-sm" id="import-skill-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            导入
+                        </button>
+                        <button class="btn btn-default btn-sm" id="export-skill-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            导出
+                        </button>
                         <button class="btn btn-danger btn-sm" id="skill-batch-delete-btn">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             批量删除
@@ -563,6 +569,33 @@ const SkillsView = {
         });
 
         document.getElementById('skill-batch-delete-btn').addEventListener('click', () => this.handleBatchDelete());
+
+        document.getElementById('add-skill-btn').addEventListener('click', async () => {
+            try {
+                const filePaths = await API.openMultiZIPFileDialog();
+                if (!filePaths || filePaths.length === 0) return;
+                if (filePaths.length === 1) {
+                    const result = await API.importSkillAuto(filePaths[0]);
+                    let msg = `导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
+                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
+                        msg += `\n` + result.errors.slice(0, 3).join('\n');
+                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
+                    }
+                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
+                } else {
+                    const result = await API.batchImportSkills(filePaths);
+                    let msg = `批量导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
+                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
+                        msg += `\n` + result.errors.slice(0, 3).join('\n');
+                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
+                    }
+                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
+                }
+                await this.loadSkills();
+            } catch (err) {
+                // 错误已由 API.call 处理
+            }
+        });
 
         document.getElementById('batch-manage-skill-btn').addEventListener('click', () => this.toggleBatchMode());
 
