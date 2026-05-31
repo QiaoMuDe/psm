@@ -138,6 +138,10 @@ export function OpenDataDirectory() {
   return window['go']['main']['App']['OpenDataDirectory']();
 }
 
+export function OpenFile(arg1) {
+  return window['go']['main']['App']['OpenFile'](arg1);
+}
+
 export function OpenFileDialog(arg1) {
   return window['go']['main']['App']['OpenFileDialog'](arg1);
 }
@@ -160,6 +164,10 @@ export function ResetAllData() {
 
 export function RestoreData(arg1) {
   return window['go']['main']['App']['RestoreData'](arg1);
+}
+
+export function RevealInExplorer(arg1) {
+  return window['go']['main']['App']['RevealInExplorer'](arg1);
 }
 
 export function SaveFileDialog(arg1) {

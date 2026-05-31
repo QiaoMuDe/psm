@@ -270,7 +270,7 @@
 .table th {
     font-weight: 600;
     color: var(--text-secondary);
-    font-size: calc(12px + var(--font-size-offset));
+    font-size: calc(14px + var(--font-size-offset));
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -663,11 +663,11 @@
 .detail-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
 }
 
 .detail-section-title {
-    font-size: calc(13px + var(--font-size-offset));
+    font-size: calc(15px + var(--font-size-offset));
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -684,13 +684,13 @@
     background-color: var(--bg-page);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 16px;
-    font-size: calc(13px + var(--font-size-offset));
-    line-height: 1.7;
+    padding: 20px;
+    font-size: calc(15px + var(--font-size-offset));
+    line-height: 1.8;
     color: var(--text-primary);
     white-space: pre-wrap;
     word-wrap: break-word;
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
     font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
 }
@@ -710,7 +710,7 @@
 }
 
 .detail-files-count {
-    font-size: calc(12px + var(--font-size-offset));
+    font-size: calc(14px + var(--font-size-offset));
     color: var(--text-secondary);
     background-color: var(--bg-page);
     padding: 2px 8px;
@@ -1950,6 +1950,115 @@ tr.highlight-flash {
 
 .search-result-active {
     background: var(--accent-light);
+}
+
+/* ==================== Skill 详情弹窗（简洁信息流） ==================== */
+
+.skill-detail {
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-detail-compact {
+    gap: var(--spacing-3);
+}
+
+.skill-detail-title {
+    font-size: calc(20px + var(--font-size-offset));
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.skill-detail-divider {
+    height: 1px;
+    background: var(--border);
+}
+
+.skill-detail-desc {
+    font-size: calc(14px + var(--font-size-offset));
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.skill-detail-time {
+    font-size: calc(13px + var(--font-size-offset));
+    color: var(--text-secondary);
+}
+
+.skill-detail-files-header {
+    display: flex;
+    align-items: center;
+}
+
+.skill-detail-files-title {
+    font-size: calc(14px + var(--font-size-offset));
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.skill-detail-files-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-detail-file-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: var(--spacing-3);
+    align-items: center;
+    padding: var(--spacing-2) 0;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.skill-detail-file-item:hover {
+    background: var(--bg-page);
+    margin: 0 calc(-1 * var(--spacing-3));
+    padding-left: var(--spacing-3);
+    padding-right: var(--spacing-3);
+    border-radius: var(--radius);
+}
+
+.skill-detail-file-item:active {
+    transform: scale(0.99);
+}
+
+.skill-detail-file-icon {
+    color: var(--text-secondary);
+}
+
+.skill-detail-file-name {
+    font-size: calc(14px + var(--font-size-offset));
+    color: var(--text-primary);
+}
+
+.skill-detail-file-size {
+    font-size: calc(13px + var(--font-size-offset));
+    color: var(--text-secondary);
+    min-width: 60px;
+    text-align: right;
+}
+
+.skill-detail-file-time {
+    font-size: calc(13px + var(--font-size-offset));
+    color: var(--text-secondary);
+    min-width: 140px;
+    text-align: right;
+}
+
+.skill-detail-files-empty {
+    color: var(--text-secondary);
+    font-size: calc(13px + var(--font-size-offset));
+}
+
+.skill-detail-hint {
+    font-size: calc(12px + var(--font-size-offset));
+    color: var(--text-secondary);
+}
+
+.skill-detail-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .font-family-active {

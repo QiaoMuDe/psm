@@ -72,6 +72,8 @@ export function ListSkillFiles(arg1:number):Promise<Array<db.SkillFile>>;
 
 export function OpenDataDirectory():Promise<void>;
 
+export function OpenFile(arg1:string):Promise<void>;
+
 export function OpenFileDialog(arg1:string):Promise<string>;
 
 export function OpenJSONFileDialog():Promise<string>;
@@ -83,6 +85,8 @@ export function OpenZIPFileDialog():Promise<string>;
 export function ResetAllData():Promise<Record<string, number>>;
 
 export function RestoreData(arg1:string):Promise<utils.BackupRestoreResult>;
+
+export function RevealInExplorer(arg1:string):Promise<void>;
 
 export function SaveFileDialog(arg1:string):Promise<string>;
 

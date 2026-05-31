@@ -636,71 +636,73 @@ const SkillsView = {
             const folderIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
             const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
 
-            let filesHtml = '';
+            let filesListHtml = '';
             if (files.length > 0) {
-                const rows = files.map(f => {
+                filesListHtml = files.map(f => {
                     const size = f.is_dir ? '-' : (f.size > 1024 ? (f.size / 1024).toFixed(1) + ' KB' : f.size + ' B');
                     const icon = f.is_dir ? folderIcon : fileIcon;
-                    const typeText = f.is_dir ? '目录' : '文件';
-                    return `<tr>
-                        <td><span class="detail-file-icon">${icon} ${escapeHtml(f.name)}</span></td>
-                        <td>${typeText}</td>
-                        <td>${size}</td>
-                        <td>${f.mod_time}</td>
-                    </tr>`;
+                    return `
+                        <div class="skill-detail-file-item" data-path="${escapeHtml(f.full_path || '')}" data-is-dir="${f.is_dir}">
+                            <span class="skill-detail-file-icon">${icon}</span>
+                            <span class="skill-detail-file-name">${escapeHtml(f.name)}</span>
+                            <span class="skill-detail-file-size">${size}</span>
+                            <span class="skill-detail-file-time">${f.mod_time}</span>
+                        </div>`;
                 }).join('');
-
-                filesHtml = `
-                    <div class="detail-section">
-                        <div class="detail-files-header">
-                            <div class="detail-section-title">文件列表</div>
-                            <span class="detail-files-count">${files.length} 项</span>
-                        </div>
-                        <div class="table-container">
-                            <table class="table">
-                                <thead>
-                                    <tr><th>名称</th><th>类型</th><th>大小</th><th>修改时间</th></tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
-            } else {
-                filesHtml = `
-                    <div class="detail-section">
-                        <div class="detail-section-title">文件列表</div>
-                        <p class="text-secondary" style="font-size:13px">该技能暂无文件</p>
-                    </div>`;
             }
 
             const content = `
-                <div class="detail-view">
-                    <div class="detail-header">
-                        <div class="detail-title">${escapeHtml(skill.name)}</div>
-                        ${skill.description ? `<div class="detail-description">${escapeHtml(skill.description)}</div>` : ''}
-                        <div class="detail-meta">
-                            <div class="detail-meta-item">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                                创建于 ${createdTime}
-                            </div>
-                            <div class="detail-meta-item">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                                </svg>
-                                更新于 ${updatedTime}
-                            </div>
-                        </div>
+                <div class="skill-detail skill-detail-compact">
+                    <div class="skill-detail-title">${escapeHtml(skill.name)}</div>
+                    <div class="skill-detail-divider"></div>
+                    ${skill.description ? `<div class="skill-detail-desc">${escapeHtml(skill.description)}</div>` : ''}
+                    <div class="skill-detail-divider"></div>
+                    <div class="skill-detail-files-header">
+                        <span class="skill-detail-files-title">📁 文件列表 (${files.length} 项)</span>
                     </div>
-                    ${filesHtml}
-                    <div class="detail-actions">
+                    ${files.length > 0 ? `
+                    <div class="skill-detail-files-list">
+                        ${filesListHtml}
+                    </div>
+                    ` : `<div class="skill-detail-files-empty">该技能暂无文件</div>`}
+                    <div class="skill-detail-divider"></div>
+                    <div class="skill-detail-actions">
                         <button class="btn btn-default" onclick="Modal.close()">关闭</button>
                     </div>
                 </div>
             `;
 
-            Modal.open('Skill 详情', content, { width: '600px' });
+            Modal.open('Skill 详情', content, { width: '560px' });
+
+            document.querySelectorAll('.skill-detail-file-item').forEach(item => {
+                item.addEventListener('dblclick', async () => {
+                    const path = item.dataset.path;
+                    if (path) {
+                        await API.revealInExplorer(path);
+                    }
+                });
+
+                item.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    const path = item.dataset.path;
+                    const isDir = item.dataset.isDir === 'true';
+                    if (!path) return;
+
+                    const items = [];
+                    if (isDir) {
+                        items.push({ label: '📂 打开目录', action: () => API.revealInExplorer(path) });
+                    } else {
+                        items.push({ label: '📄 打开文件', action: () => API.openFile(path) });
+                        items.push({ label: '📂 打开所在目录', action: () => API.revealInExplorer(path) });
+                    }
+                    items.push({ label: '📋 复制路径', action: () => {
+                        navigator.clipboard.writeText(path);
+                        Toast.success('路径已复制');
+                    }});
+
+                    ContextMenu.show(e.clientX, e.clientY, items);
+                });
+            });
         } catch (err) {
             Toast.error('获取 Skill 详情失败');
         }

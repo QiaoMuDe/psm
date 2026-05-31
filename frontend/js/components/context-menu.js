@@ -12,7 +12,7 @@ const ContextMenu = {
         this.el = document.getElementById('context-menu');
         document.addEventListener('click', () => this.hide());
         document.addEventListener('contextmenu', (e) => {
-            if (!e.target.closest('.item-card') && !e.target.closest('tr[data-id]')) {
+            if (!e.target.closest('.item-card') && !e.target.closest('tr[data-id]') && !e.target.closest('.skill-detail-file-item')) {
                 this.hide();
             }
         });

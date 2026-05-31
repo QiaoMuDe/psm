@@ -149,3 +149,15 @@ func (h *SettingsHandler) SelectDirectoryDialog() (string, error) {
 func (h *SettingsHandler) GetSystemFonts() []string {
 	return utils.GetSystemFonts()
 }
+
+// RevealInExplorer 在文件管理器中打开指定路径
+func (h *SettingsHandler) RevealInExplorer(path string) error {
+	cmd := exec.Command("explorer", path)
+	return cmd.Start()
+}
+
+// OpenFile 用系统默认程序打开文件
+func (h *SettingsHandler) OpenFile(path string) error {
+	cmd := exec.Command("cmd", "/c", "start", "", path)
+	return cmd.Start()
+}

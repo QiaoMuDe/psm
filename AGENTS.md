@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.6.0 | 更新日期: 2026-05-31 | 分析人: AI 架构师
+> 版本: 2.7.0 | 更新日期: 2026-05-31 | 分析人: AI 架构师
 
 ---
 
@@ -33,12 +33,12 @@ psm/
 │
 ├── internal/                        # 后端核心业务代码（Go 标准 internal 包结构）
 │   ├── handler/                     # Handler 子包（按领域拆分，嵌入到 App）
-│   │   ├── settings.go              # SettingsHandler：设置/版本/文件对话框（15 方法）
+│   │   ├── settings.go              # SettingsHandler：设置/版本/文件对话框/文件操作（17 方法）
 │   │   ├── prompt.go                # PromptHandler：Prompt CRUD/导入导出/置顶（13 方法）
 │   │   ├── skill.go                 # SkillHandler：Skill CRUD/ZIP 导入导出/置顶（15 方法）
 │   │   └── backup.go                # BackupHandler：备份恢复/数据统计/孤立清理（5 方法）
 │   ├── db/
-│   │   ├── models.go                # 数据模型：Settings/Prompt/Skill/SkillFile/ImportResult/DashboardStats
+│   │   ├── models.go                # 数据模型：Settings/Prompt/Skill/SkillFile(含full_path)/ImportResult/DashboardStats
 │   │   └── sqlite.go                # SQLite 初始化：WAL 模式、建表迁移、默认设置插入、索引创建
 │   ├── service/
 │   │   ├── settings.go              # 设置服务：Get/Update/BatchUpdate/GetSkillStoragePath
@@ -56,19 +56,19 @@ psm/
 │   ├── css/
 │   │   ├── variables.css            # CSS 变量定义：6 种主题颜色/间距/字体/阴影/圆角/全局字体偏移
 │   │   ├── layout.css               # 布局样式：应用容器/侧边栏/主内容区/响应式/视图内容滚动
-│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索/置顶内容/跳转闪烁/动画效果
+│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索/置顶内容/跳转闪烁/动画效果/点击动画/Skill详情弹窗
 │   └── js/
-│       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换 + 获取置顶内容
+│       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换 + 获取置顶内容 + 文件操作
 │       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮
 │       ├── components/
 │       │   ├── toast.js             # Toast 消息组件（success/error/warning/info + SVG 图标）
 │       │   ├── modal.js             # 模态框组件（打开/关闭/内容填充）
 │       │   ├── confirm.js           # 确认对话框组件（Promise-based）
-│       │   └── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭）
+│       │   └── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭/支持弹窗环境）
 │       └── views/
 │           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖 + 键盘导航）
 │           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明
-│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/批量管理/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮
+│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/批量管理/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮/Skill 详情弹窗/文件右键菜单
 │           ├── settings.js          # 设置页：存储路径配置 + 6 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局
 │           └── data.js              # 数据管理：完整备份恢复 + 数据重置
 │
@@ -512,7 +512,9 @@ settings (KV 存储)
 ├── app_theme: light/dark/midnight/ocean/forest/sunset/auto  (默认 light)
 ├── prompt_view_mode: card/list      (默认 card)
 ├── skill_view_mode: card/list       (默认 card)
-└── sidebar_collapsed: true/false
+├── sidebar_collapsed: true/false
+├── font_size_offset: 0px            (全局字体大小偏移)
+└── font_family: Space Grotesk       (全局字体族)
 
 prompts (独立表)
 ├── id (PK, AUTO_INCREMENT)
@@ -579,10 +581,14 @@ skills (独立表 + 文件系统)
 33. **UI 阴影系统**: 5 级阴影（sm/md/lg/xl/2xl），卡片悬停效果
 34. **动画效果系统**: 3 级过渡（fast/normal/slow），模态框滑入动画，列表项入场动画
 35. **悬停复制**: 鼠标悬停在 Prompt 上时按 Ctrl+C 可复制内容
-36. **全局字体族设置**: 设置页字体族选择器（系统字体列表 + 搜索过滤），CSS 变量 `--font-family` 控制全局，自动滚动到选中项
+36. **全局字体族设置**: 设置页字体族选择器（系统字体列表 + 搜索过滤 + 键盘导航），CSS 变量 `--font-family` 控制全局，自动滚动到选中项
 37. **搜索框键盘导航**: 仪表盘搜索框支持上下键移动高亮、回车选择、Esc 关闭
 38. **数据重置功能**: 数据管理页"重置所有数据"按钮，二次确认后清空所有提示词、技能（含文件）、恢复默认设置
 39. **工具栏布局优化**: 工具栏按钮保持一行显示，不因导航栏展开而换行
+40. **点击动画反馈**: 卡片/行/统计卡片/置顶内容/搜索候选项使用 CSS `:active` 伪类实现按下瞬间缩放反馈
+41. **Skill 详情弹窗**: 简洁信息流布局，无卡片边框，分隔线区分区块，双击文件可在文件管理器打开
+42. **文件列表右键菜单**: 文件：打开文件/打开所在目录/复制路径；目录：打开目录/复制路径
+43. **后端文件操作**: `RevealInExplorer`（打开文件管理器）+ `OpenFile`（用系统默认程序打开文件）
 
 ---
 
@@ -656,3 +662,9 @@ skills (独立表 + 文件系统)
 53. **二次确认保护**: 数据重置操作需要两次确认，防止误操作
 54. **工具栏不换行**: `.toolbar` 移除 `flex-wrap: wrap`，`.toolbar-right` 添加 `flex-wrap: nowrap`
 55. **技能空状态提示**: 改为"点击'导入技能'添加第一条"，反映功能变更
+56. **点击动画**: CSS `:active` 伪类实现按下瞬间缩放（`transform: scale(0.98)`），比 JS click 事件更可靠
+57. **Skill 详情弹窗**: 简洁信息流布局，`skill-detail-compact` 类，分隔线区分区块，无创建/更新时间显示
+58. **文件右键菜单**: `.skill-detail-file-item` 元素绑定 contextmenu 事件，ContextMenu 选择器需包含此类
+59. **ContextMenu 选择器**: 全局 contextmenu 事件需允许 `.skill-detail-file-item`，否则菜单被立即隐藏
+60. **后端文件操作**: `RevealInExplorer(path)` 用 explorer 打开目录，`OpenFile(path)` 用 cmd start 打开文件
+61. **SkillFile FullPath**: 模型新增 `full_path` 字段，`ListSkillFiles` 返回完整路径供前端使用

@@ -488,10 +488,11 @@ func (s *SkillService) ListSkillFiles(id int64) ([]db.SkillFile, error) {
 			continue
 		}
 		files = append(files, db.SkillFile{
-			Name:    entry.Name(),
-			IsDir:   entry.IsDir(),
-			Size:    info.Size(),
-			ModTime: info.ModTime().Format("2006-01-02 15:04:05"),
+			Name:     entry.Name(),
+			IsDir:    entry.IsDir(),
+			Size:     info.Size(),
+			ModTime:  info.ModTime().Format("2006-01-02 15:04:05"),
+			FullPath: filepath.Join(skillDir, entry.Name()),
 		})
 	}
 

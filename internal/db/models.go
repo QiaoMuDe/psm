@@ -33,10 +33,11 @@ type Skill struct {
 
 // SkillFile 表示技能目录中的文件或子目录信息
 type SkillFile struct {
-	Name    string `json:"name"`     // 文件或目录名称
-	IsDir   bool   `json:"is_dir"`   // 是否为目录
-	Size    int64  `json:"size"`     // 文件大小（字节）
-	ModTime string `json:"mod_time"` // 最后修改时间
+	Name     string `json:"name"`      // 文件或目录名称
+	IsDir    bool   `json:"is_dir"`    // 是否为目录
+	Size     int64  `json:"size"`      // 文件大小（字节）
+	ModTime  string `json:"mod_time"`  // 最后修改时间
+	FullPath string `json:"full_path"` // 完整文件路径
 }
 
 // ImportResult 表示导入操作的结果汇总

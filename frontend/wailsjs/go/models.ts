@@ -75,6 +75,7 @@ export namespace db {
 	    is_dir: boolean;
 	    size: number;
 	    mod_time: string;
+	    full_path: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SkillFile(source);
@@ -86,6 +87,7 @@ export namespace db {
 	        this.is_dir = source["is_dir"];
 	        this.size = source["size"];
 	        this.mod_time = source["mod_time"];
+	        this.full_path = source["full_path"];
 	    }
 	}
 
