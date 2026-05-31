@@ -2,6 +2,7 @@ package service
 
 import (
 	"archive/zip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -26,7 +27,7 @@ func NewSkillService(settingsSvc *SettingsService) *SkillService {
 }
 
 // CreateSkill 创建空 Skill（创建目录 + 数据库记录）
-func (s *SkillService) CreateSkill(name, description string) (*db.Skill, error) {
+func (s *SkillService) CreateSkill(name, description string, tags []string) (*db.Skill, error) {
 	storagePath, err := s.settingsSvc.GetSkillStoragePath()
 	if err != nil {
 		return nil, fmt.Errorf("获取 Skill 存储路径失败: %w", err)
@@ -41,6 +42,7 @@ func (s *SkillService) CreateSkill(name, description string) (*db.Skill, error) 
 		Name:         name,
 		Description:  description,
 		RelativePath: name,
+		Tags:         utils.MustMarshalJSON(tags),
 	}
 
 	if err := db.DB.Create(skill).Error; err != nil {
@@ -62,17 +64,24 @@ func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 	return &sk, nil
 }
 
-// GetSkills 获取所有 Skill 列表
-func (s *SkillService) GetSkills() ([]db.Skill, error) {
+// GetSkills 获取 Skill 列表，支持关键词搜索（匹配名称、描述、标签）
+func (s *SkillService) GetSkills(keyword string) ([]db.Skill, error) {
 	var skills []db.Skill
-	if err := db.DB.Order("is_pinned DESC, updated_at DESC").Find(&skills).Error; err != nil {
+	query := db.DB.Model(&db.Skill{})
+
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		query = query.Where("name LIKE ? OR description LIKE ? OR tags LIKE ?", like, like, like)
+	}
+
+	if err := query.Order("is_pinned DESC, updated_at DESC").Find(&skills).Error; err != nil {
 		return nil, fmt.Errorf("查询 Skill 列表失败: %w", err)
 	}
 	return skills, nil
 }
 
 // UpdateSkill 更新 Skill 元数据，同时同步更新技能目录中的 SKILL.md frontmatter
-func (s *SkillService) UpdateSkill(id int64, name, description string) error {
+func (s *SkillService) UpdateSkill(id int64, name, description string, tags []string) error {
 	sk, err := s.GetSkill(id)
 	if err != nil {
 		return err
@@ -81,6 +90,7 @@ func (s *SkillService) UpdateSkill(id int64, name, description string) error {
 	result := db.DB.Model(&db.Skill{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"name":        name,
 		"description": description,
+		"tags":        utils.MustMarshalJSON(tags),
 	})
 
 	if result.Error != nil {
@@ -220,6 +230,24 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 	}
 	defer func() { _ = zipReader.Close() }()
 
+	type exportMarkerData struct {
+		Skills map[string][]string `json:"skills"`
+	}
+	markerData := exportMarkerData{Skills: make(map[string][]string)}
+	for _, file := range zipReader.File {
+		if filepath.ToSlash(utils.FixFileName(file.Name)) == utils.SkillExportMarker {
+			rc, err := file.Open()
+			if err == nil {
+				data, _ := io.ReadAll(rc)
+				_ = rc.Close()
+				if len(data) > 0 {
+					_ = json.Unmarshal(data, &markerData)
+				}
+			}
+			break
+		}
+	}
+
 	skillDirMap := make(map[string]bool)
 	for _, file := range zipReader.File {
 		cleanName := filepath.ToSlash(utils.FixFileName(file.Name))
@@ -268,10 +296,12 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 			continue
 		}
 
+		tags := markerData.Skills[dirName]
 		skill := &db.Skill{
 			Name:         name,
 			Description:  description,
 			RelativePath: dirName,
+			Tags:         utils.MustMarshalJSON(tags),
 		}
 		if err := db.DB.Create(skill).Error; err != nil {
 			result.Failed++
@@ -328,7 +358,7 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 	var skills []db.Skill
 
 	if len(skillIds) == 0 {
-		allSkills, err := s.GetSkills()
+		allSkills, err := s.GetSkills("")
 		if err != nil {
 			return fmt.Errorf("获取 Skill 列表失败: %w", err)
 		}
@@ -353,11 +383,17 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 	}
 
 	skillDirs := make(map[string]string, len(skills))
+	skillTags := make(map[string][]string, len(skills))
 	for _, sk := range skills {
 		skillDirs[sk.Name] = filepath.Join(storagePath, sk.RelativePath)
+		var tags []string
+		_ = json.Unmarshal([]byte(sk.Tags), &tags)
+		if len(tags) > 0 {
+			skillTags[sk.Name] = tags
+		}
 	}
 
-	return utils.CreateSkillExportZip(skillDirs, savePath)
+	return utils.CreateSkillExportZip(skillDirs, skillTags, savePath)
 }
 
 // ExportSkill 导出单个 Skill 为标准格式 ZIP 文件
@@ -442,7 +478,7 @@ func (s *SkillService) GetOrphanSkills() ([]db.Skill, error) {
 		return nil, fmt.Errorf("获取存储路径失败: %w", err)
 	}
 
-	skills, err := s.GetSkills()
+	skills, err := s.GetSkills("")
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +523,7 @@ func (s *SkillService) DeleteAllSkills(deleteFiles bool) (int64, error) {
 	if deleteFiles {
 		storagePath, err := s.settingsSvc.GetSkillStoragePath()
 		if err == nil {
-			skills, _ := s.GetSkills()
+			skills, _ := s.GetSkills("")
 			for _, sk := range skills {
 				fullPath := filepath.Join(storagePath, sk.RelativePath)
 				_ = os.RemoveAll(fullPath)
@@ -495,7 +531,7 @@ func (s *SkillService) DeleteAllSkills(deleteFiles bool) (int64, error) {
 		}
 	}
 
-	result := db.DB.Unscoped().Delete(&db.Skill{})
+	result := db.DB.Unscoped().Where("1 = 1").Delete(&db.Skill{})
 	if result.Error != nil {
 		return 0, fmt.Errorf("删除所有 Skill 失败: %w", result.Error)
 	}

@@ -37,7 +37,7 @@ func (h *BackupHandler) BackupData(savePath string) error {
 		return fmt.Errorf("获取提示词失败: %w", err)
 	}
 
-	skills, err := h.skillSvc.GetSkills()
+	skills, err := h.skillSvc.GetSkills("")
 	if err != nil {
 		return fmt.Errorf("获取技能失败: %w", err)
 	}
@@ -60,6 +60,7 @@ func (h *BackupHandler) BackupData(savePath string) error {
 			Name:         s.Name,
 			Description:  s.Description,
 			RelativePath: s.RelativePath,
+			Tags:         s.Tags,
 			CreatedAt:    s.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:    s.UpdatedAt.Format(time.RFC3339),
 		})
@@ -94,6 +95,7 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 
 	if backupData.Settings != nil {
 		delete(backupData.Settings, "skill_storage_path")
+		delete(backupData.Settings, "app_home")
 		if err := h.settingsSvc.UpdateSettings(backupData.Settings); err != nil {
 			return nil, fmt.Errorf("恢复设置失败: %w", err)
 		}
@@ -117,7 +119,7 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 	}
 
 	for _, s := range backupData.Skills {
-		existing, _ := h.skillSvc.GetSkills()
+		existing, _ := h.skillSvc.GetSkills("")
 		duplicated := false
 		for _, e := range existing {
 			if e.Name == s.Name {
@@ -129,7 +131,9 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 			result.SkillsSkipped++
 			continue
 		}
-		_, err := h.skillSvc.CreateSkill(s.Name, s.Description)
+		var tags []string
+		_ = json.Unmarshal([]byte(s.Tags), &tags)
+		_, err := h.skillSvc.CreateSkill(s.Name, s.Description, tags)
 		if err != nil {
 			continue
 		}

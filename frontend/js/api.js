@@ -51,9 +51,9 @@ const API = {
     getTopUsedPrompts: (limit = 5) => API.call(window.go.main.App.GetTopUsedPrompts, limit),
 
     // ===== Skill API =====
-    createSkill: (name, description) => API.call(window.go.main.App.CreateSkill, name, description),
+    createSkill: (name, description, tags) => API.call(window.go.main.App.CreateSkill, name, description, tags),
     getSkill: (id) => API.call(window.go.main.App.GetSkill, Number(id)),
-    getSkills: () => API.call(window.go.main.App.GetSkills),
+    getSkills: (keyword) => API.call(window.go.main.App.GetSkills, keyword || ''),
     updateSkill: (id, name, description) => API.call(window.go.main.App.UpdateSkill, Number(id), name, description),
     deleteSkill: (id, deleteFiles) => API.call(window.go.main.App.DeleteSkill, Number(id), deleteFiles),
     batchDeleteSkills: (ids, deleteFiles) => API.call(window.go.main.App.BatchDeleteSkills, ids.map(Number), deleteFiles),

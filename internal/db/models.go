@@ -18,7 +18,7 @@ type Prompt struct {
 	ID         int64          `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name       string         `json:"name" gorm:"not null;default:''"`
 	Content    string         `json:"content" gorm:"type:text;not null;default:''"`
-	Category   string         `json:"category" gorm:"not null;default:'uncategorized'"`
+	Category   string         `json:"category" gorm:"not null;default:''"`
 	Tags       string         `json:"tags" gorm:"type:text;not null;default:'[]'"`
 	IsPinned   bool           `json:"is_pinned" gorm:"not null;default:false"`
 	IsTemplate bool           `json:"is_template" gorm:"not null;default:false"`
@@ -34,6 +34,7 @@ type Skill struct {
 	Name         string         `json:"name" gorm:"not null;default:''"`
 	Description  string         `json:"description" gorm:"type:text;not null;default:''"`
 	RelativePath string         `json:"relative_path" gorm:"not null;default:''"`
+	Tags         string         `json:"tags" gorm:"type:text;not null;default:'[]'"`
 	IsPinned     bool           `json:"is_pinned" gorm:"not null;default:false"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`

@@ -73,6 +73,7 @@ export namespace db {
 	    name: string;
 	    description: string;
 	    relative_path: string;
+	    tags: string;
 	    is_pinned: boolean;
 	    // Go type: time
 	    created_at: any;
@@ -89,6 +90,7 @@ export namespace db {
 	        this.name = source["name"];
 	        this.description = source["description"];
 	        this.relative_path = source["relative_path"];
+	        this.tags = source["tags"];
 	        this.is_pinned = source["is_pinned"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.updated_at = this.convertValues(source["updated_at"], null);

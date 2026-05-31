@@ -144,15 +144,8 @@ const SkillsView = {
         listEl.innerHTML = '<div class="loading">加载中...</div>';
 
         try {
-            let skills = await API.getSkills();
+            let skills = await API.getSkills(SkillsView.currentKeyword);
             this.allSkills = skills;
-
-            if (SkillsView.currentKeyword) {
-                skills = skills.filter(s =>
-                    (s.name && s.name.toLowerCase().includes(SkillsView.currentKeyword)) ||
-                    (s.description && s.description.toLowerCase().includes(SkillsView.currentKeyword))
-                );
-            }
 
             if (skills.length === 0) {
                 listEl.innerHTML = `
@@ -187,16 +180,22 @@ const SkillsView = {
      * @param {Array} skills - Skill 数据数组
      */
     renderTable(container, skills) {
-        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>描述</th><th>更新时间</th><th>置顶</th><th>操作</th></tr></thead><tbody>';
+        let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>描述</th><th>标签</th><th>更新时间</th><th>置顶</th><th>操作</th></tr></thead><tbody>';
 
         skills.forEach(s => {
             const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
             const time = new Date(s.updated_at).toLocaleString('zh-CN');
+            let tags = [];
+            try { tags = typeof s.tags === 'string' ? JSON.parse(s.tags || '[]') : (s.tags || []); } catch (e) { tags = []; }
+            const tagsHtml = tags.map(t =>
+                `<span class="tag tag-sm tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, SkillsView.currentKeyword)}</span>`
+            ).join('');
             html += `
                 <tr data-id="${s.id}" class="${s.is_pinned ? 'row-pinned' : ''}">
                     <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${s.id}" /></td>
                     <td><strong>${highlightText(s.name, SkillsView.currentKeyword)}</strong></td>
                     <td class="text-secondary">${highlightText(desc, SkillsView.currentKeyword)}</td>
+                    <td><div class="item-card-tags">${tagsHtml}</div></td>
                     <td>${time}</td>
                     <td>
                         <button class="btn btn-default btn-sm pin-skill-btn" data-id="${s.id}" title="${s.is_pinned ? '取消置顶' : '置顶'}">
@@ -248,6 +247,11 @@ const SkillsView = {
     renderCards(container, skills) {
         let html = '<div class="cards-grid">';
         skills.forEach(s => {
+            let tags = [];
+            try { tags = typeof s.tags === 'string' ? JSON.parse(s.tags || '[]') : (s.tags || []); } catch (e) { tags = []; }
+            const tagsHtml = tags.slice(0, 4).map(t =>
+                `<span class="tag tag-sm tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, SkillsView.currentKeyword)}</span>`
+            ).join('');
             html += `<div class="item-card${s.is_pinned ? ' card-pinned' : ''}" data-id="${s.id}">
                 <div class="card-checkbox-wrap">
                     <input type="checkbox" class="card-checkbox" data-id="${s.id}" />
@@ -255,6 +259,7 @@ const SkillsView = {
                 <div class="item-card-title">${highlightText(s.name, SkillsView.currentKeyword)}</div>
                 <div class="item-card-desc">${highlightText(s.description || '暂无描述', SkillsView.currentKeyword)}</div>
                 <div class="item-card-meta">
+                    <div class="item-card-tags">${tagsHtml}</div>
                     <button class="btn btn-default btn-sm pin-skill-btn" data-id="${s.id}" title="${s.is_pinned ? '取消置顶' : '置顶'}" style="margin-left: auto;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="${s.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L12 22M17 7L12 2L7 7"/></svg>
                     </button>
@@ -503,9 +508,21 @@ const SkillsView = {
         document.getElementById('skill-search').addEventListener('input', (e) => {
             clearTimeout(SkillsView._searchTimer);
             SkillsView._searchTimer = setTimeout(() => {
-                SkillsView.currentKeyword = e.target.value.toLowerCase();
+                SkillsView.currentKeyword = e.target.value;
                 this.loadSkills();
             }, 100);
+        });
+
+        document.getElementById('skill-list').addEventListener('click', (e) => {
+            const tagEl = e.target.closest('.tag-clickable');
+            if (!tagEl) return;
+            e.stopPropagation();
+            const tag = tagEl.dataset.tag;
+            if (tag) {
+                SkillsView.currentKeyword = tag;
+                document.getElementById('skill-search').value = tag;
+                this.loadSkills();
+            }
         });
 
         document.querySelectorAll('.view-toggle-btn').forEach(btn => {
@@ -615,6 +632,7 @@ const SkillsView = {
     async openEditModal(id) {
         try {
             const skill = await API.getSkill(id);
+            const skillTags = typeof skill.tags === 'string' ? JSON.parse(skill.tags || '[]') : (skill.tags || []);
 
             const content = `
                 <form id="skill-form">
@@ -625,6 +643,10 @@ const SkillsView = {
                     <div class="form-group">
                     <label class="form-label">描述</label>
                     <textarea class="form-textarea" id="skill-description" rows="3">${skill.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">标签（逗号分隔）</label>
+                    <input type="text" class="form-input" id="skill-tags" value="${escapeHtml(skillTags.join(', '))}" placeholder="tag1, tag2, tag3" />
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-default" onclick="Modal.close()">取消</button>
@@ -639,9 +661,11 @@ const SkillsView = {
             e.preventDefault();
             const name = document.getElementById('skill-name').value.trim();
             const description = document.getElementById('skill-description').value.trim();
+            const tagsStr = document.getElementById('skill-tags').value.trim();
+            const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
 
             try {
-                await API.updateSkill(skill.id, name, description);
+                await API.updateSkill(skill.id, name, description, tags);
                     Toast.success('更新成功');
                     Modal.close();
                     await this.loadSkills();
@@ -688,6 +712,12 @@ const SkillsView = {
                 <div class="skill-detail skill-detail-compact">
                     <div class="skill-detail-title">${escapeHtml(skill.name)}</div>
                     <div class="skill-detail-divider"></div>
+                    ${(() => {
+                        let tags = [];
+                        try { tags = typeof skill.tags === 'string' ? JSON.parse(skill.tags || '[]') : (skill.tags || []); } catch (e) { tags = []; }
+                        if (tags.length === 0) return '';
+                        return `<div class="detail-tags">${tags.map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('')}</div><div class="skill-detail-divider"></div>`;
+                    })()}
                     ${skill.description ? `<div class="skill-detail-desc">${escapeHtml(skill.description)}</div>` : ''}
                     <div class="skill-detail-divider"></div>
                     <div class="skill-detail-files-header">

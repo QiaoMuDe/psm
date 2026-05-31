@@ -8,7 +8,6 @@ require (
 	github.com/wailsapp/wails/v2 v2.11.0
 	golang.org/x/text v0.22.0
 	gorm.io/gorm v1.31.1
-	modernc.org/sqlite v1.51.0
 )
 
 require (
@@ -47,4 +46,5 @@ require (
 	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
+	modernc.org/sqlite v1.51.0 // indirect
 )

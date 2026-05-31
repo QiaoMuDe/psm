@@ -188,7 +188,7 @@ const PromptsView = {
             html += `<tr data-id="${p.id}" class="${p.is_pinned ? 'row-pinned' : ''}">
                 <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${p.id}" /></td>
                 <td><strong>${highlightText(p.name, PromptsView.currentKeyword)}</strong></td>
-                <td><span class="tag">${escapeHtml(p.category)}</span></td>
+                <td>${p.category ? `<span class="tag">${escapeHtml(p.category)}</span>` : ''}</td>
                 <td><div class="item-card-tags">${tagsHtml}</div></td>
                 <td class="text-secondary">${time}</td>
                 <td>
@@ -241,7 +241,7 @@ const PromptsView = {
                 <div class="item-card-title">${highlightText(p.name, PromptsView.currentKeyword)}</div>
                 <div class="item-card-desc">${contentHighlighted}</div>
                 <div class="item-card-meta">
-                    <span class="tag">${escapeHtml(p.category)}</span>
+                    ${p.category ? `<span class="tag">${escapeHtml(p.category)}</span>` : ''}
                     <div class="item-card-tags">${tagsHtml}</div>
                     <button class="btn btn-default btn-sm pin-prompt-btn" data-id="${p.id}" title="${p.is_pinned ? '取消置顶' : '置顶'}" style="margin-left: auto;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="${p.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L12 22M17 7L12 2L7 7"/></svg>

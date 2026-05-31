@@ -218,7 +218,7 @@ func (s *PromptService) IncrementUsage(id int64) error {
 
 // DeleteAllPrompts 删除所有 Prompt 记录（含软删除），返回删除数量
 func (s *PromptService) DeleteAllPrompts() (int64, error) {
-	result := db.DB.Unscoped().Delete(&db.Prompt{})
+	result := db.DB.Unscoped().Where("1 = 1").Delete(&db.Prompt{})
 	if result.Error != nil {
 		return 0, fmt.Errorf("删除所有 Prompt 失败: %w", result.Error)
 	}

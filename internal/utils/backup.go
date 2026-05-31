@@ -36,6 +36,7 @@ type BackupSkill struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
 	RelativePath string `json:"relative_path"`
+	Tags         string `json:"tags"`
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
 }
@@ -68,9 +69,10 @@ func CreateBackupArchive(data *BackupData, skillStoragePath string, savePath str
 
 	filteredSettings := make(map[string]string)
 	for k, v := range data.Settings {
-		if k != "skill_storage_path" {
-			filteredSettings[k] = v
+		if k == "skill_storage_path" || k == "app_home" {
+			continue
 		}
+		filteredSettings[k] = v
 	}
 	data.Settings = filteredSettings
 

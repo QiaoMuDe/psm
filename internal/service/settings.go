@@ -84,7 +84,7 @@ func (s *SettingsService) GetSkillStoragePath() (string, error) {
 // ResetSettings 重置所有设置为默认值
 func (s *SettingsService) ResetSettings() error {
 	return db.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Unscoped().Delete(&db.Settings{}).Error; err != nil {
+		if err := tx.Unscoped().Where("1 = 1").Delete(&db.Settings{}).Error; err != nil {
 			return fmt.Errorf("清空设置失败: %w", err)
 		}
 

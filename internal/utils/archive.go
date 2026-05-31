@@ -470,10 +470,11 @@ func HasExportMarker(zipPath string) (bool, error) {
 	return false, nil
 }
 
-// CreateSkillExportZip 创建技能导出格式的 ZIP 文件
+// CreateSkillExportZip 创建技能导出格式的 ZIP 文件（带标识文件）
 // 包含导出标识文件和所有技能目录，每个技能目录直接位于 ZIP 根目录下
+// 标识文件 .psm-skill-export 包含各技能的标签元数据（JSON 格式）
 // 跳过不存在的技能目录，继续处理其余技能
-func CreateSkillExportZip(skillDirs map[string]string, savePath string) error {
+func CreateSkillExportZip(skillDirs map[string]string, skillTags map[string][]string, savePath string) error {
 	if err := EnsureDir(filepath.Dir(savePath)); err != nil {
 		return fmt.Errorf("创建 ZIP 文件目录失败: %w", err)
 	}
@@ -491,7 +492,10 @@ func CreateSkillExportZip(skillDirs map[string]string, savePath string) error {
 	if err != nil {
 		return fmt.Errorf("创建标识文件条目失败: %w", err)
 	}
-	_, _ = entry.Write([]byte(""))
+	if len(skillTags) > 0 {
+		data, _ := json.Marshal(skillTags)
+		_, _ = entry.Write(data)
+	}
 
 	var lastErr error
 	for name, localPath := range skillDirs {

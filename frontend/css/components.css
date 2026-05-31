@@ -2090,6 +2090,8 @@ tr.highlight-flash {
 .popular-item:hover {
     background: var(--bg-surface);
     box-shadow: var(--shadow-sm);
+    border-left: 3px solid var(--accent);
+    padding-left: calc(var(--spacing-3) - 3px);
 }
 
 .popular-item:active {
@@ -2138,41 +2140,16 @@ tr.highlight-flash {
     font-size: calc(13px + var(--font-size-offset));
 }
 
-/* ==================== 仪表盘两列布局 ==================== */
-
-.dashboard-columns {
-    display: grid;
-    grid-template-columns: 2fr 3fr;
-    gap: var(--spacing-4);
-    align-items: stretch;
-}
-
-.dashboard-col-left,
-.dashboard-col-right {
-    min-width: 0;
+.popular-section {
     display: flex;
     flex-direction: column;
-}
-
-.dashboard-columns .card {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
     max-height: 400px;
 }
 
-.dashboard-columns .card-body {
+.popular-section .card-body {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
 }
 
-@media (max-width: 900px) {
-    .dashboard-columns {
-        grid-template-columns: 1fr;
-    }
-    
-    .dashboard-columns .card {
-        max-height: 300px;
-    }
-}
+

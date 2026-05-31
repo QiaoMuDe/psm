@@ -34,8 +34,8 @@ export function CreatePrompt(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['CreatePrompt'](arg1, arg2, arg3, arg4, arg5);
 }
 
-export function CreateSkill(arg1, arg2) {
-  return window['go']['main']['App']['CreateSkill'](arg1, arg2);
+export function CreateSkill(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CreateSkill'](arg1, arg2, arg3);
 }
 
 export function DeletePrompt(arg1) {
@@ -106,8 +106,8 @@ export function GetSkill(arg1) {
   return window['go']['main']['App']['GetSkill'](arg1);
 }
 
-export function GetSkills() {
-  return window['go']['main']['App']['GetSkills']();
+export function GetSkills(arg1) {
+  return window['go']['main']['App']['GetSkills'](arg1);
 }
 
 export function GetSystemFonts() {
@@ -230,6 +230,6 @@ export function UpdateSettings(arg1) {
   return window['go']['main']['App']['UpdateSettings'](arg1);
 }
 
-export function UpdateSkill(arg1, arg2, arg3) {
-  return window['go']['main']['App']['UpdateSkill'](arg1, arg2, arg3);
+export function UpdateSkill(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['UpdateSkill'](arg1, arg2, arg3, arg4);
 }

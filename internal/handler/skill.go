@@ -18,8 +18,8 @@ func (h *SkillHandler) Init(skillSvc *service.SkillService) {
 }
 
 // CreateSkill 创建空 Skill
-func (h *SkillHandler) CreateSkill(name, description string) (*db.Skill, error) {
-	return h.skillSvc.CreateSkill(name, description)
+func (h *SkillHandler) CreateSkill(name, description string, tags []string) (*db.Skill, error) {
+	return h.skillSvc.CreateSkill(name, description, tags)
 }
 
 // GetSkill 根据 ID 获取 Skill
@@ -27,14 +27,14 @@ func (h *SkillHandler) GetSkill(id int64) (*db.Skill, error) {
 	return h.skillSvc.GetSkill(id)
 }
 
-// GetSkills 获取所有 Skill 列表
-func (h *SkillHandler) GetSkills() ([]db.Skill, error) {
-	return h.skillSvc.GetSkills()
+// GetSkills 根据关键词搜索 Skill 列表
+func (h *SkillHandler) GetSkills(keyword string) ([]db.Skill, error) {
+	return h.skillSvc.GetSkills(keyword)
 }
 
 // UpdateSkill 更新 Skill 元数据，同时同步 SKILL.md 文件
-func (h *SkillHandler) UpdateSkill(id int64, name, description string) error {
-	return h.skillSvc.UpdateSkill(id, name, description)
+func (h *SkillHandler) UpdateSkill(id int64, name, description string, tags []string) error {
+	return h.skillSvc.UpdateSkill(id, name, description, tags)
 }
 
 // DeleteSkill 删除 Skill

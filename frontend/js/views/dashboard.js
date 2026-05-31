@@ -53,48 +53,21 @@ const DashboardView = {
                     </div>
                 </div>
 
-                <div class="dashboard-columns">
-                    <div class="dashboard-col-left">
-                        <div class="card popular-section" id="popular-section">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 20V10"/>
-                                        <path d="M18 20V4"/>
-                                        <path d="M6 20v-4"/>
-                                    </svg>
-                                    最常用提示词
-                                </h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="popular-list" id="popular-list">
-                                    <div class="empty-state-small">
-                                        <p>暂无使用记录</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="card popular-section" id="popular-section">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20V10"/>
+                                <path d="M18 20V4"/>
+                                <path d="M6 20v-4"/>
+                            </svg>
+                            最常用提示词
+                        </h3>
                     </div>
-                    <div class="dashboard-col-right">
-                        <div class="card pinned-section">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
-                                    </svg>
-                                    置顶内容
-                                </h3>
-                            </div>
-                            <div class="card-body">
-                                <div id="pinned-items">
-                                    <div class="empty-state">
-                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-bottom: 12px;">
-                                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
-                                        </svg>
-                                        <div class="empty-state-text">暂无置顶内容</div>
-                                        <div class="empty-state-hint">在提示词或技能模块中点击置顶按钮</div>
-                                    </div>
-                                </div>
+                    <div class="card-body">
+                        <div class="popular-list" id="popular-list">
+                            <div class="empty-state-small">
+                                <p>暂无使用记录</p>
                             </div>
                         </div>
                     </div>
@@ -102,11 +75,9 @@ const DashboardView = {
             </div>
         `;
         try {
-            const [promptCount, skillCount, pinnedPrompts, pinnedSkills, popularPrompts] = await Promise.all([
+            const [promptCount, skillCount, popularPrompts] = await Promise.all([
                 API.countPrompts(),
                 API.countSkills(),
-                API.getPinnedPrompts(3),
-                API.getPinnedSkills(3),
                 API.getTopUsedPrompts(5)
             ]);
             document.getElementById('prompt-count').textContent = promptCount;
@@ -116,35 +87,6 @@ const DashboardView = {
             });
 
             this.renderPopularList(container, popularPrompts);
-
-            const pinnedItems = document.getElementById('pinned-items');
-            const allPinned = [
-                ...(pinnedPrompts || []).map(p => ({ name: p.name, type: 'Prompt', id: p.id, updated_at: p.updated_at })),
-                ...(pinnedSkills || []).map(s => ({ name: s.name, type: 'Skill', id: s.id, updated_at: s.updated_at }))
-            ].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 6);
-
-            if (allPinned.length > 0) {
-                let pinnedHtml = '<div class="pinned-list">';
-                allPinned.forEach(item => {
-                    const tagClass = item.type === 'Prompt' ? 'tag-blue' : 'tag-teal';
-                    const icon = item.type === 'Prompt'
-                        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
-                        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
-                    pinnedHtml += `
-                        <div class="pinned-item" data-view="${item.type.toLowerCase()}s" data-id="${item.id}">
-                            <div class="pinned-item-icon ${item.type === 'Prompt' ? 'pinned-icon-blue' : 'pinned-icon-teal'}">${icon}</div>
-                            <span class="pinned-item-name">${escapeHtml(item.name)}</span>
-                            <span class="tag tag-sm ${tagClass}">${item.type}</span>
-                        </div>
-                    `;
-                });
-                pinnedHtml += '</div>';
-                pinnedItems.innerHTML = pinnedHtml;
-
-                pinnedItems.querySelectorAll('.pinned-item').forEach(el => {
-                    el.addEventListener('click', () => App.navigate(el.dataset.view, Number(el.dataset.id)));
-                });
-            }
 
             this.bindSearchEvents();
         } catch (err) {
