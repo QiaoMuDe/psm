@@ -16,6 +16,7 @@ type Prompt struct {
 	Tags       string `json:"tags"`        // 标签列表，以 JSON 数组字符串存储
 	IsPinned   bool   `json:"is_pinned"`   // 是否置顶
 	IsTemplate bool   `json:"is_template"` // 是否为模板
+	UsageCount int    `json:"usage_count"` // 使用次数
 	CreatedAt  string `json:"created_at"`  // 创建时间
 	UpdatedAt  string `json:"updated_at"`  // 更新时间
 }

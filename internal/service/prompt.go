@@ -51,8 +51,8 @@ func (s *PromptService) CreatePrompt(name, content, category, tags string, isTem
 func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 	var p db.Prompt
 	err := s.db.QueryRow(
-		"SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts WHERE id = ?", id,
-	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt)
+		"SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts WHERE id = ?", id,
+	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
@@ -64,7 +64,7 @@ func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 
 // GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
 func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error) {
-	query := "SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts WHERE 1=1"
+	query := "SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts WHERE 1=1"
 	var args []interface{}
 
 	if keyword != "" {
@@ -89,7 +89,7 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 	prompts := []db.Prompt{}
 	for rows.Next() {
 		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
 		}
 		prompts = append(prompts, p)
@@ -211,7 +211,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 	prompts := []db.Prompt{}
 
 	if len(ids) == 0 {
-		rows, err := s.db.Query("SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts ORDER BY id")
+		rows, err := s.db.Query("SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts ORDER BY id")
 		if err != nil {
 			return fmt.Errorf("查询全部 Prompt 失败: %w", err)
 		}
@@ -219,7 +219,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 
 		for rows.Next() {
 			var p db.Prompt
-			if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
 				return fmt.Errorf("读取 Prompt 记录失败: %w", err)
 			}
 			prompts = append(prompts, p)
@@ -285,7 +285,7 @@ func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 		limit = 10
 	}
 	rows, err := s.db.Query(
-		"SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at FROM prompts ORDER BY updated_at DESC LIMIT ?",
+		"SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts ORDER BY updated_at DESC LIMIT ?",
 		limit,
 	)
 	if err != nil {
@@ -296,7 +296,7 @@ func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 	prompts := []db.Prompt{}
 	for rows.Next() {
 		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
 		}
 		prompts = append(prompts, p)
@@ -344,7 +344,7 @@ func (s *PromptService) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
 		limit = 3
 	}
 	rows, err := s.db.Query(`
-		SELECT id, name, content, category, tags, is_pinned, is_template, created_at, updated_at 
+		SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at 
 		FROM prompts WHERE is_pinned = 1 
 		ORDER BY updated_at DESC LIMIT ?`, limit)
 	if err != nil {
@@ -355,10 +355,53 @@ func (s *PromptService) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
 	prompts := []db.Prompt{}
 	for rows.Next() {
 		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("扫描 Prompt 数据失败: %w", err)
 		}
 		prompts = append(prompts, p)
 	}
+	return prompts, nil
+}
+
+// IncrementUsage 增加 Prompt 使用次数
+func (s *PromptService) IncrementUsage(id int64) error {
+	_, err := s.db.Exec(
+		"UPDATE prompts SET usage_count = usage_count + 1 WHERE id = ?", id,
+	)
+	if err != nil {
+		return fmt.Errorf("增加使用次数失败: %w", err)
+	}
+	return nil
+}
+
+// GetTopUsedPrompts 获取最常用的 Prompt 列表
+func (s *PromptService) GetTopUsedPrompts(limit int) ([]db.Prompt, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	rows, err := s.db.Query(`
+		SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at 
+		FROM prompts 
+		WHERE usage_count > 0 
+		ORDER BY usage_count DESC 
+		LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("查询最常用 Prompt 列表失败: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	prompts := []db.Prompt{}
+	for rows.Next() {
+		var p db.Prompt
+		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
+		}
+		prompts = append(prompts, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("遍历 Prompt 列表失败: %w", err)
+	}
+
 	return prompts, nil
 }

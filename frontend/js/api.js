@@ -47,6 +47,8 @@ const API = {
     countPrompts: () => API.call(window.go.main.App.CountPrompts),
     togglePinPrompt: (id) => API.call(window.go.main.App.TogglePinPrompt, Number(id)),
     getPinnedPrompts: (limit = 3) => API.call(window.go.main.App.GetPinnedPrompts, limit),
+    incrementPromptUsage: (id) => API.call(window.go.main.App.IncrementPromptUsage, Number(id)),
+    getTopUsedPrompts: (limit = 5) => API.call(window.go.main.App.GetTopUsedPrompts, limit),
 
     // ===== Skill API =====
     createSkill: (name, description) => API.call(window.go.main.App.CreateSkill, name, description),

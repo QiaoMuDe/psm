@@ -114,6 +114,10 @@ export function GetSystemFonts() {
   return window['go']['main']['App']['GetSystemFonts']();
 }
 
+export function GetTopUsedPrompts(arg1) {
+  return window['go']['main']['App']['GetTopUsedPrompts'](arg1);
+}
+
 export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
@@ -128,6 +132,10 @@ export function ImportSkill(arg1) {
 
 export function ImportSkillAuto(arg1) {
   return window['go']['main']['App']['ImportSkillAuto'](arg1);
+}
+
+export function IncrementPromptUsage(arg1) {
+  return window['go']['main']['App']['IncrementPromptUsage'](arg1);
 }
 
 export function ListSkillFiles(arg1) {

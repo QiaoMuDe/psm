@@ -53,23 +53,48 @@ const DashboardView = {
                     </div>
                 </div>
 
-                <div class="card pinned-section">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
-                            </svg>
-                            置顶内容
-                        </h3>
+                <div class="dashboard-columns">
+                    <div class="dashboard-col-left">
+                        <div class="card popular-section" id="popular-section">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 20V10"/>
+                                        <path d="M18 20V4"/>
+                                        <path d="M6 20v-4"/>
+                                    </svg>
+                                    最常用提示词
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="popular-list" id="popular-list">
+                                    <div class="empty-state-small">
+                                        <p>暂无使用记录</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div id="pinned-items">
-                            <div class="empty-state">
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-bottom: 12px;">
-                                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
-                                </svg>
-                                <div class="empty-state-text">暂无置顶内容</div>
-                                <div class="empty-state-hint">在提示词或技能模块中点击置顶按钮</div>
+                    <div class="dashboard-col-right">
+                        <div class="card pinned-section">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
+                                    </svg>
+                                    置顶内容
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="pinned-items">
+                                    <div class="empty-state">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-bottom: 12px;">
+                                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
+                                        </svg>
+                                        <div class="empty-state-text">暂无置顶内容</div>
+                                        <div class="empty-state-hint">在提示词或技能模块中点击置顶按钮</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -77,17 +102,20 @@ const DashboardView = {
             </div>
         `;
         try {
-            const [promptCount, skillCount, pinnedPrompts, pinnedSkills] = await Promise.all([
+            const [promptCount, skillCount, pinnedPrompts, pinnedSkills, popularPrompts] = await Promise.all([
                 API.countPrompts(),
                 API.countSkills(),
                 API.getPinnedPrompts(3),
-                API.getPinnedSkills(3)
+                API.getPinnedSkills(3),
+                API.getTopUsedPrompts(5)
             ]);
             document.getElementById('prompt-count').textContent = promptCount;
             document.getElementById('skill-count').textContent = skillCount;
             container.querySelectorAll('.stat-card[data-view]').forEach(card => {
                 card.addEventListener('click', () => App.navigate(card.dataset.view));
             });
+
+            this.renderPopularList(container, popularPrompts);
 
             const pinnedItems = document.getElementById('pinned-items');
             const allPinned = [
@@ -277,5 +305,40 @@ const DashboardView = {
         const escapedKeyword = escapeHtml(keyword);
         const regex = new RegExp(`(${escapedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
         return escaped.replace(regex, '<span class="search-highlight">$1</span>');
+    },
+
+    /**
+     * 渲染最常用提示词列表到容器
+     * @param {HTMLElement} container - 容器元素
+     * @param {Array} prompts - 最常用的 Prompt 列表
+     */
+    renderPopularList(container, prompts) {
+        const popularList = container.querySelector('#popular-list');
+        if (!popularList) return;
+
+        if (!prompts || prompts.length === 0) {
+            popularList.innerHTML = `
+                <div class="empty-state-small">
+                    <p>暂无使用记录</p>
+                </div>
+            `;
+            return;
+        }
+
+        const items = prompts.map(p => `
+            <div class="popular-item" data-id="${p.id}">
+                <div class="popular-item-header">
+                    <span class="popular-item-name">${escapeHtml(p.name)}</span>
+                    <span class="popular-item-count">${p.usage_count} 次使用</span>
+                </div>
+                <div class="popular-item-preview">${escapeHtml(p.content.substring(0, 80))}${p.content.length > 80 ? '...' : ''}</div>
+            </div>
+        `).join('');
+
+        popularList.innerHTML = items;
+
+        popularList.querySelectorAll('.popular-item').forEach(el => {
+            el.addEventListener('click', () => App.navigate('prompts', Number(el.dataset.id)));
+        });
     }
 };

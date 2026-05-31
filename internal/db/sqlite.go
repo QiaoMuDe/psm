@@ -87,6 +87,7 @@ func createTables(db *sql.DB) error {
 	    tags        TEXT NOT NULL DEFAULT '[]',
 	    is_pinned   INTEGER NOT NULL DEFAULT 0,
 	    is_template INTEGER NOT NULL DEFAULT 0,
+	    usage_count INTEGER NOT NULL DEFAULT 0,
 	    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 	    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -118,6 +119,10 @@ func createTables(db *sql.DB) error {
 		if _, err := db.Exec(idx); err != nil {
 			return fmt.Errorf("创建索引失败: %w", err)
 		}
+	}
+
+	if err := migrateDatabase(db); err != nil {
+		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
 	return nil
@@ -155,6 +160,23 @@ func insertDefaultSettings(db *sql.DB) error {
 
 	if _, err := db.Exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('font_family', '')"); err != nil {
 		return fmt.Errorf("插入默认字体族设置失败: %w", err)
+	}
+
+	return nil
+}
+
+// migrateDatabase 执行数据库迁移，为已有表添加新字段
+func migrateDatabase(db *sql.DB) error {
+	var columnExists int
+	err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('prompts') WHERE name='usage_count'`).Scan(&columnExists)
+	if err != nil {
+		return fmt.Errorf("检查 usage_count 字段失败: %w", err)
+	}
+
+	if columnExists == 0 {
+		if _, err := db.Exec(`ALTER TABLE prompts ADD COLUMN usage_count INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("添加 usage_count 字段失败: %w", err)
+		}
 	}
 
 	return nil

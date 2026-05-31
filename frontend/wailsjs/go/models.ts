@@ -26,6 +26,7 @@ export namespace db {
 	    tags: string;
 	    is_pinned: boolean;
 	    is_template: boolean;
+	    usage_count: number;
 	    created_at: string;
 	    updated_at: string;
 	
@@ -42,6 +43,7 @@ export namespace db {
 	        this.tags = source["tags"];
 	        this.is_pinned = source["is_pinned"];
 	        this.is_template = source["is_template"];
+	        this.usage_count = source["usage_count"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
 	    }

@@ -821,6 +821,20 @@ const PromptsView = {
                 const content = copyBtn.dataset.content;
                 const isTemplate = copyBtn.dataset.isTemplate === 'true';
 
+                const incrementUsage = async () => {
+                    if (dataset.id) {
+                        try {
+                            await API.incrementPromptUsage(Number(dataset.id));
+                            const prompt = this.allPrompts.find(p => p.id === Number(dataset.id));
+                            if (prompt) {
+                                prompt.usage_count = (prompt.usage_count || 0) + 1;
+                            }
+                        } catch (e) {
+                            // 静默处理错误
+                        }
+                    }
+                };
+
                 if (isTemplate) {
                     const vars = parseTemplateVars(content);
                     if (vars.length > 0) {
@@ -828,6 +842,7 @@ const PromptsView = {
                             const replaced = replaceTemplateVars(content, values);
                             try {
                                 await navigator.clipboard.writeText(replaced);
+                                await incrementUsage();
                                 Toast.success('内容已复制到剪贴板');
                             } catch (err) {
                                 const textarea = document.createElement('textarea');
@@ -838,6 +853,7 @@ const PromptsView = {
                                 textarea.select();
                                 document.execCommand('copy');
                                 document.body.removeChild(textarea);
+                                await incrementUsage();
                                 Toast.success('内容已复制到剪贴板');
                             }
                         });
@@ -847,6 +863,7 @@ const PromptsView = {
 
                 try {
                     await navigator.clipboard.writeText(content);
+                    await incrementUsage();
                     Toast.success('内容已复制到剪贴板');
                 } catch (err) {
                     const textarea = document.createElement('textarea');
@@ -857,6 +874,7 @@ const PromptsView = {
                     textarea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
+                    await incrementUsage();
                     Toast.success('内容已复制到剪贴板');
                 }
             });
@@ -871,6 +889,15 @@ const PromptsView = {
         const prompt = this.allPrompts.find(p => p.id === promptId);
         if (!prompt) return;
 
+        const incrementUsage = async () => {
+            try {
+                await API.incrementPromptUsage(promptId);
+                prompt.usage_count = (prompt.usage_count || 0) + 1;
+            } catch (e) {
+                // 静默处理错误
+            }
+        };
+
         if (prompt.is_template) {
             const vars = parseTemplateVars(prompt.content);
             if (vars.length > 0) {
@@ -878,6 +905,7 @@ const PromptsView = {
                     const replaced = replaceTemplateVars(prompt.content, values);
                     try {
                         await navigator.clipboard.writeText(replaced);
+                        await incrementUsage();
                         Toast.success('内容已复制到剪贴板');
                     } catch (err) {
                         const textarea = document.createElement('textarea');
@@ -888,6 +916,7 @@ const PromptsView = {
                         textarea.select();
                         document.execCommand('copy');
                         document.body.removeChild(textarea);
+                        await incrementUsage();
                         Toast.success('内容已复制到剪贴板');
                     }
                 });
@@ -897,6 +926,7 @@ const PromptsView = {
 
         try {
             await navigator.clipboard.writeText(prompt.content);
+            await incrementUsage();
             Toast.success('内容已复制到剪贴板');
         } catch (err) {
             const textarea = document.createElement('textarea');
@@ -907,6 +937,7 @@ const PromptsView = {
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
+            await incrementUsage();
             Toast.success('内容已复制到剪贴板');
         }
     },
@@ -920,6 +951,19 @@ const PromptsView = {
         const promptId = btn.dataset.id;
         const prompt = promptId ? this.allPrompts.find(p => p.id === Number(promptId)) : null;
 
+        const incrementUsage = async () => {
+            if (promptId) {
+                try {
+                    await API.incrementPromptUsage(Number(promptId));
+                    if (prompt) {
+                        prompt.usage_count = (prompt.usage_count || 0) + 1;
+                    }
+                } catch (e) {
+                    // 静默处理错误
+                }
+            }
+        };
+
         if (prompt && prompt.is_template) {
             const vars = parseTemplateVars(content);
             if (vars.length > 0) {
@@ -927,6 +971,7 @@ const PromptsView = {
                     const replaced = replaceTemplateVars(content, values);
                     try {
                         await navigator.clipboard.writeText(replaced);
+                        await incrementUsage();
                         Toast.success('内容已复制到剪贴板');
                     } catch (err) {
                         const textarea = document.createElement('textarea');
@@ -937,6 +982,7 @@ const PromptsView = {
                         textarea.select();
                         document.execCommand('copy');
                         document.body.removeChild(textarea);
+                        await incrementUsage();
                         Toast.success('内容已复制到剪贴板');
                     }
                 });
@@ -946,6 +992,7 @@ const PromptsView = {
 
         try {
             await navigator.clipboard.writeText(content);
+            await incrementUsage();
             Toast.success('内容已复制到剪贴板');
         } catch (err) {
             const textarea = document.createElement('textarea');
@@ -956,6 +1003,7 @@ const PromptsView = {
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
+            await incrementUsage();
             Toast.success('内容已复制到剪贴板');
         }
     },
@@ -980,6 +1028,15 @@ const PromptsView = {
         ContextMenu.show(e.clientX, e.clientY, [
             { label: '查看', icon: viewIcon, action: () => this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', '), isTemplate: prompt.is_template }) },
             { label: '复制', icon: copyIcon, action: async () => {
+                const incrementUsage = async () => {
+                    try {
+                        await API.incrementPromptUsage(id);
+                        prompt.usage_count = (prompt.usage_count || 0) + 1;
+                    } catch (e) {
+                        // 静默处理错误
+                    }
+                };
+
                 if (prompt.is_template) {
                     const vars = parseTemplateVars(prompt.content);
                     if (vars.length > 0) {
@@ -987,6 +1044,7 @@ const PromptsView = {
                             const replaced = replaceTemplateVars(prompt.content, values);
                             try {
                                 await navigator.clipboard.writeText(replaced);
+                                await incrementUsage();
                                 Toast.success('内容已复制到剪贴板');
                             } catch (err) {
                                 const textarea = document.createElement('textarea');
@@ -997,6 +1055,7 @@ const PromptsView = {
                                 textarea.select();
                                 document.execCommand('copy');
                                 document.body.removeChild(textarea);
+                                await incrementUsage();
                                 Toast.success('内容已复制到剪贴板');
                             }
                         });
@@ -1005,6 +1064,7 @@ const PromptsView = {
                 }
                 try {
                     await navigator.clipboard.writeText(prompt.content);
+                    await incrementUsage();
                     Toast.success('内容已复制到剪贴板');
                 } catch (err) {
                     const textarea = document.createElement('textarea');
@@ -1015,6 +1075,7 @@ const PromptsView = {
                     textarea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
+                    await incrementUsage();
                     Toast.success('内容已复制到剪贴板');
                 }
             }},

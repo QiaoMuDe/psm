@@ -60,6 +60,8 @@ export function GetSkills():Promise<Array<db.Skill>>;
 
 export function GetSystemFonts():Promise<Array<string>>;
 
+export function GetTopUsedPrompts(arg1:number):Promise<Array<db.Prompt>>;
+
 export function GetVersion():Promise<Record<string, string>>;
 
 export function ImportPrompts(arg1:string):Promise<db.ImportResult>;
@@ -67,6 +69,8 @@ export function ImportPrompts(arg1:string):Promise<db.ImportResult>;
 export function ImportSkill(arg1:string):Promise<db.Skill>;
 
 export function ImportSkillAuto(arg1:string):Promise<db.ImportResult>;
+
+export function IncrementPromptUsage(arg1:number):Promise<void>;
 
 export function ListSkillFiles(arg1:number):Promise<Array<db.SkillFile>>;
 

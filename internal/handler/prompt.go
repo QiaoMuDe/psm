@@ -90,3 +90,13 @@ func (h *PromptHandler) TogglePinPrompt(id int64) error {
 func (h *PromptHandler) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
 	return h.promptSvc.GetPinnedPrompts(limit)
 }
+
+// IncrementPromptUsage 增加 Prompt 使用次数
+func (h *PromptHandler) IncrementPromptUsage(id int64) error {
+	return h.promptSvc.IncrementUsage(id)
+}
+
+// GetTopUsedPrompts 获取最常用的 Prompt 列表
+func (h *PromptHandler) GetTopUsedPrompts(limit int) ([]db.Prompt, error) {
+	return h.promptSvc.GetTopUsedPrompts(limit)
+}
