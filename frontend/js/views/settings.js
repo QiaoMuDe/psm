@@ -3,6 +3,8 @@
  * 提供应用设置管理功能，所有图标使用内联 SVG
  */
 const SettingsView = {
+    _fontIndex: -1,
+
     /**
      * 渲染设置视图
      * @param {HTMLElement} container - 容器元素
@@ -216,6 +218,22 @@ const SettingsView = {
     },
 
     /**
+     * 更新字体选项高亮状态
+     * @param {HTMLElement} dropdown - 下拉框元素
+     */
+    updateFontHighlight(dropdown) {
+        const options = Array.from(dropdown.querySelectorAll('.font-family-option')).filter(opt => opt.style.display !== 'none');
+        options.forEach((option, index) => {
+            if (index === this._fontIndex) {
+                option.classList.add('font-family-active');
+                option.scrollIntoView({ block: 'nearest' });
+            } else {
+                option.classList.remove('font-family-active');
+            }
+        });
+    },
+
+    /**
      * 应用字体族到根元素
      * @param {string} family - 字体族名称
      */
@@ -279,6 +297,7 @@ const SettingsView = {
             dropdown.classList.add('active');
             const selected = dropdown.querySelector('.font-family-option.selected');
             if (selected) {
+                this._fontIndex = Array.from(dropdown.querySelectorAll('.font-family-option')).indexOf(selected);
                 selected.scrollIntoView({ block: 'nearest' });
             }
         });
@@ -290,6 +309,30 @@ const SettingsView = {
                 const fontName = option.dataset.value || 'Space Grotesk';
                 option.style.display = fontName.toLowerCase().includes(query) ? '' : 'none';
             });
+            this._fontIndex = -1;
+            this.updateFontHighlight(dropdown);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            const options = Array.from(dropdown.querySelectorAll('.font-family-option')).filter(opt => opt.style.display !== 'none');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this._fontIndex = Math.min(this._fontIndex + 1, options.length - 1);
+                this.updateFontHighlight(dropdown);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this._fontIndex = Math.max(this._fontIndex - 1, -1);
+                this.updateFontHighlight(dropdown);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (this._fontIndex >= 0 && options[this._fontIndex]) {
+                    options[this._fontIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.classList.remove('active');
+                this._fontIndex = -1;
+            }
         });
 
         dropdown.addEventListener('click', (e) => {
@@ -302,11 +345,13 @@ const SettingsView = {
             option.classList.add('selected');
             this.applyFontFamily(value);
             dropdown.classList.remove('active');
+            this._fontIndex = -1;
         });
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.font-family-selector')) {
                 dropdown.classList.remove('active');
+                this._fontIndex = -1;
             }
         });
 

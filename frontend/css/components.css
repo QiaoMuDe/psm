@@ -66,6 +66,11 @@
     border-color: var(--accent);
 }
 
+.stat-card:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease-out;
+}
+
 .stat-value {
     font-size: calc(36px + var(--font-size-offset));
     font-weight: 700;
@@ -1674,6 +1679,11 @@ mark {
     background-color: var(--bg-page);
 }
 
+.pinned-item:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
+}
+
 .pinned-item-icon {
     width: 28px;
     height: 28px;
@@ -1846,6 +1856,11 @@ tr.highlight-flash {
     background-color: var(--bg-page);
 }
 
+.search-result-item:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
+}
+
 .search-result-item:not(:last-child) {
     border-bottom: 1px solid var(--border);
 }
@@ -1935,4 +1950,14 @@ tr.highlight-flash {
 
 .search-result-active {
     background: var(--accent-light);
+}
+
+.font-family-active {
+    background: var(--accent-light);
+}
+
+.item-row:active,
+.item-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
 }
