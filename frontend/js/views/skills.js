@@ -87,6 +87,9 @@ const SkillsView = {
                             </svg>
                             导出
                         </button>
+                        <div class="batch-dropdown-wrap">
+                            <button class="btn btn-default btn-sm" id="skill-more-actions-btn">更多操作 ▾</button>
+                        </div>
                         <button class="btn btn-danger btn-sm" id="skill-batch-delete-btn">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             批量删除
@@ -185,8 +188,7 @@ const SkillsView = {
         skills.forEach(s => {
             const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
             const time = new Date(s.updated_at).toLocaleString('zh-CN');
-            let tags = [];
-            try { tags = typeof s.tags === 'string' ? JSON.parse(s.tags || '[]') : (s.tags || []); } catch (e) { tags = []; }
+            const tags = parseTags(s.tags);
             const tagsHtml = tags.map(t =>
                 `<span class="tag tag-sm tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, SkillsView.currentKeyword)}</span>`
             ).join('');
@@ -247,8 +249,7 @@ const SkillsView = {
     renderCards(container, skills) {
         let html = '<div class="cards-grid">';
         skills.forEach(s => {
-            let tags = [];
-            try { tags = typeof s.tags === 'string' ? JSON.parse(s.tags || '[]') : (s.tags || []); } catch (e) { tags = []; }
+            const tags = parseTags(s.tags);
             const tagsHtml = tags.slice(0, 4).map(t =>
                 `<span class="tag tag-sm tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, SkillsView.currentKeyword)}</span>`
             ).join('');
@@ -419,6 +420,7 @@ const SkillsView = {
         this.batchMode = !this.batchMode;
         if (!this.batchMode) {
             this.selectedIds.clear();
+            DropdownMenu.hide();
         }
         this.syncBatchMode();
         this.updateBatchBar();
@@ -430,6 +432,7 @@ const SkillsView = {
     exitBatchMode() {
         this.batchMode = false;
         this.selectedIds.clear();
+        DropdownMenu.hide();
         this.syncBatchMode();
         this.updateBatchBar();
     },
@@ -499,6 +502,90 @@ const SkillsView = {
                 // 错误已由 API.call 处理
             }
         }
+    },
+
+    handleBatchAddTags() {
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的技能'); return; }
+        Modal.open('添加标签', `
+            <div style="padding:16px">
+                <label class="form-label">标签（逗号分隔）</label>
+                <input type="text" class="form-input" id="skill-batch-tags-input" placeholder="标签1, 标签2, ..." />
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-default" id="skill-batch-tags-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="skill-batch-tags-confirm-btn">确认</button>
+            </div>
+        `);
+        document.getElementById('skill-batch-tags-cancel-btn').addEventListener('click', () => Modal.close());
+        document.getElementById('skill-batch-tags-confirm-btn').addEventListener('click', async () => {
+            const val = document.getElementById('skill-batch-tags-input').value.trim();
+            if (!val) { Toast.warning('请输入标签'); return; }
+            const tags = val.split(',').map(t => t.trim()).filter(Boolean);
+            try {
+                await API.batchAddSkillTags([...this.selectedIds], tags);
+                Toast.success(`已为 ${this.selectedIds.size} 个技能添加标签`);
+                Modal.close();
+                this.selectedIds.clear();
+                this.loadSkills();
+            } catch (e) { Toast.error('操作失败: ' + e.message); }
+        });
+    },
+
+    handleBatchRemoveTags() {
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的技能'); return; }
+        const allTags = new Set();
+        [...this.selectedIds].forEach(id => {
+            const s = this.allSkills.find(x => x.id === id);
+            if (s) {
+                parseTags(s.tags).forEach(x => allTags.add(x));
+            }
+        });
+        if (allTags.size === 0) { Toast.info('选中的技能没有标签'); return; }
+        const tagsHtml = [...allTags].map(t => `<label class="batch-remove-tag-item"><input type="checkbox" class="skill-batch-remove-tag-cb" value="${escapeHtml(t)}" checked /> <span class="tag tag-sm">${escapeHtml(t)}</span></label>`).join('');
+        Modal.open('移除标签', `
+            <div class="batch-remove-tags-wrap">
+                <div class="batch-remove-tags-header">
+                    <span class="batch-remove-tags-label">勾选要移除的标签</span>
+                    <div class="batch-remove-tags-actions">
+                        <button type="button" class="btn btn-xs btn-default" id="skill-batch-remove-tags-select-all">全选</button>
+                        <button type="button" class="btn btn-xs btn-default" id="skill-batch-remove-tags-deselect-all">取消全选</button>
+                    </div>
+                </div>
+                <div class="batch-remove-tags-list">${tagsHtml}</div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-default" id="skill-batch-remove-tags-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="skill-batch-remove-tags-confirm-btn">确认</button>
+            </div>
+        `);
+        document.getElementById('skill-batch-remove-tags-cancel-btn').addEventListener('click', () => Modal.close());
+        document.getElementById('skill-batch-remove-tags-select-all').addEventListener('click', () => {
+            document.querySelectorAll('.skill-batch-remove-tag-cb').forEach(cb => cb.checked = true);
+        });
+        document.getElementById('skill-batch-remove-tags-deselect-all').addEventListener('click', () => {
+            document.querySelectorAll('.skill-batch-remove-tag-cb').forEach(cb => cb.checked = false);
+        });
+        document.getElementById('skill-batch-remove-tags-confirm-btn').addEventListener('click', async () => {
+            const toRemove = [];
+            document.querySelectorAll('.skill-batch-remove-tag-cb').forEach(cb => { if (cb.checked) toRemove.push(cb.value); });
+            if (toRemove.length === 0) { Toast.info('请勾选要移除的标签'); return; }
+            try {
+                await API.batchRemoveSkillTags([...this.selectedIds], toRemove);
+                Toast.success(`已从 ${this.selectedIds.size} 个技能中移除 ${toRemove.length} 个标签`);
+                Modal.close();
+                this.selectedIds.clear();
+                this.loadSkills();
+            } catch (e) { Toast.error('操作失败: ' + e.message); }
+        });
+    },
+
+    handleBatchSetPin(pinned) {
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的技能'); return; }
+        API.batchSetPinSkill([...this.selectedIds], pinned).then(() => {
+            Toast.success(pinned ? '已置顶' : '已取消置顶');
+            this.selectedIds.clear();
+            this.loadSkills();
+        }).catch(e => Toast.error('操作失败: ' + e.message));
     },
 
     /**
@@ -587,6 +674,18 @@ const SkillsView = {
 
         document.getElementById('skill-batch-delete-btn').addEventListener('click', () => this.handleBatchDelete());
 
+        document.getElementById('skill-more-actions-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = e.target.getBoundingClientRect();
+            DropdownMenu.show(rect.left, rect.bottom + 4, [
+                { label: '添加标签', action: () => this.handleBatchAddTags() },
+                { label: '移除标签', action: () => this.handleBatchRemoveTags() },
+                { separator: true },
+                { label: '置顶', action: () => this.handleBatchSetPin(true) },
+                { label: '取消置顶', action: () => this.handleBatchSetPin(false) },
+            ]);
+        });
+
         document.getElementById('add-skill-btn').addEventListener('click', async () => {
             try {
                 const filePaths = await API.openMultiZIPFileDialog();
@@ -632,7 +731,7 @@ const SkillsView = {
     async openEditModal(id) {
         try {
             const skill = await API.getSkill(id);
-            const skillTags = typeof skill.tags === 'string' ? JSON.parse(skill.tags || '[]') : (skill.tags || []);
+            const skillTags = parseTags(skill.tags);
 
             const content = `
                 <form id="skill-form">
@@ -713,8 +812,7 @@ const SkillsView = {
                     <div class="skill-detail-title">${escapeHtml(skill.name)}</div>
                     <div class="skill-detail-divider"></div>
                     ${(() => {
-                        let tags = [];
-                        try { tags = typeof skill.tags === 'string' ? JSON.parse(skill.tags || '[]') : (skill.tags || []); } catch (e) { tags = []; }
+                        const tags = parseTags(skill.tags);
                         if (tags.length === 0) return '';
                         return `<div class="detail-tags">${tags.map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('')}</div><div class="skill-detail-divider"></div>`;
                     })()}

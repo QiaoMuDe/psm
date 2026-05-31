@@ -93,3 +93,23 @@ func (h *PromptHandler) IncrementPromptUsage(id int64) error {
 func (h *PromptHandler) GetTopUsedPrompts(limit int) ([]db.Prompt, error) {
 	return h.promptSvc.GetTopUsedPrompts(limit)
 }
+
+// BatchUpdateCategory 批量更新 Prompt 分类
+func (h *PromptHandler) BatchUpdateCategory(ids []int64, category string) error {
+	return h.promptSvc.BatchUpdateCategory(ids, category)
+}
+
+// BatchAddTags 批量为 Prompt 添加标签
+func (h *PromptHandler) BatchAddTags(ids []int64, tags []string) error {
+	return h.promptSvc.BatchAddTags(ids, tags)
+}
+
+// BatchRemoveTags 批量移除 Prompt 标签
+func (h *PromptHandler) BatchRemoveTags(ids []int64, tags []string) error {
+	return h.promptSvc.BatchRemoveTags(ids, tags)
+}
+
+// BatchSetPin 批量设置 Prompt 置顶状态
+func (h *PromptHandler) BatchSetPin(ids []int64, pinned bool) error {
+	return h.promptSvc.BatchSetPin(ids, pinned)
+}

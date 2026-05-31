@@ -1130,6 +1130,108 @@
     margin: 4px 0;
 }
 
+/* ==================== 下拉菜单 ==================== */
+
+.dropdown-menu-container {
+    position: fixed;
+    z-index: 1001;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 160px;
+    padding: var(--spacing-1) 0;
+    display: none;
+}
+
+.dropdown-menu-container.show {
+    display: block;
+}
+
+.dropdown-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3);
+    cursor: pointer;
+    font-size: calc(13px + var(--font-size-offset));
+    color: var(--text-primary);
+    transition: background-color var(--transition-fast);
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.dropdown-menu-item:hover {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+.dropdown-menu-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dropdown-menu-item.disabled:hover {
+    background: none;
+    color: var(--text-primary);
+}
+
+.dropdown-menu-separator {
+    height: 1px;
+    background: var(--border);
+    margin: var(--spacing-1) 0;
+}
+
+.batch-remove-tags-wrap {
+    padding: 0;
+}
+
+.batch-remove-tags-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-3);
+}
+
+.batch-remove-tags-label {
+    font-size: calc(13px + var(--font-size-offset));
+    color: var(--text-secondary);
+}
+
+.batch-remove-tags-actions {
+    display: flex;
+    gap: var(--spacing-1);
+}
+
+.btn-xs {
+    padding: 2px 8px;
+    font-size: calc(11px + var(--font-size-offset));
+}
+
+.batch-remove-tags-list {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-2);
+}
+
+.batch-remove-tag-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px var(--spacing-2);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-fast);
+}
+
+.batch-remove-tag-item:hover {
+    background-color: var(--bg-hover);
+}
+
 /* ==================== 版本信息 ==================== */
 
 .version-info {

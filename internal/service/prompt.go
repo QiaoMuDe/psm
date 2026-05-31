@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"psm/internal/db"
 	"psm/internal/utils"
@@ -236,4 +237,115 @@ func (s *PromptService) GetTopUsedPrompts(limit int) ([]db.Prompt, error) {
 		return nil, fmt.Errorf("查询最常用 Prompt 列表失败: %w", err)
 	}
 	return prompts, nil
+}
+
+// BatchUpdateCategory 批量更新指定 Prompt 的分类
+func (s *PromptService) BatchUpdateCategory(ids []int64, category string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	result := db.DB.Model(&db.Prompt{}).Where("id IN ?", ids).Update("category", category)
+	if result.Error != nil {
+		return fmt.Errorf("批量更新分类失败: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("未找到匹配的 Prompt 记录")
+	}
+	return nil
+}
+
+// BatchAddTags 批量为指定 Prompt 添加标签（自动去重）
+func (s *PromptService) BatchAddTags(ids []int64, tags []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	for _, id := range ids {
+		var prompt db.Prompt
+		if err := db.DB.First(&prompt, id).Error; err != nil {
+			continue
+		}
+
+		var existingTags []string
+		if err := json.Unmarshal([]byte(prompt.Tags), &existingTags); err != nil {
+			existingTags = []string{}
+		}
+
+		tagSet := make(map[string]bool, len(existingTags))
+		for _, t := range existingTags {
+			tagSet[t] = true
+		}
+		for _, t := range tags {
+			tagSet[t] = true
+		}
+
+		merged := make([]string, 0, len(tagSet))
+		for t := range tagSet {
+			merged = append(merged, t)
+		}
+
+		newTagsJSON, err := json.Marshal(merged)
+		if err != nil {
+			return fmt.Errorf("序列化标签失败: %w", err)
+		}
+
+		if err := db.DB.Model(&db.Prompt{}).Where("id = ?", id).Update("tags", string(newTagsJSON)).Error; err != nil {
+			return fmt.Errorf("更新 Prompt (ID=%d) 标签失败: %w", id, err)
+		}
+	}
+	return nil
+}
+
+// BatchRemoveTags 批量从指定 Prompt 中移除标签
+func (s *PromptService) BatchRemoveTags(ids []int64, tags []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	removeSet := make(map[string]bool, len(tags))
+	for _, t := range tags {
+		removeSet[t] = true
+	}
+
+	for _, id := range ids {
+		var prompt db.Prompt
+		if err := db.DB.First(&prompt, id).Error; err != nil {
+			continue
+		}
+
+		var existingTags []string
+		if err := json.Unmarshal([]byte(prompt.Tags), &existingTags); err != nil {
+			continue
+		}
+
+		filtered := make([]string, 0)
+		for _, t := range existingTags {
+			if !removeSet[t] {
+				filtered = append(filtered, t)
+			}
+		}
+
+		newTagsJSON, err := json.Marshal(filtered)
+		if err != nil {
+			return fmt.Errorf("序列化标签失败: %w", err)
+		}
+
+		if err := db.DB.Model(&db.Prompt{}).Where("id = ?", id).Update("tags", string(newTagsJSON)).Error; err != nil {
+			return fmt.Errorf("更新 Prompt (ID=%d) 标签失败: %w", id, err)
+		}
+	}
+	return nil
+}
+
+// BatchSetPin 批量设置指定 Prompt 的置顶状态
+func (s *PromptService) BatchSetPin(ids []int64, pinned bool) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	result := db.DB.Model(&db.Prompt{}).Where("id IN ?", ids).Update("is_pinned", pinned)
+	if result.Error != nil {
+		return fmt.Errorf("批量设置置顶状态失败: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("未找到匹配的 Prompt 记录")
+	}
+	return nil
 }

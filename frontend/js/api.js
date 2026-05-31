@@ -85,4 +85,20 @@ const API = {
     saveZIPFileDialog: (filename) => API.call(window.go.main.App.SaveZIPFileDialog, filename),
     saveJSONFileDialog: (filename) => API.call(window.go.main.App.SaveJSONFileDialog, filename),
     selectDirectoryDialog: () => API.call(window.go.main.App.SelectDirectoryDialog),
+
+    // ===== 批量操作 API =====
+    // 批量更新 Prompt 分类
+    batchUpdateCategory: (ids, category) => API.call(window.go.main.App.BatchUpdateCategory, ids, category),
+    // 批量为 Prompt 添加标签
+    batchAddPromptTags: (ids, tags) => API.call(window.go.main.App.BatchAddTags, ids, tags),
+    // 批量移除 Prompt 标签
+    batchRemovePromptTags: (ids, tags) => API.call(window.go.main.App.BatchRemoveTags, ids, tags),
+    // 批量设置 Prompt 置顶状态
+    batchSetPinPrompt: (ids, pinned) => API.call(window.go.main.App.BatchSetPin, ids, pinned),
+    // 批量为 Skill 添加标签
+    batchAddSkillTags: (ids, tags) => API.call(window.go.main.App.BatchAddSkillTags, ids, tags),
+    // 批量移除 Skill 标签
+    batchRemoveSkillTags: (ids, tags) => API.call(window.go.main.App.BatchRemoveSkillTags, ids, tags),
+    // 批量设置 Skill 置顶状态
+    batchSetPinSkill: (ids, pinned) => API.call(window.go.main.App.BatchSetPinSkill, ids, pinned),
 };

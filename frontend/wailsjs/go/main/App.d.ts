@@ -6,11 +6,25 @@ import {utils} from '../models';
 
 export function BackupData(arg1:string):Promise<void>;
 
+export function BatchAddSkillTags(arg1:Array<number>,arg2:Array<string>):Promise<void>;
+
+export function BatchAddTags(arg1:Array<number>,arg2:Array<string>):Promise<void>;
+
 export function BatchDeletePrompts(arg1:Array<number>):Promise<number>;
 
 export function BatchDeleteSkills(arg1:Array<number>,arg2:boolean):Promise<number>;
 
 export function BatchImportSkills(arg1:Array<string>):Promise<db.ImportResult>;
+
+export function BatchRemoveSkillTags(arg1:Array<number>,arg2:Array<string>):Promise<void>;
+
+export function BatchRemoveTags(arg1:Array<number>,arg2:Array<string>):Promise<void>;
+
+export function BatchSetPin(arg1:Array<number>,arg2:boolean):Promise<void>;
+
+export function BatchSetPinSkill(arg1:Array<number>,arg2:boolean):Promise<void>;
+
+export function BatchUpdateCategory(arg1:Array<number>,arg2:string):Promise<void>;
 
 export function CleanupOrphanSkills():Promise<number>;
 

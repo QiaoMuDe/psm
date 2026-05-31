@@ -88,6 +88,9 @@ const PromptsView = {
                             </svg>
                             导出
                         </button>
+                        <div class="batch-dropdown-wrap">
+                            <button class="btn btn-default btn-sm" id="prompt-more-actions-btn">更多操作 ▾</button>
+                        </div>
                         <button class="btn btn-danger btn-sm" id="prompt-batch-delete-btn">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             批量删除
@@ -181,8 +184,7 @@ const PromptsView = {
         let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>分类</th><th>标签</th><th>更新时间</th><th>置顶</th><th>操作</th></tr></thead><tbody>';
         prompts.forEach(p => {
             const time = new Date(p.updated_at).toLocaleString('zh-CN');
-            let tags = [];
-            try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
+            const tags = parseTags(p.tags);
             const tagsHtml = tags.map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, PromptsView.currentKeyword)}</span>`).join('');
             const contentEscaped = escapeHtml(p.content);
             html += `<tr data-id="${p.id}" class="${p.is_pinned ? 'row-pinned' : ''}">
@@ -230,8 +232,7 @@ const PromptsView = {
     renderCards(container, prompts) {
         let html = '<div class="cards-grid">';
         prompts.forEach(p => {
-            let tags = [];
-            try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []); } catch(e) { tags = []; }
+            const tags = parseTags(p.tags);
             const tagsHtml = tags.slice(0, 4).map(t => `<span class="tag tag-primary tag-clickable" data-tag="${escapeHtml(t)}">${highlightText(t, PromptsView.currentKeyword)}</span>`).join('');
             const contentHighlighted = highlightText(p.content, PromptsView.currentKeyword);
             html += `<div class="item-card${p.is_pinned ? ' card-pinned' : ''}" data-id="${p.id}">
@@ -307,8 +308,7 @@ const PromptsView = {
                 const id = Number(row.dataset.id);
                 const prompt = this.allPrompts.find(p => p.id === id);
                 if (!prompt) return;
-                let tags = [];
-                try { tags = typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : (prompt.tags || []); } catch(err) { tags = []; }
+                const tags = parseTags(prompt.tags);
                 this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', ') });
             });
             row.addEventListener('contextmenu', (e) => {
@@ -332,8 +332,7 @@ const PromptsView = {
                 const id = Number(card.dataset.id);
                 const prompt = this.allPrompts.find(p => p.id === id);
                 if (!prompt) return;
-                let tags = [];
-                try { tags = typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : (prompt.tags || []); } catch(err) { tags = []; }
+                const tags = parseTags(prompt.tags);
                 this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', ') });
             });
             card.addEventListener('contextmenu', (e) => {
@@ -444,6 +443,7 @@ const PromptsView = {
         this.batchMode = !this.batchMode;
         if (!this.batchMode) {
             this.selectedIds.clear();
+            DropdownMenu.hide();
         }
         this.syncBatchMode();
         this.updateBatchBar();
@@ -455,6 +455,7 @@ const PromptsView = {
     exitBatchMode() {
         this.batchMode = false;
         this.selectedIds.clear();
+        DropdownMenu.hide();
         this.syncBatchMode();
         this.updateBatchBar();
     },
@@ -583,6 +584,20 @@ const PromptsView = {
 
         document.getElementById('prompt-batch-delete-btn').addEventListener('click', () => this.handleBatchDelete());
 
+        document.getElementById('prompt-more-actions-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = e.target.getBoundingClientRect();
+            DropdownMenu.show(rect.left, rect.bottom + 4, [
+                { label: '修改分类', action: () => this.handleBatchUpdateCategory() },
+                { separator: true },
+                { label: '添加标签', action: () => this.handleBatchAddTags() },
+                { label: '移除标签', action: () => this.handleBatchRemoveTags() },
+                { separator: true },
+                { label: '置顶', action: () => this.handleBatchSetPin(true) },
+                { label: '取消置顶', action: () => this.handleBatchSetPin(false) },
+            ]);
+        });
+
         document.getElementById('batch-manage-prompt-btn').addEventListener('click', () => this.toggleBatchMode());
 
         document.getElementById('prompt-exit-batch-btn').addEventListener('click', () => this.exitBatchMode());
@@ -705,7 +720,7 @@ const PromptsView = {
                     </div>
                     <div class="form-group">
                         <label class="form-label">标签（逗号分隔）</label>
-                        <input type="text" class="form-input" id="prompt-tags" value="${escapeHtml((Array.isArray(prompt.tags) ? prompt.tags : (typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : [])).join(', '))}" />
+                        <input type="text" class="form-input" id="prompt-tags" value="${escapeHtml(parseTags(prompt.tags).join(', '))}" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">模板</label>
@@ -1008,6 +1023,133 @@ const PromptsView = {
         }
     },
 
+    handleBatchUpdateCategory() {
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的提示词'); return; }
+        Modal.open('修改分类', `
+            <div style="padding:16px">
+                <label class="form-label">分类名称</label>
+                <div id="batch-category-tags" style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+                <input type="text" class="form-input" id="batch-category-input" placeholder="输入新分类或点击上方选择" />
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-default" id="batch-category-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="batch-category-confirm-btn">确认</button>
+            </div>
+        `);
+        document.getElementById('batch-category-cancel-btn').addEventListener('click', () => Modal.close());
+        document.getElementById('batch-category-confirm-btn').addEventListener('click', async () => {
+            const val = document.getElementById('batch-category-input').value.trim();
+            if (!val) { Toast.warning('请输入分类名称'); return; }
+            try {
+                await API.batchUpdateCategory([...this.selectedIds], val);
+                Toast.success(`已更新 ${this.selectedIds.size} 条提示词的分类`);
+                Modal.close();
+                this.selectedIds.clear();
+                this.loadPrompts();
+            } catch (e) { Toast.error('操作失败: ' + e.message); }
+        });
+        setTimeout(async () => {
+            try {
+                const cats = await API.getCategories();
+                const container = document.getElementById('batch-category-tags');
+                if (container && cats) {
+                    cats.forEach(c => {
+                        const tag = document.createElement('span');
+                        tag.className = 'tag tag-sm tag-clickable';
+                        tag.textContent = c;
+                        tag.style.cursor = 'pointer';
+                        tag.onclick = () => { document.getElementById('batch-category-input').value = c; };
+                        container.appendChild(tag);
+                    });
+                }
+            } catch (e) {}
+        }, 100);
+    },
+
+    handleBatchAddTags() {
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的提示词'); return; }
+        Modal.open('添加标签', `
+            <div style="padding:16px">
+                <label class="form-label">标签（逗号分隔）</label>
+                <input type="text" class="form-input" id="batch-tags-input" placeholder="标签1, 标签2, ..." />
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-default" id="batch-tags-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="batch-tags-confirm-btn">确认</button>
+            </div>
+        `);
+        document.getElementById('batch-tags-cancel-btn').addEventListener('click', () => Modal.close());
+        document.getElementById('batch-tags-confirm-btn').addEventListener('click', async () => {
+            const val = document.getElementById('batch-tags-input').value.trim();
+            if (!val) { Toast.warning('请输入标签'); return; }
+            const tags = val.split(',').map(t => t.trim()).filter(Boolean);
+            try {
+                await API.batchAddPromptTags([...this.selectedIds], tags);
+                Toast.success(`已为 ${this.selectedIds.size} 条提示词添加标签`);
+                Modal.close();
+                this.selectedIds.clear();
+                this.loadPrompts();
+            } catch (e) { Toast.error('操作失败: ' + e.message); }
+        });
+    },
+
+    handleBatchRemoveTags() {
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的提示词'); return; }
+        const allTags = new Set();
+        [...this.selectedIds].forEach(id => {
+            const p = this.allPrompts.find(x => x.id === id);
+            if (p) {
+                parseTags(p.tags).forEach(x => allTags.add(x));
+            }
+        });
+        if (allTags.size === 0) { Toast.info('选中的提示词没有标签'); return; }
+        const tagsHtml = [...allTags].map(t => `<label class="batch-remove-tag-item"><input type="checkbox" class="batch-remove-tag-cb" value="${escapeHtml(t)}" checked /> <span class="tag tag-sm">${escapeHtml(t)}</span></label>`).join('');
+        Modal.open('移除标签', `
+            <div class="batch-remove-tags-wrap">
+                <div class="batch-remove-tags-header">
+                    <span class="batch-remove-tags-label">勾选要移除的标签</span>
+                    <div class="batch-remove-tags-actions">
+                        <button type="button" class="btn btn-xs btn-default" id="batch-remove-tags-select-all">全选</button>
+                        <button type="button" class="btn btn-xs btn-default" id="batch-remove-tags-deselect-all">取消全选</button>
+                    </div>
+                </div>
+                <div class="batch-remove-tags-list">${tagsHtml}</div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-default" id="batch-remove-tags-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="batch-remove-tags-confirm-btn">确认</button>
+            </div>
+        `);
+        document.getElementById('batch-remove-tags-cancel-btn').addEventListener('click', () => Modal.close());
+        document.getElementById('batch-remove-tags-select-all').addEventListener('click', () => {
+            document.querySelectorAll('.batch-remove-tag-cb').forEach(cb => cb.checked = true);
+        });
+        document.getElementById('batch-remove-tags-deselect-all').addEventListener('click', () => {
+            document.querySelectorAll('.batch-remove-tag-cb').forEach(cb => cb.checked = false);
+        });
+        document.getElementById('batch-remove-tags-confirm-btn').addEventListener('click', async () => {
+            const toRemove = [];
+            document.querySelectorAll('.batch-remove-tag-cb').forEach(cb => { if (cb.checked) toRemove.push(cb.value); });
+            if (toRemove.length === 0) { Toast.info('请勾选要移除的标签'); return; }
+            try {
+                await API.batchRemovePromptTags([...this.selectedIds], toRemove);
+                Toast.success(`已从 ${this.selectedIds.size} 条提示词中移除 ${toRemove.length} 个标签`);
+                Modal.close();
+                this.selectedIds.clear();
+                this.loadPrompts();
+            } catch (e) { Toast.error('操作失败: ' + e.message); }
+        });
+    },
+
+    handleBatchSetPin(pinned) {
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的提示词'); return; }
+        API.batchSetPinPrompt([...this.selectedIds], pinned).then(() => {
+            Toast.success(pinned ? '已置顶' : '已取消置顶');
+            this.selectedIds.clear();
+            this.loadPrompts();
+        }).catch(e => Toast.error('操作失败: ' + e.message));
+    },
+
     /**
      * 显示 Prompt 卡片/行的右键菜单
      * @param {MouseEvent} e - 右键事件
@@ -1022,8 +1164,7 @@ const PromptsView = {
         const editIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
         const deleteIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 
-        let tags = [];
-        try { tags = typeof prompt.tags === 'string' ? JSON.parse(prompt.tags || '[]') : (prompt.tags || []); } catch(e) { tags = []; }
+        const tags = parseTags(prompt.tags);
 
         ContextMenu.show(e.clientX, e.clientY, [
             { label: '查看', icon: viewIcon, action: () => this.viewPrompt({ name: prompt.name, content: prompt.content, category: prompt.category || '', tags: tags.join(', '), isTemplate: prompt.is_template }) },

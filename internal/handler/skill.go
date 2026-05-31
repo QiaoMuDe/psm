@@ -109,3 +109,18 @@ func (h *SkillHandler) TogglePinSkill(id int64) error {
 func (h *SkillHandler) GetPinnedSkills(limit int) ([]db.Skill, error) {
 	return h.skillSvc.GetPinnedSkills(limit)
 }
+
+// BatchAddSkillTags 批量为 Skill 添加标签
+func (h *SkillHandler) BatchAddSkillTags(ids []int64, tags []string) error {
+	return h.skillSvc.BatchAddTags(ids, tags)
+}
+
+// BatchRemoveSkillTags 批量移除 Skill 标签
+func (h *SkillHandler) BatchRemoveSkillTags(ids []int64, tags []string) error {
+	return h.skillSvc.BatchRemoveTags(ids, tags)
+}
+
+// BatchSetPinSkill 批量设置 Skill 置顶状态
+func (h *SkillHandler) BatchSetPinSkill(ids []int64, pinned bool) error {
+	return h.skillSvc.BatchSetPin(ids, pinned)
+}

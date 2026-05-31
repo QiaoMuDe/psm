@@ -6,6 +6,14 @@ export function BackupData(arg1) {
   return window['go']['main']['App']['BackupData'](arg1);
 }
 
+export function BatchAddSkillTags(arg1, arg2) {
+  return window['go']['main']['App']['BatchAddSkillTags'](arg1, arg2);
+}
+
+export function BatchAddTags(arg1, arg2) {
+  return window['go']['main']['App']['BatchAddTags'](arg1, arg2);
+}
+
 export function BatchDeletePrompts(arg1) {
   return window['go']['main']['App']['BatchDeletePrompts'](arg1);
 }
@@ -16,6 +24,26 @@ export function BatchDeleteSkills(arg1, arg2) {
 
 export function BatchImportSkills(arg1) {
   return window['go']['main']['App']['BatchImportSkills'](arg1);
+}
+
+export function BatchRemoveSkillTags(arg1, arg2) {
+  return window['go']['main']['App']['BatchRemoveSkillTags'](arg1, arg2);
+}
+
+export function BatchRemoveTags(arg1, arg2) {
+  return window['go']['main']['App']['BatchRemoveTags'](arg1, arg2);
+}
+
+export function BatchSetPin(arg1, arg2) {
+  return window['go']['main']['App']['BatchSetPin'](arg1, arg2);
+}
+
+export function BatchSetPinSkill(arg1, arg2) {
+  return window['go']['main']['App']['BatchSetPinSkill'](arg1, arg2);
+}
+
+export function BatchUpdateCategory(arg1, arg2) {
+  return window['go']['main']['App']['BatchUpdateCategory'](arg1, arg2);
 }
 
 export function CleanupOrphanSkills() {

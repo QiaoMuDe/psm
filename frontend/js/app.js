@@ -432,6 +432,19 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function parseTags(tagsValue) {
+    if (Array.isArray(tagsValue)) return tagsValue;
+    if (typeof tagsValue === 'string') {
+        try {
+            const parsed = JSON.parse(tagsValue || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    return [];
+}
+
 function highlightText(text, keyword) {
     if (!keyword || !text) return escapeHtml(text);
     const escaped = escapeHtml(text);
