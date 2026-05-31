@@ -54,7 +54,7 @@ const API = {
     createSkill: (name, description, tags) => API.call(window.go.main.App.CreateSkill, name, description, tags),
     getSkill: (id) => API.call(window.go.main.App.GetSkill, Number(id)),
     getSkills: (keyword) => API.call(window.go.main.App.GetSkills, keyword || ''),
-    updateSkill: (id, name, description) => API.call(window.go.main.App.UpdateSkill, Number(id), name, description),
+    updateSkill: (id, name, description, tags) => API.call(window.go.main.App.UpdateSkill, Number(id), name, description, tags || []),
     deleteSkill: (id, deleteFiles) => API.call(window.go.main.App.DeleteSkill, Number(id), deleteFiles),
     batchDeleteSkills: (ids, deleteFiles) => API.call(window.go.main.App.BatchDeleteSkills, ids.map(Number), deleteFiles),
     importSkill: (zipPath) => API.call(window.go.main.App.ImportSkill, zipPath),
@@ -89,6 +89,8 @@ const API = {
     // ===== AI API =====
     generatePrompt: (description) => API.call(window.go.main.App.GeneratePrompt, description),
     optimizePrompt: (content) => API.call(window.go.main.App.OptimizePrompt, content),
+    optimizeName: (content) => API.call(window.go.main.App.OptimizeName, content),
+    optimizeDescription: (content) => API.call(window.go.main.App.OptimizeDescription, content),
     cancelAIGeneration: () => API.call(window.go.main.App.CancelAIGeneration),
     getAIModels: () => API.call(window.go.main.App.GetAIModels),
     testAIConnection: (apiURL, apiKey) => API.call(window.go.main.App.TestAIConnection, apiURL, apiKey),

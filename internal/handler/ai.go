@@ -68,6 +68,24 @@ func (h *AIHandler) OptimizePrompt(content string) error {
 	return h.streamChat(prompt, content)
 }
 
+// OptimizeName 向 AI API 发起流式请求，优化名称
+func (h *AIHandler) OptimizeName(content string) error {
+	prompt, err := h.getSystemPrompt("ai_optimize_name")
+	if err != nil || prompt == "" {
+		return fmt.Errorf("未配置名称优化系统提示词，请在设置页配置")
+	}
+	return h.streamChat(prompt, content)
+}
+
+// OptimizeDescription 向 AI API 发起流式请求，优化描述
+func (h *AIHandler) OptimizeDescription(content string) error {
+	prompt, err := h.getSystemPrompt("ai_optimize_description")
+	if err != nil || prompt == "" {
+		return fmt.Errorf("未配置描述优化系统提示词，请在设置页配置")
+	}
+	return h.streamChat(prompt, content)
+}
+
 // getSystemPrompt 从 settings 读取系统提示词
 func (h *AIHandler) getSystemPrompt(key string) (string, error) {
 	return h.settingsSvc.GetSetting(key)

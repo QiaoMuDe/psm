@@ -197,7 +197,7 @@
     font-size: calc(15px + var(--font-size-offset));
     font-family: inherit;
     color: var(--text-primary);
-    background-color: var(--bg-surface);
+    background-color: var(--bg-page);
     transition: border-color var(--transition);
 }
 
@@ -1610,12 +1610,6 @@ mark {
     padding: var(--spacing-2) var(--spacing-4);
 }
 
-.settings-section .form-input,
-.settings-section .form-select,
-.settings-section .form-textarea {
-    background-color: var(--bg-page);
-}
-
 .settings-row {
     display: flex;
     align-items: center;
@@ -1846,6 +1840,15 @@ mark {
     padding-bottom: 40px;
 }
 
+.ai-optimize-row:has(.form-input) .btn-ai-optimize {
+    bottom: 50%;
+    transform: translateY(50%);
+}
+
+.ai-optimize-row:has(.form-input) .form-input {
+    padding-right: 90px;
+}
+
 .btn-ai-optimize {
     position: absolute;
     bottom: 8px;
@@ -1887,10 +1890,9 @@ mark {
     content: '';
     position: absolute;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.15);
+    background-color: rgba(0, 0, 0, 0.05);
     border-radius: var(--radius);
     pointer-events: none;
-    z-index: 1;
 }
 
 @keyframes pulse {

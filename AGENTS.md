@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.9.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
+> 版本: 2.10.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
 
 ---
 
@@ -11,7 +11,7 @@
 **核心业务场景**:
 - Prompt 的增删改查、分类筛选、搜索（含标签匹配+高亮）、JSON 选择性导入导出、置顶、模板变量（`{{变量名}}` / `{{变量名|默认值}}` 占位符）
 - Skill 的元数据管理 + 文件系统存储（ZIP 批量导入导出、SKILL.md frontmatter 解析与同步、标签系统）
-- AI 功能（设置页配置 API 地址/Key/模型、一键生成提示词、优化提示词、模型列表获取、连接测试）
+- AI 功能（设置页配置 API 地址/Key/模型、一键生成提示词、优化提示词/名称/描述、模型列表获取、连接测试）
 - 数据管理（完整备份恢复、一键备份还原、数据统计、孤立数据清理、数据重置、数据目录快捷打开）
 - 系统设置（程序家目录配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置、AI 配置）
 - 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框、最常用提示词）
@@ -615,7 +615,9 @@ settings (KV 存储)
 ├── ai_api_key:                     (AI API 密钥)
 ├── ai_model: gpt-4o-mini           (AI 模型标识)
 ├── ai_generate_prompt: ...         (AI 生成系统提示词)
-└── ai_optimize_prompt: ...         (AI 优化系统提示词)
+├── ai_optimize_prompt: ...         (AI 优化提示词系统提示词)
+├── ai_optimize_name: ...           (AI 优化名称系统提示词)
+└── ai_optimize_description: ...    (AI 优化描述系统提示词)
 
 prompts (独立表)
 ├── id (PK, AUTO_INCREMENT)
@@ -782,6 +784,13 @@ skills (独立表 + 文件系统)
 63. **Skill PSM 导出格式**: `.psm-skill-export` 标识文件 JSON 包含 `skills`（map[name][]tags）和 `pinned`（[]name）
 64. **Prompt JSON 导入**: Tags 直接使用 `p.Tags`（已是 JSON 字符串），不再 `MustMarshalJSON`；保留 UsageCount/CreatedAt/UpdatedAt
 65. **仪表盘隐藏滚动条**: `#view-container > .view-content` 子元素选择器精确匹配，不影响其他视图
+66. **AI 三种优化 API**: `OptimizePrompt`（内容）、`OptimizeName`（名称）、`OptimizeDescription`（描述），各自独立系统提示词
+67. **AI 系统提示词配置项**: `ai_generate_prompt`（生成）、`ai_optimize_prompt`（优化内容）、`ai_optimize_name`（优化名称）、`ai_optimize_description`（优化描述），共 4 个
+68. **bindOptimizeButton 参数化**: `(btnId, fieldId, apiMethod)` 第三个参数可选，默认 `API.optimizePrompt`
+69. **全局输入框背景色**: `.form-input/.form-select/.form-textarea` 统一 `var(--bg-page)`，与 `var(--bg-surface)` 白色背景区分
+70. **优化按钮位置**: `:has(.form-input)` 区分 input（垂直居中）和 textarea（右下角），`.btn-ai-optimize` 默认右下角
+71. **api.js updateSkill**: 必须传 4 个参数 `(id, name, description, tags)`，Wails 严格校验参数数量
+72. **备份恢复全面审查**: 5 个 BUG（Tags 双重编码/UsageCount 丢失/时间戳丢失/LIKE 模糊去重/Skill IsPinned 丢失）+ 1 个设计缺陷已修复
 66. **AI 一键生成提示词**: 设置页配置 API 地址/Key/模型，Prompt 管理页工具栏"AI 生成"按钮，输入一句话描述→流式生成→审查名称+内容→确认使用
 67. **AI 优化提示词**: Prompt 新建/编辑模态框内容标签旁"优化"按钮，流式覆盖 textarea，支持还原，textarea 遮罩动画
 68. **AI 系统提示词可配置**: 设置页 AI 分组中配置生成/优化系统提示词，存入数据库 settings 表
@@ -794,3 +803,10 @@ skills (独立表 + 文件系统)
 75. **备份恢复精确去重**: Prompt 恢复时使用 `WHERE name = ?` 精确匹配，不再使用 LIKE 模糊匹配
 76. **Skill PSM 格式保留置顶**: `.psm-skill-export` 标识文件新增 `pinned` 字段，导入时恢复 IsPinned 状态
 77. **仪表盘滚动条隐藏**: `#view-container > .view-content` 子元素选择器精确匹配仪表盘滚动容器
+78. **AI 名称优化**: `OptimizeName` 方法 + `ai_optimize_name` 系统提示词，20 字以内中文命名
+79. **AI 描述优化**: `OptimizeDescription` 方法 + `ai_optimize_description` 系统提示词，50 字以内中文描述
+80. **优化按钮覆盖所有模态框**: Prompt 三个模态框名字 + Skill 编辑模态框名字和描述，均带 AI 优化按钮
+81. **bindOptimizeButton 参数化**: 第三个参数 `apiMethod` 区分不同优化 API（optimizeName/optimizeDescription/optimizePrompt）
+82. **全局输入框背景色**: `.form-input/.form-select/.form-textarea` 统一使用 `var(--bg-page)` 背景色
+83. **优化按钮位置区分**: `:has(.form-input)` 选择器让 input 按钮垂直居中，textarea 按钮右下角
+84. **api.js updateSkill 修复**: 补充缺失的 `tags` 参数，修复 Skill 保存时参数数量不匹配错误

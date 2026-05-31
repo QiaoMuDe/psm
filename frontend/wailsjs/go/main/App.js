@@ -206,6 +206,14 @@ export function OpenZIPFileDialog() {
   return window['go']['main']['App']['OpenZIPFileDialog']();
 }
 
+export function OptimizeDescription(arg1) {
+  return window['go']['main']['App']['OptimizeDescription'](arg1);
+}
+
+export function OptimizeName(arg1) {
+  return window['go']['main']['App']['OptimizeName'](arg1);
+}
+
 export function OptimizePrompt(arg1) {
   return window['go']['main']['App']['OptimizePrompt'](arg1);
 }

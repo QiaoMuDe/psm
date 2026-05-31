@@ -106,6 +106,10 @@ export function OpenMultiZIPFileDialog():Promise<Array<string>>;
 
 export function OpenZIPFileDialog():Promise<string>;
 
+export function OptimizeDescription(arg1:string):Promise<void>;
+
+export function OptimizeName(arg1:string):Promise<void>;
+
 export function OptimizePrompt(arg1:string):Promise<void>;
 
 export function QuickBackup():Promise<void>;

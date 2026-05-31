@@ -211,10 +211,28 @@ const SettingsView = {
                         <div class="settings-row settings-row-column">
                             <div class="settings-row-label">
                                 <span class="settings-row-title">优化提示词系统提示</span>
-                                <span class="settings-row-desc">AI 优化提示词时使用的系统提示词，可自定义修改</span>
+                                <span class="settings-row-desc">AI 优化提示词内容时使用的系统提示词，可自定义修改</span>
                             </div>
                             <div class="settings-row-control settings-row-control-full">
                                 <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-prompt" rows="6"></textarea>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-column">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">优化名称系统提示</span>
+                                <span class="settings-row-desc">AI 优化名称时使用的系统提示词，适用于提示词和技能的名称优化</span>
+                            </div>
+                            <div class="settings-row-control settings-row-control-full">
+                                <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-name" rows="6"></textarea>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-column">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">优化描述系统提示</span>
+                                <span class="settings-row-desc">AI 优化描述时使用的系统提示词，适用于技能描述优化</span>
+                            </div>
+                            <div class="settings-row-control settings-row-control-full">
+                                <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-description" rows="6"></textarea>
                             </div>
                         </div>
                     </div>
@@ -264,6 +282,8 @@ const SettingsView = {
             document.getElementById('setting-ai-model').value = settings.ai_model || '';
             document.getElementById('setting-ai-generate-prompt').value = settings.ai_generate_prompt || '';
             document.getElementById('setting-ai-optimize-prompt').value = settings.ai_optimize_prompt || '';
+            document.getElementById('setting-ai-optimize-name').value = settings.ai_optimize_name || '';
+            document.getElementById('setting-ai-optimize-description').value = settings.ai_optimize_description || '';
 
             await this.loadSystemFonts(fontFamily);
         } catch (err) {
@@ -462,6 +482,8 @@ const SettingsView = {
                     ai_model: document.getElementById('setting-ai-model').value.trim(),
                     ai_generate_prompt: document.getElementById('setting-ai-generate-prompt').value,
                     ai_optimize_prompt: document.getElementById('setting-ai-optimize-prompt').value,
+                    ai_optimize_name: document.getElementById('setting-ai-optimize-name').value,
+                    ai_optimize_description: document.getElementById('setting-ai-optimize-description').value,
                 });
                 App.settings = await API.getSettings();
                 document.documentElement.setAttribute('data-theme', theme);
