@@ -10,12 +10,13 @@
 **核心定位**: 基于 Wails v2 的跨平台桌面应用，用于统一管理 AI 开发中的 Skill（技能包）和 Prompt（提示词）
 **核心业务场景**:
 - Prompt 的增删改查、分类筛选、搜索（含标签匹配+高亮）、JSON 选择性导入导出、置顶、模板变量（`{{变量名}}` / `{{变量名|默认值}}` 占位符）
-- Skill 的元数据管理 + 文件系统存储（ZIP 批量导入导出、SKILL.md frontmatter 解析与同步）
+- Skill 的元数据管理 + 文件系统存储（ZIP 批量导入导出、SKILL.md frontmatter 解析与同步、标签系统）
 - 数据管理（完整备份恢复、一键备份还原、数据统计、孤立数据清理、数据重置、数据目录快捷打开）
 - 系统设置（程序家目录配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置）
 - 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框）
 - 全局拖拽导入（支持拖入 ZIP 文件直接导入技能）
 - 快捷键系统（全局快捷键 + 模块快捷键 + 悬停复制）
+- 批量操作增强（批量修改分类/添加移除标签/置顶取消置顶，下拉菜单交互）
 - 关于弹窗（版本号、项目地址、快捷键帮助）
 
 ---
@@ -64,11 +65,12 @@ psm/
 │       │   ├── toast.js             # Toast 消息组件（success/error/warning/info + SVG 图标）
 │       │   ├── modal.js             # 模态框组件（打开/关闭/内容填充）
 │       │   ├── confirm.js           # 确认对话框组件（Promise-based）
-│       │   └── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭/支持弹窗环境）
+│       │   ├── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭/支持弹窗环境）
+│       │   └── dropdown-menu.js     # 下拉菜单组件（批量操作"更多操作"菜单，自动边界定位/点击外部关闭）
 │       └── views/
 │           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖 + 键盘导航）
 │           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明
-│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/批量管理/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮/Skill 详情弹窗/文件右键菜单
+│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/标签筛选/批量管理(修改分类/添加移除标签/置顶)/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮/Skill 详情弹窗/文件右键菜单
 │           ├── settings.js          # 设置页：程序家目录配置 + 6 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局
 │           └── data.js              # 数据管理：一键备份还原 + 完整备份恢复 + 数据重置
 │
@@ -120,8 +122,8 @@ psm/
 | 模块 | 核心功能 | 文件 | 核心输入/输出 |
 |------|----------|------|---------------|
 | 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置 | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
-| Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
-| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
+| Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶) | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
+| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
 | 前端 SPA | 路由管理、视图切换、组件系统（含右键菜单） | `frontend/js/app.js` + views/ | 用户交互 → API 调用 |
@@ -134,6 +136,7 @@ psm/
 | Modal | 模态框（打开/关闭/内容填充） | `frontend/js/components/modal.js` |
 | Confirm | 确认对话框（Promise-based，danger/info） | `frontend/js/components/confirm.js` |
 | ContextMenu | 右键菜单（动态菜单项/自动边界定位/点击外部关闭） | `frontend/js/components/context-menu.js` |
+| DropdownMenu | 下拉菜单（批量操作"更多操作"菜单，自动边界定位/点击外部关闭） | `frontend/js/components/dropdown-menu.js` |
 
 ---
 
@@ -559,7 +562,7 @@ prompts (独立表)
 
 skills (独立表 + 文件系统)
 ├── id (PK, AUTO_INCREMENT)
-├── name, description
+├── name, description, tags (JSON 数组字符串)
 ├── relative_path → 拼接 app_home/skills 得到绝对路径
 ├── is_pinned (DEFAULT 0)
 ├── created_at, updated_at (time.Time)
@@ -624,6 +627,10 @@ skills (独立表 + 文件系统)
 42. **Skill 详情弹窗**: 简洁信息流布局，无卡片边框，分隔线区分区块，双击文件可在文件管理器打开
 43. **文件列表右键菜单**: 文件：打开文件/打开所在目录/复制路径；目录：打开目录/复制路径
 44. **后端文件操作**: `RevealInExplorer`（打开文件管理器）+ `OpenFile`（用系统默认程序打开文件）
+45. **Skill 标签系统**: Skill 模型新增 tags 字段（JSON 数组），支持标签筛选、搜索匹配、ZIP 导入导出保留标签（通过 .psm-skill-export 标识文件存储）
+46. **批量操作增强**: 批量管理模式下"更多操作"下拉菜单，支持 Prompt 批量修改分类/添加移除标签/置顶取消置顶，Skill 批量添加移除标签/置顶取消置顶
+47. **DropdownMenu 组件**: 新增下拉菜单组件，跟随 ContextMenu 模式，自动边界检测，点击外部/滚动关闭
+48. **parseTags 工具函数**: app.js 新增统一标签解析函数，处理 null/"null"/"[]"/数组等所有情况，避免前端崩溃
 
 ---
 
@@ -659,7 +666,7 @@ skills (独立表 + 文件系统)
 15. **设计系统**: Flat Design，5 级阴影系统，3 级动画效果，Space Grotesk 字体，SVG 图标
 16. **CSS 三文件**: `variables.css`（变量/主题定义）、`layout.css`（布局）、`components.css`（组件样式）
 17. **前端路由**: app.js loadScript 去重机制，防止 const 重复声明
-18. **批量管理模式**: `batchMode` 状态 + `.batch-mode` CSS 类切换，checkbox 默认隐藏，批量操作栏 `order:1` 固定底部
+18. **批量管理模式**: `batchMode` 状态 + `.batch-mode` CSS 类切换，checkbox 默认隐藏，批量操作栏 `order:1` 固定底部，含"更多操作"下拉菜单（修改分类/添加移除标签/置顶取消置顶）
 19. **右键菜单**: `ContextMenu` 组件，`show(x, y, items)` API，自动边界检测，点击外部/滚动自动关闭
 20. **仪表盘导航**: 统计卡片通过 `data-view` 属性 + `App.navigate()` 实现点击跳转
 21. **版本信息**: verman 库构建时注入，前端 `loadVersion()` 展示，未注入时显示 "dev"
@@ -690,3 +697,8 @@ skills (独立表 + 文件系统)
 46. **GORM 原子更新**: `db.DB.Model().Update("field", value)` 或 `Updates(map[string]interface{}{})` 替代 CASE WHEN SQL
 47. **GORM 批量删除**: `db.DB.Unscoped().Delete(&Type{}, ids)` 硬删除指定 ID 列表
 48. **GORM 空切片**: `Count()` 返回 `int64`，Handler 层相应调整返回类型为 `(int64, error)`
+49. **Skill 标签存储**: Skill.tags 字段为 JSON 数组字符串，ZIP 导入导出通过 `.psm-skill-export` 标识文件保留标签
+50. **批量操作后端**: PromptHandler/BatchUpdateCategory/BatchAddTags/BatchRemoveTags/BatchSetPin，SkillHandler/BatchAddSkillTags/BatchRemoveSkillTags/BatchSetPinSkill（避免 Wails 绑定同名冲突）
+51. **DropdownMenu 组件**: `DropdownMenu.show(x, y, items)` API，items 支持 `{label, action, separator}` 格式
+52. **parseTags 函数**: `parseTags(tagsValue)` 统一处理 null/"null"/"[]"/数组，返回安全数组
+53. **批量操作下拉菜单**: "更多操作"按钮位于批量操作栏右侧，点击弹出 DropdownMenu，包含修改分类/添加标签/移除标签/置顶/取消置顶
