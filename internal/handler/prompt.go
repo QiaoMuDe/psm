@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"psm/internal/db"
 	"psm/internal/service"
 )
@@ -18,12 +17,7 @@ func (h *PromptHandler) Init(promptSvc *service.PromptService) {
 
 // CreatePrompt 创建新的 Prompt
 func (h *PromptHandler) CreatePrompt(name, content, category string, tags []string, isTemplate bool) (*db.Prompt, error) {
-	tagsJSON := "[]"
-	if len(tags) > 0 {
-		data, _ := json.Marshal(tags)
-		tagsJSON = string(data)
-	}
-	return h.promptSvc.CreatePrompt(name, content, category, tagsJSON, isTemplate)
+	return h.promptSvc.CreatePrompt(name, content, category, tags, isTemplate)
 }
 
 // GetPrompt 根据 ID 获取 Prompt
@@ -38,12 +32,7 @@ func (h *PromptHandler) GetPrompts(keyword, category string) ([]db.Prompt, error
 
 // UpdatePrompt 更新 Prompt
 func (h *PromptHandler) UpdatePrompt(id int64, name, content, category string, tags []string, isTemplate bool) error {
-	tagsJSON := "[]"
-	if len(tags) > 0 {
-		data, _ := json.Marshal(tags)
-		tagsJSON = string(data)
-	}
-	return h.promptSvc.UpdatePrompt(id, name, content, category, tagsJSON, isTemplate)
+	return h.promptSvc.UpdatePrompt(id, name, content, category, tags, isTemplate)
 }
 
 // DeletePrompt 删除 Prompt
@@ -68,7 +57,11 @@ func (h *PromptHandler) ExportPrompts(ids []int64, filePath string) error {
 
 // ImportPrompts 从 JSON 文件导入 Prompt
 func (h *PromptHandler) ImportPrompts(filePath string) (*db.ImportResult, error) {
-	return h.promptSvc.ImportPrompts(filePath)
+	count, err := h.promptSvc.ImportPrompts(filePath)
+	if err != nil {
+		return nil, err
+	}
+	return &db.ImportResult{Success: count}, nil
 }
 
 // GetRecentPrompts 获取最近修改的 Prompt 列表
@@ -77,7 +70,7 @@ func (h *PromptHandler) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 }
 
 // CountPrompts 统计 Prompt 总数
-func (h *PromptHandler) CountPrompts() (int, error) {
+func (h *PromptHandler) CountPrompts() (int64, error) {
 	return h.promptSvc.CountPrompts()
 }
 

@@ -2,7 +2,6 @@ package service
 
 import (
 	"archive/zip"
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -10,19 +9,18 @@ import (
 	"psm/internal/db"
 	"psm/internal/utils"
 	"strings"
-	"time"
+
+	"gorm.io/gorm"
 )
 
 // SkillService Skill 管理服务
 type SkillService struct {
-	db          *sql.DB
 	settingsSvc *SettingsService
 }
 
 // NewSkillService 创建 Skill 服务实例
-func NewSkillService(db *sql.DB, settingsSvc *SettingsService) *SkillService {
+func NewSkillService(settingsSvc *SettingsService) *SkillService {
 	return &SkillService{
-		db:          db,
 		settingsSvc: settingsSvc,
 	}
 }
@@ -39,42 +37,26 @@ func (s *SkillService) CreateSkill(name, description string) (*db.Skill, error) 
 		return nil, fmt.Errorf("创建 Skill 目录失败: %w", err)
 	}
 
-	relativePath := name
-	now := time.Now().Format("2006-01-02 15:04:05")
-	result, err := s.db.Exec(
-		"INSERT INTO skills (name, description, relative_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-		name, description, relativePath, now, now,
-	)
-	if err != nil {
+	skill := &db.Skill{
+		Name:         name,
+		Description:  description,
+		RelativePath: name,
+	}
+
+	if err := db.DB.Create(skill).Error; err != nil {
 		return nil, fmt.Errorf("创建 Skill 记录失败: %w", err)
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, fmt.Errorf("获取插入 ID 失败: %w", err)
-	}
-
-	skill := &db.Skill{
-		ID:           id,
-		Name:         name,
-		Description:  description,
-		RelativePath: relativePath,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
 	return skill, nil
 }
 
 // GetSkill 根据 ID 获取 Skill
 func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 	var sk db.Skill
-	err := s.db.QueryRow(
-		"SELECT id, name, description, relative_path, is_pinned, created_at, updated_at FROM skills WHERE id = ?", id,
-	).Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.IsPinned, &sk.CreatedAt, &sk.UpdatedAt)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("skill (ID=%d) 不存在", id)
-	}
-	if err != nil {
+	if err := db.DB.First(&sk, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("skill (ID=%d) 不存在", id)
+		}
 		return nil, fmt.Errorf("查询 Skill 失败: %w", err)
 	}
 	return &sk, nil
@@ -82,27 +64,10 @@ func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 
 // GetSkills 获取所有 Skill 列表
 func (s *SkillService) GetSkills() ([]db.Skill, error) {
-	rows, err := s.db.Query(
-		"SELECT id, name, description, relative_path, is_pinned, created_at, updated_at FROM skills ORDER BY is_pinned DESC, updated_at DESC",
-	)
-	if err != nil {
+	var skills []db.Skill
+	if err := db.DB.Order("is_pinned DESC, updated_at DESC").Find(&skills).Error; err != nil {
 		return nil, fmt.Errorf("查询 Skill 列表失败: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	skills := []db.Skill{}
-	for rows.Next() {
-		var sk db.Skill
-		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.IsPinned, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("读取 Skill 记录失败: %w", err)
-		}
-		skills = append(skills, sk)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("遍历 Skill 列表失败: %w", err)
-	}
-
 	return skills, nil
 }
 
@@ -113,20 +78,15 @@ func (s *SkillService) UpdateSkill(id int64, name, description string) error {
 		return err
 	}
 
-	now := time.Now().Format("2006-01-02 15:04:05")
-	result, err := s.db.Exec(
-		"UPDATE skills SET name = ?, description = ?, updated_at = ? WHERE id = ?",
-		name, description, now, id,
-	)
-	if err != nil {
-		return fmt.Errorf("更新 Skill 失败: %w", err)
-	}
+	result := db.DB.Model(&db.Skill{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":        name,
+		"description": description,
+	})
 
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("获取影响行数失败: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("更新 Skill 失败: %w", result.Error)
 	}
-	if affected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 
@@ -155,16 +115,11 @@ func (s *SkillService) DeleteSkill(id int64, deleteFiles bool) error {
 		}
 	}
 
-	result, err := s.db.Exec("DELETE FROM skills WHERE id = ?", id)
-	if err != nil {
-		return fmt.Errorf("删除 Skill 记录失败: %w", err)
+	result := db.DB.Delete(&db.Skill{}, id)
+	if result.Error != nil {
+		return fmt.Errorf("删除 Skill 记录失败: %w", result.Error)
 	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("获取影响行数失败: %w", err)
-	}
-	if affected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 	return nil
@@ -192,27 +147,11 @@ func (s *SkillService) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, 
 		}
 	}
 
-	query := "DELETE FROM skills WHERE id IN ("
-	args := make([]interface{}, 0, len(ids))
-	for i, id := range ids {
-		if i > 0 {
-			query += ","
-		}
-		query += "?"
-		args = append(args, id)
+	result := db.DB.Unscoped().Delete(&db.Skill{}, ids)
+	if result.Error != nil {
+		return 0, fmt.Errorf("批量删除 Skill 失败: %w", result.Error)
 	}
-	query += ")"
-
-	result, err := s.db.Exec(query, args...)
-	if err != nil {
-		return 0, fmt.Errorf("批量删除 Skill 失败: %w", err)
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("获取影响行数失败: %w", err)
-	}
-	return affected, nil
+	return result.RowsAffected, nil
 }
 
 // ImportSkill 从 ZIP 文件导入 Skill（解压 + 创建数据库记录）
@@ -242,12 +181,8 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 		name = strings.TrimSuffix(name, filepath.Ext(name))
 	}
 
-	var exists bool
-	err = s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM skills WHERE name = ?)", name).Scan(&exists)
-	if err != nil {
-		return nil, fmt.Errorf("检查 Skill 是否存在失败: %w", err)
-	}
-	if exists {
+	var existsSkill db.Skill
+	if err := db.DB.Where("name = ?", name).First(&existsSkill).Error; err == nil {
 		return nil, fmt.Errorf("skill '%s' 已存在，请先删除或更改名称", name)
 	}
 
@@ -258,31 +193,16 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 
 	utils.FlattenIfNested(skillDir, name)
 
-	relativePath := name
-	description := metadata.Description
+	skill := &db.Skill{
+		Name:         name,
+		Description:  metadata.Description,
+		RelativePath: name,
+	}
 
-	now := time.Now().Format("2006-01-02 15:04:05")
-	insertResult, err := s.db.Exec(
-		"INSERT INTO skills (name, description, relative_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-		name, description, relativePath, now, now,
-	)
-	if err != nil {
+	if err := db.DB.Create(skill).Error; err != nil {
 		return nil, fmt.Errorf("创建 Skill 记录失败: %w", err)
 	}
 
-	id, err := insertResult.LastInsertId()
-	if err != nil {
-		return nil, fmt.Errorf("获取插入 ID 失败: %w", err)
-	}
-
-	skill := &db.Skill{
-		ID:           id,
-		Name:         name,
-		Description:  description,
-		RelativePath: relativePath,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
 	return skill, nil
 }
 
@@ -317,14 +237,8 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 	for dirName := range skillDirMap {
 		prefix := dirName + "/"
 
-		var exists bool
-		err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM skills WHERE name = ?)", dirName).Scan(&exists)
-		if err != nil {
-			result.Failed++
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: 查询失败: %v", dirName, err))
-			continue
-		}
-		if exists {
+		var existsSkill db.Skill
+		if err := db.DB.Where("name = ?", dirName).First(&existsSkill).Error; err == nil {
 			result.Skipped++
 			continue
 		}
@@ -354,12 +268,12 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 			continue
 		}
 
-		now := time.Now().Format("2006-01-02 15:04:05")
-		_, err = s.db.Exec(
-			"INSERT INTO skills (name, description, relative_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-			name, description, dirName, now, now,
-		)
-		if err != nil {
+		skill := &db.Skill{
+			Name:         name,
+			Description:  description,
+			RelativePath: dirName,
+		}
+		if err := db.DB.Create(skill).Error; err != nil {
 			result.Failed++
 			result.Errors = append(result.Errors, fmt.Sprintf("%s: 创建记录失败: %v", dirName, err))
 			_ = os.RemoveAll(skillDir)
@@ -504,36 +418,18 @@ func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
 	if limit <= 0 {
 		limit = 10
 	}
-	rows, err := s.db.Query(
-		"SELECT id, name, description, relative_path, is_pinned, created_at, updated_at FROM skills ORDER BY is_pinned DESC, updated_at DESC LIMIT ?",
-		limit,
-	)
-	if err != nil {
+
+	var skills []db.Skill
+	if err := db.DB.Order("is_pinned DESC, updated_at DESC").Limit(limit).Find(&skills).Error; err != nil {
 		return nil, fmt.Errorf("查询最近 Skill 列表失败: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	skills := []db.Skill{}
-	for rows.Next() {
-		var sk db.Skill
-		if err := rows.Scan(&sk.ID, &sk.Name, &sk.Description, &sk.RelativePath, &sk.IsPinned, &sk.CreatedAt, &sk.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("读取 Skill 记录失败: %w", err)
-		}
-		skills = append(skills, sk)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("遍历 Skill 列表失败: %w", err)
-	}
-
 	return skills, nil
 }
 
 // CountSkills 统计 Skill 总数
-func (s *SkillService) CountSkills() (int, error) {
-	var count int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM skills").Scan(&count)
-	if err != nil {
+func (s *SkillService) CountSkills() (int64, error) {
+	var count int64
+	if err := db.DB.Model(&db.Skill{}).Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("统计 Skill 总数失败: %w", err)
 	}
 	return count, nil
@@ -566,13 +462,7 @@ func (s *SkillService) DeleteSkills(ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	query := "DELETE FROM skills WHERE id IN (" + strings.Repeat("?,", len(ids)-1) + "?)"
-	args := make([]interface{}, len(ids))
-	for i, id := range ids {
-		args[i] = id
-	}
-	_, err := s.db.Exec(query, args...)
-	if err != nil {
+	if err := db.DB.Unscoped().Delete(&db.Skill{}, ids).Error; err != nil {
 		return fmt.Errorf("批量删除 Skill 失败: %w", err)
 	}
 	return nil
@@ -580,19 +470,14 @@ func (s *SkillService) DeleteSkills(ids []int64) error {
 
 // TogglePinSkill 切换 Skill 的置顶状态
 func (s *SkillService) TogglePinSkill(id int64) error {
-	result, err := s.db.Exec(
-		"UPDATE skills SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?",
-		time.Now().Format("2006-01-02 15:04:05"), id,
-	)
-	if err != nil {
-		return fmt.Errorf("切换置顶状态失败: %w", err)
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("获取影响行数失败: %w", err)
-	}
-	if affected == 0 {
+	var sk db.Skill
+	if err := db.DB.First(&sk, id).Error; err != nil {
 		return fmt.Errorf("skill (ID=%d) 不存在", id)
+	}
+
+	newPinned := !sk.IsPinned
+	if err := db.DB.Model(&db.Skill{}).Where("id = ?", id).Update("is_pinned", newPinned).Error; err != nil {
+		return fmt.Errorf("切换置顶状态失败: %w", err)
 	}
 	return nil
 }
@@ -610,15 +495,11 @@ func (s *SkillService) DeleteAllSkills(deleteFiles bool) (int64, error) {
 		}
 	}
 
-	result, err := s.db.Exec("DELETE FROM skills")
-	if err != nil {
-		return 0, fmt.Errorf("删除所有 Skill 失败: %w", err)
+	result := db.DB.Unscoped().Delete(&db.Skill{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("删除所有 Skill 失败: %w", result.Error)
 	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("获取删除数量失败: %w", err)
-	}
-	return affected, nil
+	return result.RowsAffected, nil
 }
 
 // GetPinnedSkills 获取置顶的 Skill 列表
@@ -626,23 +507,12 @@ func (s *SkillService) GetPinnedSkills(limit int) ([]db.Skill, error) {
 	if limit <= 0 {
 		limit = 3
 	}
-	rows, err := s.db.Query(`
-		SELECT id, name, description, relative_path, is_pinned, created_at, updated_at 
-		FROM skills WHERE is_pinned = 1 
-		ORDER BY updated_at DESC LIMIT ?`, limit)
-	if err != nil {
-		return nil, fmt.Errorf("获取置顶 Skill 列表失败: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
 
 	var skills []db.Skill
-	for rows.Next() {
-		var skill db.Skill
-		if err := rows.Scan(&skill.ID, &skill.Name, &skill.Description, &skill.RelativePath, &skill.IsPinned, &skill.CreatedAt, &skill.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("扫描 Skill 数据失败: %w", err)
-		}
-		skills = append(skills, skill)
+	if err := db.DB.Where("is_pinned = ?", true).Order("updated_at DESC").Limit(limit).Find(&skills).Error; err != nil {
+		return nil, fmt.Errorf("获取置顶 Skill 列表失败: %w", err)
 	}
+
 	if skills == nil {
 		skills = []db.Skill{}
 	}

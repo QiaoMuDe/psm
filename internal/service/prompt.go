@@ -1,239 +1,133 @@
 package service
 
 import (
-	"database/sql"
 	"fmt"
 	"psm/internal/db"
 	"psm/internal/utils"
-	"time"
+
+	"gorm.io/gorm"
 )
 
-// PromptService Prompt 管理服务
-type PromptService struct {
-	db *sql.DB
+// PromptService 提示词服务
+type PromptService struct{}
+
+// NewPromptService 创建提示词服务实例
+func NewPromptService() *PromptService {
+	return &PromptService{}
 }
 
-// NewPromptService 创建 Prompt 服务实例
-func NewPromptService(db *sql.DB) *PromptService {
-	return &PromptService{db: db}
-}
-
-// CreatePrompt 创建新的 Prompt
-func (s *PromptService) CreatePrompt(name, content, category, tags string, isTemplate bool) (*db.Prompt, error) {
-	now := time.Now().Format("2006-01-02 15:04:05")
-	result, err := s.db.Exec(
-		"INSERT INTO prompts (name, content, category, tags, is_template, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		name, content, category, tags, isTemplate, now, now,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("创建 Prompt 失败: %w", err)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, fmt.Errorf("获取插入 ID 失败: %w", err)
-	}
-
-	prompt := &db.Prompt{
-		ID:         id,
+// CreatePrompt 创建新 Prompt，返回创建的 Prompt 对象
+func (s *PromptService) CreatePrompt(name, content, category string, tags []string, isTemplate bool) (*db.Prompt, error) {
+	prompt := db.Prompt{
 		Name:       name,
 		Content:    content,
 		Category:   category,
-		Tags:       tags,
+		Tags:       utils.MustMarshalJSON(tags),
 		IsTemplate: isTemplate,
-		CreatedAt:  now,
-		UpdatedAt:  now,
 	}
-	return prompt, nil
+
+	if err := db.DB.Create(&prompt).Error; err != nil {
+		return nil, fmt.Errorf("创建 Prompt 失败: %w", err)
+	}
+	return &prompt, nil
 }
 
 // GetPrompt 根据 ID 获取 Prompt
 func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
-	var p db.Prompt
-	err := s.db.QueryRow(
-		"SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts WHERE id = ?", id,
-	).Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("prompt (ID=%d) 不存在", id)
-	}
-	if err != nil {
+	var prompt db.Prompt
+	if err := db.DB.First(&prompt, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("prompt (ID=%d) 不存在", id)
+		}
 		return nil, fmt.Errorf("查询 Prompt 失败: %w", err)
 	}
-	return &p, nil
+	return &prompt, nil
 }
 
 // GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
 func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error) {
-	query := "SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts WHERE 1=1"
-	var args []interface{}
+	var prompts []db.Prompt
+	query := db.DB.Model(&db.Prompt{})
 
 	if keyword != "" {
-		query += " AND (name LIKE ? OR content LIKE ? OR tags LIKE ?)"
 		like := "%" + keyword + "%"
-		args = append(args, like, like, like)
+		query = query.Where("name LIKE ? OR content LIKE ? OR tags LIKE ?", like, like, like)
 	}
 
 	if category != "" && category != "all" {
-		query += " AND category = ?"
-		args = append(args, category)
+		query = query.Where("category = ?", category)
 	}
 
-	query += " ORDER BY is_pinned DESC, updated_at DESC"
-
-	rows, err := s.db.Query(query, args...)
-	if err != nil {
+	if err := query.Order("is_pinned DESC, updated_at DESC").Find(&prompts).Error; err != nil {
 		return nil, fmt.Errorf("查询 Prompt 列表失败: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	prompts := []db.Prompt{}
-	for rows.Next() {
-		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
-		}
-		prompts = append(prompts, p)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("遍历 Prompt 列表失败: %w", err)
 	}
 
 	return prompts, nil
 }
 
-// UpdatePrompt 更新 Prompt
-func (s *PromptService) UpdatePrompt(id int64, name, content, category, tags string, isTemplate bool) error {
-	now := time.Now().Format("2006-01-02 15:04:05")
-	result, err := s.db.Exec(
-		"UPDATE prompts SET name = ?, content = ?, category = ?, tags = ?, is_template = ?, updated_at = ? WHERE id = ?",
-		name, content, category, tags, isTemplate, now, id,
-	)
-	if err != nil {
-		return fmt.Errorf("更新 Prompt 失败: %w", err)
-	}
+// UpdatePrompt 更新指定 Prompt 的所有字段
+func (s *PromptService) UpdatePrompt(id int64, name, content, category string, tags []string, isTemplate bool) error {
+	result := db.DB.Model(&db.Prompt{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":        name,
+		"content":     content,
+		"category":    category,
+		"tags":        utils.MustMarshalJSON(tags),
+		"is_template": isTemplate,
+	})
 
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("获取影响行数失败: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("更新 Prompt 失败: %w", result.Error)
 	}
-	if affected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
 	return nil
 }
 
-// DeletePrompt 删除 Prompt
+// DeletePrompt 根据 ID 删除 Prompt
 func (s *PromptService) DeletePrompt(id int64) error {
-	result, err := s.db.Exec("DELETE FROM prompts WHERE id = ?", id)
-	if err != nil {
-		return fmt.Errorf("删除 Prompt 失败: %w", err)
+	result := db.DB.Delete(&db.Prompt{}, id)
+	if result.Error != nil {
+		return fmt.Errorf("删除 Prompt 失败: %w", result.Error)
 	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("获取影响行数失败: %w", err)
-	}
-	if affected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
 	return nil
 }
 
-// BatchDeletePrompts 批量删除多个 Prompt，返回实际删除的数量
+// BatchDeletePrompts 批量删除 Prompt，返回删除数量
 func (s *PromptService) BatchDeletePrompts(ids []int64) (int64, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-
-	query := "DELETE FROM prompts WHERE id IN ("
-	args := make([]interface{}, 0, len(ids))
-	for i, id := range ids {
-		if i > 0 {
-			query += ","
-		}
-		query += "?"
-		args = append(args, id)
+	result := db.DB.Unscoped().Delete(&db.Prompt{}, ids)
+	if result.Error != nil {
+		return 0, fmt.Errorf("批量删除 Prompt 失败: %w", result.Error)
 	}
-	query += ")"
-
-	result, err := s.db.Exec(query, args...)
-	if err != nil {
-		return 0, fmt.Errorf("批量删除 Prompt 失败: %w", err)
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("获取影响行数失败: %w", err)
-	}
-	return affected, nil
+	return result.RowsAffected, nil
 }
 
-// DeleteAllPrompts 删除所有 Prompt 记录，返回删除数量
-func (s *PromptService) DeleteAllPrompts() (int64, error) {
-	result, err := s.db.Exec("DELETE FROM prompts")
-	if err != nil {
-		return 0, fmt.Errorf("删除所有 Prompt 失败: %w", err)
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("获取删除数量失败: %w", err)
-	}
-	return affected, nil
-}
-
-// GetCategories 获取所有不重复的分类列表
+// GetCategories 获取所有分类列表
 func (s *PromptService) GetCategories() ([]string, error) {
-	rows, err := s.db.Query("SELECT DISTINCT category FROM prompts ORDER BY category")
-	if err != nil {
+	var categories []string
+	if err := db.DB.Model(&db.Prompt{}).Distinct().Pluck("category", &categories).Error; err != nil {
 		return nil, fmt.Errorf("查询分类列表失败: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	categories := []string{}
-	for rows.Next() {
-		var cat string
-		if err := rows.Scan(&cat); err != nil {
-			return nil, fmt.Errorf("读取分类失败: %w", err)
-		}
-		categories = append(categories, cat)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("遍历分类列表失败: %w", err)
-	}
-
 	return categories, nil
 }
 
 // ExportPrompts 导出 Prompt 为 JSON 文件，ids 为空时导出全部
 func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
-	prompts := []db.Prompt{}
+	var prompts []db.Prompt
 
 	if len(ids) == 0 {
-		rows, err := s.db.Query("SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts ORDER BY id")
-		if err != nil {
+		if err := db.DB.Order("id").Find(&prompts).Error; err != nil {
 			return fmt.Errorf("查询全部 Prompt 失败: %w", err)
 		}
-		defer func() { _ = rows.Close() }()
-
-		for rows.Next() {
-			var p db.Prompt
-			if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
-				return fmt.Errorf("读取 Prompt 记录失败: %w", err)
-			}
-			prompts = append(prompts, p)
-		}
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("遍历 Prompt 列表失败: %w", err)
-		}
 	} else {
-		for _, id := range ids {
-			p, err := s.GetPrompt(id)
-			if err != nil {
-				return fmt.Errorf("获取 Prompt (ID=%d) 失败: %w", id, err)
-			}
-			prompts = append(prompts, *p)
+		if err := db.DB.Where("id IN ?", ids).Find(&prompts).Error; err != nil {
+			return fmt.Errorf("查询指定 Prompt 失败: %w", err)
 		}
 	}
 
@@ -243,40 +137,29 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 	return nil
 }
 
-// ImportPrompts 从 JSON 文件导入 Prompt，返回导入结果
-func (s *PromptService) ImportPrompts(filePath string) (*db.ImportResult, error) {
-	prompts, err := utils.ImportPromptsFromJSON(filePath)
+// ImportPrompts 从 JSON 文件导入 Prompt，返回成功导入的数量
+func (s *PromptService) ImportPrompts(filePath string) (int, error) {
+	importedPrompts, err := utils.ImportPromptsFromJSON(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("从 JSON 文件读取 Prompt 失败: %w", err)
+		return 0, fmt.Errorf("从 JSON 导入 Prompt 失败: %w", err)
 	}
 
-	result := &db.ImportResult{}
-
-	for _, p := range prompts {
-		var exists bool
-		err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM prompts WHERE name = ?)", p.Name).Scan(&exists)
-		if err != nil {
-			result.Failed++
+	count := 0
+	for _, p := range importedPrompts {
+		newPrompt := db.Prompt{
+			Name:       p.Name,
+			Content:    p.Content,
+			Category:   p.Category,
+			Tags:       utils.MustMarshalJSON(p.Tags),
+			IsPinned:   p.IsPinned,
+			IsTemplate: p.IsTemplate,
+		}
+		if err := db.DB.Create(&newPrompt).Error; err != nil {
 			continue
 		}
-		if exists {
-			result.Skipped++
-			continue
-		}
-
-		now := time.Now().Format("2006-01-02 15:04:05")
-		_, err = s.db.Exec(
-			"INSERT INTO prompts (name, content, category, tags, is_template, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			p.Name, p.Content, p.Category, p.Tags, p.IsTemplate, now, now,
-		)
-		if err != nil {
-			result.Failed++
-			continue
-		}
-		result.Success++
+		count++
 	}
-
-	return result, nil
+	return count, nil
 }
 
 // GetRecentPrompts 获取最近修改的 Prompt 列表
@@ -284,56 +167,33 @@ func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 	if limit <= 0 {
 		limit = 10
 	}
-	rows, err := s.db.Query(
-		"SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at FROM prompts ORDER BY updated_at DESC LIMIT ?",
-		limit,
-	)
-	if err != nil {
+
+	var prompts []db.Prompt
+	if err := db.DB.Order("updated_at DESC").Limit(limit).Find(&prompts).Error; err != nil {
 		return nil, fmt.Errorf("查询最近 Prompt 列表失败: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	prompts := []db.Prompt{}
-	for rows.Next() {
-		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
-		}
-		prompts = append(prompts, p)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("遍历 Prompt 列表失败: %w", err)
-	}
-
 	return prompts, nil
 }
 
 // CountPrompts 统计 Prompt 总数
-func (s *PromptService) CountPrompts() (int, error) {
-	var count int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM prompts").Scan(&count)
-	if err != nil {
+func (s *PromptService) CountPrompts() (int64, error) {
+	var count int64
+	if err := db.DB.Model(&db.Prompt{}).Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("统计 Prompt 总数失败: %w", err)
 	}
 	return count, nil
 }
 
-// TogglePinPrompt 切换 Prompt 的置顶状态
+// TogglePinPrompt 切换 Prompt 置顶状态
 func (s *PromptService) TogglePinPrompt(id int64) error {
-	result, err := s.db.Exec(
-		"UPDATE prompts SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?",
-		time.Now().Format("2006-01-02 15:04:05"), id,
-	)
-	if err != nil {
-		return fmt.Errorf("切换置顶状态失败: %w", err)
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("获取影响行数失败: %w", err)
-	}
-	if affected == 0 {
+	var prompt db.Prompt
+	if err := db.DB.First(&prompt, id).Error; err != nil {
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
+	}
+
+	newPinned := !prompt.IsPinned
+	if err := db.DB.Model(&db.Prompt{}).Where("id = ?", id).Update("is_pinned", newPinned).Error; err != nil {
+		return fmt.Errorf("切换置顶状态失败: %w", err)
 	}
 	return nil
 }
@@ -343,35 +203,26 @@ func (s *PromptService) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
 	if limit <= 0 {
 		limit = 3
 	}
-	rows, err := s.db.Query(`
-		SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at 
-		FROM prompts WHERE is_pinned = 1 
-		ORDER BY updated_at DESC LIMIT ?`, limit)
-	if err != nil {
-		return nil, fmt.Errorf("获取置顶 Prompt 列表失败: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
 
-	prompts := []db.Prompt{}
-	for rows.Next() {
-		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("扫描 Prompt 数据失败: %w", err)
-		}
-		prompts = append(prompts, p)
+	var prompts []db.Prompt
+	if err := db.DB.Where("is_pinned = ?", true).Order("updated_at DESC").Limit(limit).Find(&prompts).Error; err != nil {
+		return nil, fmt.Errorf("获取置顶 Prompt 列表失败: %w", err)
 	}
 	return prompts, nil
 }
 
 // IncrementUsage 增加 Prompt 使用次数
 func (s *PromptService) IncrementUsage(id int64) error {
-	_, err := s.db.Exec(
-		"UPDATE prompts SET usage_count = usage_count + 1 WHERE id = ?", id,
-	)
-	if err != nil {
-		return fmt.Errorf("增加使用次数失败: %w", err)
+	return db.DB.Model(&db.Prompt{}).Where("id = ?", id).UpdateColumn("usage_count", gorm.Expr("usage_count + 1")).Error
+}
+
+// DeleteAllPrompts 删除所有 Prompt 记录（含软删除），返回删除数量
+func (s *PromptService) DeleteAllPrompts() (int64, error) {
+	result := db.DB.Unscoped().Delete(&db.Prompt{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("删除所有 Prompt 失败: %w", result.Error)
 	}
-	return nil
+	return result.RowsAffected, nil
 }
 
 // GetTopUsedPrompts 获取最常用的 Prompt 列表
@@ -379,29 +230,10 @@ func (s *PromptService) GetTopUsedPrompts(limit int) ([]db.Prompt, error) {
 	if limit <= 0 {
 		limit = 5
 	}
-	rows, err := s.db.Query(`
-		SELECT id, name, content, category, tags, is_pinned, is_template, usage_count, created_at, updated_at 
-		FROM prompts 
-		WHERE usage_count > 0 
-		ORDER BY usage_count DESC 
-		LIMIT ?`, limit)
-	if err != nil {
+
+	var prompts []db.Prompt
+	if err := db.DB.Where("usage_count > 0").Order("usage_count DESC").Limit(limit).Find(&prompts).Error; err != nil {
 		return nil, fmt.Errorf("查询最常用 Prompt 列表失败: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	prompts := []db.Prompt{}
-	for rows.Next() {
-		var p db.Prompt
-		if err := rows.Scan(&p.ID, &p.Name, &p.Content, &p.Category, &p.Tags, &p.IsPinned, &p.IsTemplate, &p.UsageCount, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("读取 Prompt 记录失败: %w", err)
-		}
-		prompts = append(prompts, p)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("遍历 Prompt 列表失败: %w", err)
-	}
-
 	return prompts, nil
 }

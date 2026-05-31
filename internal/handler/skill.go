@@ -96,7 +96,7 @@ func (h *SkillHandler) GetRecentSkills(limit int) ([]db.Skill, error) {
 }
 
 // CountSkills 统计 Skill 总数
-func (h *SkillHandler) CountSkills() (int, error) {
+func (h *SkillHandler) CountSkills() (int64, error) {
 	return h.skillSvc.CountSkills()
 }
 

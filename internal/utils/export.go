@@ -45,6 +45,15 @@ func ImportPromptsFromJSON(filePath string) ([]db.Prompt, error) {
 	return prompts, nil
 }
 
+// MustMarshalJSON 将值序列化为 JSON 字符串，失败时返回 "[]"
+func MustMarshalJSON(v interface{}) string {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return "[]"
+	}
+	return string(data)
+}
+
 // ExportSkillMetadata 将技能元数据导出为 JSON 文件
 // skill 为要导出的技能信息，filePath 为目标 JSON 文件路径
 func ExportSkillMetadata(skill db.Skill, filePath string) error {

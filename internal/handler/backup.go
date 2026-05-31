@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"psm/internal/db"
 	"psm/internal/service"
 	"psm/internal/utils"
+	"time"
 )
 
 // BackupHandler 处理备份恢复和数据统计相关的方法，嵌入到 App 结构体
@@ -47,8 +49,8 @@ func (h *BackupHandler) BackupData(savePath string) error {
 			Content:   p.Content,
 			Category:  p.Category,
 			Tags:      p.Tags,
-			CreatedAt: p.CreatedAt,
-			UpdatedAt: p.UpdatedAt,
+			CreatedAt: p.CreatedAt.Format(time.RFC3339),
+			UpdatedAt: p.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 
@@ -58,8 +60,8 @@ func (h *BackupHandler) BackupData(savePath string) error {
 			Name:         s.Name,
 			Description:  s.Description,
 			RelativePath: s.RelativePath,
-			CreatedAt:    s.CreatedAt,
-			UpdatedAt:    s.UpdatedAt,
+			CreatedAt:    s.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:    s.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 
@@ -105,7 +107,9 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 			result.PromptsSkipped++
 			continue
 		}
-		_, err := h.promptSvc.CreatePrompt(p.Name, p.Content, p.Category, p.Tags, false)
+		var tags []string
+		_ = json.Unmarshal([]byte(p.Tags), &tags)
+		_, err := h.promptSvc.CreatePrompt(p.Name, p.Content, p.Category, tags, false)
 		if err != nil {
 			continue
 		}
@@ -137,8 +141,8 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 
 // DataStats 数据统计信息
 type DataStats struct {
-	PromptCount int   `json:"prompt_count"`
-	SkillCount  int   `json:"skill_count"`
+	PromptCount int64 `json:"prompt_count"`
+	SkillCount  int64 `json:"skill_count"`
 	DBSize      int64 `json:"db_size"`
 }
 
