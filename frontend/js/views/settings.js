@@ -237,6 +237,33 @@ const SettingsView = {
                         </div>
                     </div>
                 </div>
+
+                <!-- 日志设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-header">
+                        <h3>日志设置</h3>
+                    </div>
+                    <div class="settings-section-body">
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">日志级别</span>
+                                <span class="settings-row-desc">控制日志输出详细程度，DEBUG 最详细，ERROR 仅错误</span>
+                            </div>
+                            <div class="settings-row-control settings-model-control">
+                                <div class="log-level-segments" id="log-level-select" tabindex="0">
+                                    <input type="hidden" id="log-level-value" value="WARN" />
+                                    <div class="segments-track" id="log-level-track">
+                                        <div class="segments-highlight" id="log-level-highlight"></div>
+                                        <div class="segment-item active" data-level="DEBUG" data-index="0">DEBUG</div>
+                                        <div class="segment-item" data-level="INFO" data-index="1">INFO</div>
+                                        <div class="segment-item" data-level="WARN" data-index="2">WARN</div>
+                                        <div class="segment-item" data-level="ERROR" data-index="3">ERROR</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -284,6 +311,12 @@ const SettingsView = {
             document.getElementById('setting-ai-optimize-prompt').value = settings.ai_optimize_prompt || '';
             document.getElementById('setting-ai-optimize-name').value = settings.ai_optimize_name || '';
             document.getElementById('setting-ai-optimize-description').value = settings.ai_optimize_description || '';
+
+            // 加载日志级别
+            const logLevel = await API.getLogLevel();
+            const levelValue = document.getElementById('log-level-value');
+            levelValue.value = logLevel || 'WARN';
+            this.setLogLevelSegments(logLevel || 'WARN');
 
             await this.loadSystemFonts(fontFamily);
         } catch (err) {
@@ -485,6 +518,7 @@ const SettingsView = {
                     ai_optimize_name: document.getElementById('setting-ai-optimize-name').value,
                     ai_optimize_description: document.getElementById('setting-ai-optimize-description').value,
                 });
+                await API.setLogLevel(document.getElementById('log-level-value').value);
                 App.settings = await API.getSettings();
                 document.documentElement.setAttribute('data-theme', theme);
                 Toast.success('保存成功');
@@ -530,6 +564,88 @@ const SettingsView = {
         });
 
         this.bindModelFetcher();
+        this.bindLogLevelSelect();
+    },
+
+    /**
+     * 设置分段滑块高亮位置
+     * @param {string} level - 日志级别 (DEBUG/INFO/WARN/ERROR)
+     */
+    setLogLevelSegments(level) {
+        const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+        const index = levels.indexOf(level);
+        if (index < 0) return;
+        const highlight = document.getElementById('log-level-highlight');
+        const items = document.querySelectorAll('#log-level-select .segment-item');
+        if (!highlight || items.length === 0) return;
+        const width = 100 / items.length;
+        highlight.style.width = `${width}%`;
+        highlight.style.left = `${index * width}%`;
+        items.forEach((item, i) => item.classList.toggle('active', i === index));
+    },
+
+    /**
+     * 绑定分段滑块的点击、拖动和键盘事件
+     */
+    bindLogLevelSelect() {
+        const container = document.getElementById('log-level-select');
+        const levelInput = document.getElementById('log-level-value');
+        const track = document.getElementById('log-level-track');
+        const items = Array.from(track.querySelectorAll('.segment-item'));
+        const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+        let dragging = false;
+
+        const selectLevel = (level) => {
+            if (levelInput.value === level) return;
+            levelInput.value = level;
+            this.setLogLevelSegments(level);
+        };
+
+        const getSegmentFromX = (clientX) => {
+            const trackRect = track.getBoundingClientRect();
+            const x = clientX - trackRect.left;
+            const idx = Math.floor((x / trackRect.width) * items.length);
+            return levels[Math.max(0, Math.min(idx, levels.length - 1))];
+        };
+
+        items.forEach((item) => {
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                dragging = true;
+                selectLevel(item.dataset.level);
+            });
+
+            item.addEventListener('mouseenter', () => {
+                if (dragging) selectLevel(item.dataset.level);
+            });
+        });
+
+        document.addEventListener('mouseup', () => {
+            dragging = false;
+        });
+
+        track.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            selectLevel(getSegmentFromX(e.clientX));
+        });
+
+        container.addEventListener('keydown', (e) => {
+            const current = levels.indexOf(levelInput.value);
+            let next = current;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                next = Math.min(current + 1, levels.length - 1);
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                next = Math.max(current - 1, 0);
+            } else {
+                return;
+            }
+            if (next !== current) {
+                levelInput.value = levels[next];
+                this.setLogLevelSegments(levels[next]);
+            }
+        });
     },
 
     /**

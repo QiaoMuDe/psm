@@ -6,15 +6,18 @@ import (
 	"psm/internal/db"
 	"psm/internal/utils"
 
+	"gitee.com/MM-Q/fastlog"
 	"gorm.io/gorm"
 )
 
 // PromptService 提示词服务
-type PromptService struct{}
+type PromptService struct {
+	logger *fastlog.Logger
+}
 
 // NewPromptService 创建提示词服务实例
-func NewPromptService() *PromptService {
-	return &PromptService{}
+func NewPromptService(logger *fastlog.Logger) *PromptService {
+	return &PromptService{logger: logger}
 }
 
 // CreatePrompt 创建新 Prompt，返回创建的 Prompt 对象
@@ -28,13 +31,16 @@ func (s *PromptService) CreatePrompt(name, content, category string, tags []stri
 	}
 
 	if err := db.DB.Create(&prompt).Error; err != nil {
+		s.logger.Errorw("创建 Prompt 失败", fastlog.Error(err), fastlog.String("name", name))
 		return nil, fmt.Errorf("创建 Prompt 失败: %w", err)
 	}
+	s.logger.Warnw("Prompt 创建成功", fastlog.String("name", name), fastlog.Int64("id", prompt.ID))
 	return &prompt, nil
 }
 
 // GetPrompt 根据 ID 获取 Prompt
 func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
+	s.logger.Debugw("获取 Prompt", fastlog.Int64("id", id))
 	var prompt db.Prompt
 	if err := db.DB.First(&prompt, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -47,6 +53,7 @@ func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 
 // GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
 func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error) {
+	s.logger.Debugw("GetPrompts", fastlog.String("keyword", keyword), fastlog.String("category", category))
 	var prompts []db.Prompt
 	query := db.DB.Model(&db.Prompt{})
 
@@ -77,9 +84,11 @@ func (s *PromptService) UpdatePrompt(id int64, name, content, category string, t
 	})
 
 	if result.Error != nil {
+		s.logger.Errorw("更新 Prompt 失败", fastlog.Error(result.Error), fastlog.Int64("id", id))
 		return fmt.Errorf("更新 Prompt 失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
+		s.logger.Errorw("更新 Prompt 失败: 记录不存在", fastlog.Int64("id", id))
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
 	return nil
@@ -89,11 +98,13 @@ func (s *PromptService) UpdatePrompt(id int64, name, content, category string, t
 func (s *PromptService) DeletePrompt(id int64) error {
 	result := db.DB.Delete(&db.Prompt{}, id)
 	if result.Error != nil {
+		s.logger.Errorw("删除 Prompt 失败", fastlog.Error(result.Error), fastlog.Int64("id", id))
 		return fmt.Errorf("删除 Prompt 失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
+	s.logger.Warnw("Prompt 删除成功", fastlog.Int64("id", id))
 	return nil
 }
 
@@ -104,6 +115,7 @@ func (s *PromptService) BatchDeletePrompts(ids []int64) (int64, error) {
 	}
 	result := db.DB.Unscoped().Delete(&db.Prompt{}, ids)
 	if result.Error != nil {
+		s.logger.Errorw("批量删除 Prompt 失败", fastlog.Error(result.Error), fastlog.Int("count", len(ids)))
 		return 0, fmt.Errorf("批量删除 Prompt 失败: %w", result.Error)
 	}
 	return result.RowsAffected, nil
@@ -111,6 +123,7 @@ func (s *PromptService) BatchDeletePrompts(ids []int64) (int64, error) {
 
 // GetCategories 获取所有分类列表
 func (s *PromptService) GetCategories() ([]string, error) {
+	s.logger.Debugw("GetCategories")
 	var categories []string
 	if err := db.DB.Model(&db.Prompt{}).Distinct().Pluck("category", &categories).Error; err != nil {
 		return nil, fmt.Errorf("查询分类列表失败: %w", err)
@@ -133,8 +146,10 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 	}
 
 	if err := utils.ExportPromptsToJSON(prompts, filePath); err != nil {
+		s.logger.Errorw("导出 Prompt 失败", fastlog.Error(err), fastlog.Int("count", len(prompts)))
 		return fmt.Errorf("导出 Prompt 到 JSON 失败: %w", err)
 	}
+	s.logger.Warnw("Prompt 导出完成", fastlog.Int("count", len(prompts)), fastlog.String("path", filePath))
 	return nil
 }
 
@@ -142,9 +157,11 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 func (s *PromptService) ImportPrompts(filePath string) (int, error) {
 	importedPrompts, err := utils.ImportPromptsFromJSON(filePath)
 	if err != nil {
+		s.logger.Errorw("导入 Prompt 失败", fastlog.Error(err), fastlog.String("path", filePath))
 		return 0, fmt.Errorf("从 JSON 导入 Prompt 失败: %w", err)
 	}
 
+	skipped := 0
 	count := 0
 	for _, p := range importedPrompts {
 		newPrompt := db.Prompt{
@@ -159,15 +176,18 @@ func (s *PromptService) ImportPrompts(filePath string) (int, error) {
 			UpdatedAt:  p.UpdatedAt,
 		}
 		if err := db.DB.Create(&newPrompt).Error; err != nil {
+			skipped++
 			continue
 		}
 		count++
 	}
+	s.logger.Warnw("Prompt 导入完成", fastlog.Int("total", len(importedPrompts)), fastlog.Int("imported", count), fastlog.Int("skipped", skipped))
 	return count, nil
 }
 
 // GetRecentPrompts 获取最近修改的 Prompt 列表
 func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
+	s.logger.Debugw("GetRecentPrompts", fastlog.Int("limit", limit))
 	if limit <= 0 {
 		limit = 10
 	}
@@ -181,6 +201,7 @@ func (s *PromptService) GetRecentPrompts(limit int) ([]db.Prompt, error) {
 
 // CountPrompts 统计 Prompt 总数
 func (s *PromptService) CountPrompts() (int64, error) {
+	s.logger.Debugw("CountPrompts")
 	var count int64
 	if err := db.DB.Model(&db.Prompt{}).Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("统计 Prompt 总数失败: %w", err)
@@ -192,11 +213,13 @@ func (s *PromptService) CountPrompts() (int64, error) {
 func (s *PromptService) TogglePinPrompt(id int64) error {
 	var prompt db.Prompt
 	if err := db.DB.First(&prompt, id).Error; err != nil {
+		s.logger.Errorw("切换置顶失败: Prompt 不存在", fastlog.Int64("id", id))
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
 
 	newPinned := !prompt.IsPinned
 	if err := db.DB.Model(&db.Prompt{}).Where("id = ?", id).Update("is_pinned", newPinned).Error; err != nil {
+		s.logger.Errorw("切换置顶状态失败", fastlog.Error(err), fastlog.Int64("id", id))
 		return fmt.Errorf("切换置顶状态失败: %w", err)
 	}
 	return nil
@@ -204,6 +227,7 @@ func (s *PromptService) TogglePinPrompt(id int64) error {
 
 // GetPinnedPrompts 获取置顶的 Prompt 列表
 func (s *PromptService) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
+	s.logger.Debugw("GetPinnedPrompts", fastlog.Int("limit", limit))
 	if limit <= 0 {
 		limit = 3
 	}
@@ -217,7 +241,11 @@ func (s *PromptService) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
 
 // IncrementUsage 增加 Prompt 使用次数
 func (s *PromptService) IncrementUsage(id int64) error {
-	return db.DB.Model(&db.Prompt{}).Where("id = ?", id).UpdateColumn("usage_count", gorm.Expr("usage_count + 1")).Error
+	if err := db.DB.Model(&db.Prompt{}).Where("id = ?", id).UpdateColumn("usage_count", gorm.Expr("usage_count + 1")).Error; err != nil {
+		s.logger.Errorw("增加使用次数失败", fastlog.Error(err), fastlog.Int64("id", id))
+		return err
+	}
+	return nil
 }
 
 // DeleteAllPrompts 删除所有 Prompt 记录（含软删除），返回删除数量
@@ -231,6 +259,7 @@ func (s *PromptService) DeleteAllPrompts() (int64, error) {
 
 // GetTopUsedPrompts 获取最常用的 Prompt 列表
 func (s *PromptService) GetTopUsedPrompts(limit int) ([]db.Prompt, error) {
+	s.logger.Debugw("GetTopUsedPrompts", fastlog.Int("limit", limit))
 	if limit <= 0 {
 		limit = 5
 	}
@@ -249,9 +278,11 @@ func (s *PromptService) BatchUpdateCategory(ids []int64, category string) error 
 	}
 	result := db.DB.Model(&db.Prompt{}).Where("id IN ?", ids).Update("category", category)
 	if result.Error != nil {
+		s.logger.Errorw("批量更新分类失败", fastlog.Error(result.Error), fastlog.Int("count", len(ids)))
 		return fmt.Errorf("批量更新分类失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
+		s.logger.Errorw("批量更新分类失败: 未找到匹配记录", fastlog.Int("count", len(ids)))
 		return fmt.Errorf("未找到匹配的 Prompt 记录")
 	}
 	return nil

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"psm/internal/db"
+
+	"gitee.com/MM-Q/fastlog"
 )
 
 // testPrompt 测试用 Prompt 数据
@@ -589,7 +591,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := db.InitDB(dbPath); err != nil {
+	logger := fastlog.New(fastlog.Console())
+	defer func() { _ = logger.Close() }()
+
+	if err := db.InitDB(dbPath, logger); err != nil {
 		fmt.Printf("初始化数据库失败: %v\n", err)
 		os.Exit(1)
 	}

@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
+
+	"gitee.com/MM-Q/fastlog"
+
 	"psm/internal/db"
 	"psm/internal/service"
 	"psm/internal/utils"
-	"time"
 )
 
 // BackupHandler 处理备份恢复和数据统计相关的方法，嵌入到 App 结构体
@@ -16,29 +19,34 @@ type BackupHandler struct {
 	settingsSvc *service.SettingsService
 	promptSvc   *service.PromptService
 	skillSvc    *service.SkillService
+	logger      *fastlog.Logger
 }
 
 // Init 初始化 BackupHandler
-func (h *BackupHandler) Init(settingsSvc *service.SettingsService, promptSvc *service.PromptService, skillSvc *service.SkillService) {
+func (h *BackupHandler) Init(settingsSvc *service.SettingsService, promptSvc *service.PromptService, skillSvc *service.SkillService, logger *fastlog.Logger) {
 	h.settingsSvc = settingsSvc
 	h.promptSvc = promptSvc
 	h.skillSvc = skillSvc
+	h.logger = logger
 }
 
 // BackupData 创建完整备份
 func (h *BackupHandler) BackupData(savePath string) error {
 	settings, err := h.settingsSvc.GetSettings()
 	if err != nil {
+		h.logger.Errorw("备份获取设置失败", fastlog.Error(err))
 		return fmt.Errorf("获取设置失败: %w", err)
 	}
 
 	prompts, err := h.promptSvc.GetPrompts("", "")
 	if err != nil {
+		h.logger.Errorw("备份获取提示词失败", fastlog.Error(err))
 		return fmt.Errorf("获取提示词失败: %w", err)
 	}
 
 	skills, err := h.skillSvc.GetSkills("")
 	if err != nil {
+		h.logger.Errorw("备份获取技能失败", fastlog.Error(err))
 		return fmt.Errorf("获取技能失败: %w", err)
 	}
 
@@ -82,7 +90,14 @@ func (h *BackupHandler) BackupData(savePath string) error {
 		skillPath = ""
 	}
 
-	return utils.CreateBackupArchive(data, skillPath, savePath)
+	if err := utils.CreateBackupArchive(data, skillPath, savePath); err != nil {
+		h.logger.Errorw("创建备份归档失败", fastlog.Error(err))
+		return err
+	}
+
+	h.logger.Warnw("备份完成", fastlog.String("path", savePath))
+
+	return nil
 }
 
 // RestoreData 从备份 ZIP 文件恢复所有数据
@@ -94,6 +109,7 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 
 	backupData, err := utils.RestoreBackupArchive(zipPath, skillPath)
 	if err != nil {
+		h.logger.Errorw("备份恢复解压失败", fastlog.Error(err))
 		return nil, err
 	}
 
@@ -101,6 +117,7 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 		delete(backupData.Settings, "skill_storage_path")
 		delete(backupData.Settings, "app_home")
 		if err := h.settingsSvc.UpdateSettings(backupData.Settings); err != nil {
+			h.logger.Errorw("恢复设置失败", fastlog.Error(err))
 			return nil, fmt.Errorf("恢复设置失败: %w", err)
 		}
 	}
@@ -158,6 +175,13 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 		result.SkillsRestored++
 	}
 
+	h.logger.Warnw("数据恢复完成",
+		fastlog.Int("prompts_restored", result.PromptsRestored),
+		fastlog.Int("prompts_skipped", result.PromptsSkipped),
+		fastlog.Int("skills_restored", result.SkillsRestored),
+		fastlog.Int("skills_skipped", result.SkillsSkipped),
+	)
+
 	return result, nil
 }
 
@@ -170,6 +194,8 @@ type DataStats struct {
 
 // GetDataStats 获取数据统计信息
 func (h *BackupHandler) GetDataStats() (*DataStats, error) {
+	h.logger.Warnw("获取数据统计")
+
 	promptCount, err := h.promptSvc.CountPrompts()
 	if err != nil {
 		return nil, fmt.Errorf("统计 Prompt 失败: %w", err)
@@ -197,22 +223,29 @@ func (h *BackupHandler) GetDataStats() (*DataStats, error) {
 
 // GetOrphanSkills 获取文件已不存在的孤立 Skill 列表
 func (h *BackupHandler) GetOrphanSkills() ([]db.Skill, error) {
+	h.logger.Warnw("检测孤立 Skill")
+
 	return h.skillSvc.GetOrphanSkills()
 }
 
 // ResetAllData 重置所有数据：清空提示词、技能（含文件）、恢复默认设置
 func (h *BackupHandler) ResetAllData() (map[string]int64, error) {
+	h.logger.Warnw("用户执行数据重置")
+
 	promptCount, err := h.promptSvc.DeleteAllPrompts()
 	if err != nil {
+		h.logger.Errorw("重置清空提示词失败", fastlog.Error(err))
 		return nil, fmt.Errorf("清空提示词失败: %w", err)
 	}
 
 	skillCount, err := h.skillSvc.DeleteAllSkills(true)
 	if err != nil {
+		h.logger.Errorw("重置清空技能失败", fastlog.Error(err))
 		return nil, fmt.Errorf("清空技能失败: %w", err)
 	}
 
 	if err := h.settingsSvc.ResetSettings(); err != nil {
+		h.logger.Errorw("重置恢复默认设置失败", fastlog.Error(err))
 		return nil, fmt.Errorf("重置设置失败: %w", err)
 	}
 
@@ -224,6 +257,8 @@ func (h *BackupHandler) ResetAllData() (map[string]int64, error) {
 
 // CleanupOrphanSkills 清理孤立 Skill 数据
 func (h *BackupHandler) CleanupOrphanSkills() (int, error) {
+	h.logger.Warnw("清理孤立 Skill")
+
 	orphans, err := h.skillSvc.GetOrphanSkills()
 	if err != nil {
 		return 0, fmt.Errorf("检测孤立 Skill 失败: %w", err)
@@ -252,6 +287,8 @@ func getBackupPath() (string, error) {
 
 // QuickBackupInfo 获取一键备份的状态信息
 func (h *BackupHandler) QuickBackupInfo() (map[string]interface{}, error) {
+	h.logger.Warnw("获取快速备份信息")
+
 	backupPath, err := getBackupPath()
 	if err != nil {
 		return nil, err

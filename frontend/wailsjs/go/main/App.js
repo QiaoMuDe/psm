@@ -110,6 +110,10 @@ export function GetDataStats() {
   return window['go']['main']['App']['GetDataStats']();
 }
 
+export function GetLogLevel() {
+  return window['go']['main']['App']['GetLogLevel']();
+}
+
 export function GetOrphanSkills() {
   return window['go']['main']['App']['GetOrphanSkills']();
 }
@@ -260,6 +264,10 @@ export function SelectDirectoryDialog() {
 
 export function SetAppHome(arg1) {
   return window['go']['main']['App']['SetAppHome'](arg1);
+}
+
+export function SetLogLevel(arg1) {
+  return window['go']['main']['App']['SetLogLevel'](arg1);
 }
 
 export function TestAIConnection(arg1, arg2) {

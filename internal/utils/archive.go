@@ -269,8 +269,11 @@ func HasSkillMD(zipPath string) (bool, error) {
 	defer func() { _ = reader.Close() }()
 
 	for _, file := range reader.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
 		base := filepath.Base(file.Name)
-		if strings.EqualFold(base, "SKILL.md") && !file.FileInfo().IsDir() {
+		if strings.EqualFold(base, "SKILL.md") && filepath.Dir(file.Name) == "." {
 			return true, nil
 		}
 	}
@@ -286,8 +289,11 @@ func ReadSkillMDFromZip(zipPath string) (string, error) {
 	defer func() { _ = reader.Close() }()
 
 	for _, file := range reader.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
 		base := filepath.Base(file.Name)
-		if strings.EqualFold(base, "SKILL.md") && !file.FileInfo().IsDir() {
+		if strings.EqualFold(base, "SKILL.md") && filepath.Dir(file.Name) == "." {
 			rc, err := file.Open()
 			if err != nil {
 				return "", fmt.Errorf("打开 SKILL.md 失败: %w", err)
@@ -407,8 +413,11 @@ func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 	defer func() { _ = reader.Close() }()
 
 	for _, file := range reader.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
 		base := filepath.Base(file.Name)
-		if strings.EqualFold(base, "SKILL.md") && !file.FileInfo().IsDir() {
+		if strings.EqualFold(base, "SKILL.md") && filepath.Dir(file.Name) == "." {
 			rc, err := file.Open()
 			if err != nil {
 				return nil, fmt.Errorf("打开 SKILL.md 失败: %w", err)
@@ -430,8 +439,11 @@ func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 	}
 
 	for _, file := range reader.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
 		base := strings.ToLower(filepath.Base(file.Name))
-		if base == "metadata.json" || base == "skill.json" {
+		if (base == "metadata.json" || base == "skill.json") && filepath.Dir(file.Name) == "." {
 			rc, err := file.Open()
 			if err != nil {
 				return nil, fmt.Errorf("打开元数据文件失败: %w", err)

@@ -1559,6 +1559,10 @@ mark {
     margin-bottom: var(--spacing-3);
 }
 
+.settings-section:last-child {
+    margin-bottom: var(--spacing-3);
+}
+
 .settings-section-header {
     display: flex;
     align-items: center;
@@ -2196,6 +2200,61 @@ tr.highlight-flash {
     text-align: center;
     color: var(--text-muted);
     font-size: calc(13px + var(--font-size-offset));
+}
+
+/* ==================== 日志级别分段滑块选择器 ==================== */
+
+.log-level-segments {
+    outline: none;
+}
+
+.log-level-segments:focus .segments-track {
+    box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.segments-track {
+    display: flex;
+    position: relative;
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: box-shadow var(--transition-fast);
+}
+
+.segments-highlight {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 25%;
+    background: var(--accent);
+    border-radius: calc(var(--radius) - 2px);
+    transition: left var(--transition), width var(--transition);
+    z-index: 0;
+}
+
+.segment-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    font-size: calc(12px + var(--font-size-offset));
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    z-index: 1;
+    transition: color var(--transition-fast);
+}
+
+.segment-item:hover {
+    color: var(--text-primary);
+}
+
+.segment-item.active {
+    color: #fff;
+    font-weight: 600;
 }
 
 @keyframes spin {

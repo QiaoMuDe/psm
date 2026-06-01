@@ -11,18 +11,21 @@ import (
 	"psm/internal/utils"
 	"strings"
 
+	"gitee.com/MM-Q/fastlog"
 	"gorm.io/gorm"
 )
 
 // SkillService Skill 管理服务
 type SkillService struct {
 	settingsSvc *SettingsService
+	logger      *fastlog.Logger
 }
 
 // NewSkillService 创建 Skill 服务实例
-func NewSkillService(settingsSvc *SettingsService) *SkillService {
+func NewSkillService(settingsSvc *SettingsService, logger *fastlog.Logger) *SkillService {
 	return &SkillService{
 		settingsSvc: settingsSvc,
+		logger:      logger,
 	}
 }
 
@@ -35,6 +38,7 @@ func (s *SkillService) CreateSkill(name, description string, tags []string) (*db
 
 	skillDir := filepath.Join(storagePath, name)
 	if err := utils.EnsureDir(skillDir); err != nil {
+		s.logger.Errorw("创建 Skill 目录失败", fastlog.String("name", name), fastlog.Error(err))
 		return nil, fmt.Errorf("创建 Skill 目录失败: %w", err)
 	}
 
@@ -46,14 +50,17 @@ func (s *SkillService) CreateSkill(name, description string, tags []string) (*db
 	}
 
 	if err := db.DB.Create(skill).Error; err != nil {
+		s.logger.Errorw("创建 Skill 记录失败", fastlog.String("name", name), fastlog.Error(err))
 		return nil, fmt.Errorf("创建 Skill 记录失败: %w", err)
 	}
 
+	s.logger.Infow("Skill 创建成功", fastlog.String("name", skill.Name))
 	return skill, nil
 }
 
 // GetSkill 根据 ID 获取 Skill
 func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
+	s.logger.Debugw("GetSkill", fastlog.Int64("id", id))
 	var sk db.Skill
 	if err := db.DB.First(&sk, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -66,6 +73,7 @@ func (s *SkillService) GetSkill(id int64) (*db.Skill, error) {
 
 // GetSkills 获取 Skill 列表，支持关键词搜索（匹配名称、描述、标签）
 func (s *SkillService) GetSkills(keyword string) ([]db.Skill, error) {
+	s.logger.Debugw("GetSkills", fastlog.String("keyword", keyword))
 	var skills []db.Skill
 	query := db.DB.Model(&db.Skill{})
 
@@ -121,17 +129,21 @@ func (s *SkillService) DeleteSkill(id int64, deleteFiles bool) error {
 		}
 		fullPath := filepath.Join(storagePath, sk.RelativePath)
 		if err := os.RemoveAll(fullPath); err != nil {
+			s.logger.Errorw("删除 Skill 文件失败", fastlog.Int64("id", id), fastlog.Error(err))
 			return fmt.Errorf("删除 Skill 文件失败: %w", err)
 		}
 	}
 
 	result := db.DB.Delete(&db.Skill{}, id)
 	if result.Error != nil {
+		s.logger.Errorw("删除 Skill 记录失败", fastlog.Int64("id", id), fastlog.Error(result.Error))
 		return fmt.Errorf("删除 Skill 记录失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
+
+	s.logger.Infow("Skill 删除成功", fastlog.Int64("id", id))
 	return nil
 }
 
@@ -174,14 +186,17 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 
 	hasSkillMD, err := utils.HasSkillMD(zipPath)
 	if err != nil {
+		s.logger.Errorw("检查 SKILL.md 失败", fastlog.String("path", zipPath), fastlog.Error(err))
 		return nil, fmt.Errorf("检查 SKILL.md 失败: %w", err)
 	}
 	if !hasSkillMD {
+		s.logger.Warnw("ZIP 根目录未找到 SKILL.md", fastlog.String("path", zipPath))
 		return nil, fmt.Errorf("导入失败：ZIP 根目录下未找到 SKILL.md 文件，该压缩包不是有效的 Skill 包")
 	}
 
 	metadata, err := utils.GetSkillMetadataFromZip(zipPath)
 	if err != nil {
+		s.logger.Errorw("读取 Skill 元数据失败", fastlog.String("path", zipPath), fastlog.Error(err))
 		return nil, fmt.Errorf("从 ZIP 读取 Skill 元数据失败: %w", err)
 	}
 
@@ -193,11 +208,13 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 
 	var existsSkill db.Skill
 	if err := db.DB.Where("name = ?", name).First(&existsSkill).Error; err == nil {
+		s.logger.Infow("Skill 已存在，跳过", fastlog.String("name", name))
 		return nil, fmt.Errorf("skill '%s' 已存在，请先删除或更改名称", name)
 	}
 
 	skillDir := filepath.Join(storagePath, name)
 	if err := utils.UnzipToDir(zipPath, skillDir); err != nil {
+		s.logger.Errorw("解压 Skill 包失败", fastlog.String("name", name), fastlog.Error(err))
 		return nil, fmt.Errorf("解压 Skill 包失败: %w", err)
 	}
 
@@ -210,9 +227,11 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 	}
 
 	if err := db.DB.Create(skill).Error; err != nil {
+		s.logger.Errorw("创建 Skill 记录失败", fastlog.String("name", name), fastlog.Error(err))
 		return nil, fmt.Errorf("创建 Skill 记录失败: %w", err)
 	}
 
+	s.logger.Infow("Skill 导入成功", fastlog.String("name", name))
 	return skill, nil
 }
 
@@ -226,6 +245,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 
 	zipReader, err := zip.OpenReader(zipPath)
 	if err != nil {
+		s.logger.Errorw("打开 ZIP 文件失败", fastlog.String("path", zipPath), fastlog.Error(err))
 		return nil, fmt.Errorf("打开 ZIP 文件失败: %w", err)
 	}
 	defer func() { _ = zipReader.Close() }()
@@ -268,6 +288,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 
 		var existsSkill db.Skill
 		if err := db.DB.Where("name = ?", dirName).First(&existsSkill).Error; err == nil {
+			s.logger.Infow("Skill 已存在，跳过", fastlog.String("name", dirName))
 			result.Skipped++
 			continue
 		}
@@ -292,6 +313,7 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 
 		skillDir := filepath.Join(storagePath, dirName)
 		if err := utils.UnzipPrefixToDir(&zipReader.Reader, prefix, skillDir); err != nil {
+			s.logger.Errorw("解压 Skill 目录失败", fastlog.String("name", dirName), fastlog.Error(err))
 			result.Failed++
 			result.Errors = append(result.Errors, fmt.Sprintf("%s: 解压失败: %v", dirName, err))
 			continue
@@ -313,14 +335,17 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 			IsPinned:     isPinned,
 		}
 		if err := db.DB.Create(skill).Error; err != nil {
+			s.logger.Errorw("创建 Skill 记录失败", fastlog.String("name", dirName), fastlog.Error(err))
 			result.Failed++
 			result.Errors = append(result.Errors, fmt.Sprintf("%s: 创建记录失败: %v", dirName, err))
 			_ = os.RemoveAll(skillDir)
 			continue
 		}
+		s.logger.Infow("Skill 导入成功", fastlog.String("name", name))
 		result.Success++
 	}
 
+	s.logger.Infow("批量导入完成", fastlog.Int("success", result.Success), fastlog.Int("skipped", result.Skipped), fastlog.Int("failed", result.Failed))
 	return result, nil
 }
 
@@ -357,6 +382,12 @@ func (s *SkillService) BatchImportSkills(zipPaths []string) (*db.ImportResult, e
 		}
 	}
 
+	s.logger.Infow("批量导入完成",
+		fastlog.Int("success", result.Success),
+		fastlog.Int("skipped", result.Skipped),
+		fastlog.Int("failed", result.Failed),
+	)
+
 	return result, nil
 }
 
@@ -369,6 +400,7 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 	if len(skillIds) == 0 {
 		allSkills, err := s.GetSkills("")
 		if err != nil {
+			s.logger.Errorw("获取 Skill 列表失败", fastlog.Error(err))
 			return fmt.Errorf("获取 Skill 列表失败: %w", err)
 		}
 		skills = allSkills
@@ -388,6 +420,7 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 
 	storagePath, err := s.settingsSvc.GetSkillStoragePath()
 	if err != nil {
+		s.logger.Errorw("获取 Skill 存储路径失败", fastlog.Error(err))
 		return fmt.Errorf("获取 Skill 存储路径失败: %w", err)
 	}
 
@@ -406,7 +439,13 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 		}
 	}
 
-	return utils.CreateSkillExportZip(skillDirs, skillTags, skillPinned, savePath)
+	if err := utils.CreateSkillExportZip(skillDirs, skillTags, skillPinned, savePath); err != nil {
+		s.logger.Errorw("批量导出失败", fastlog.Error(err))
+		return err
+	}
+
+	s.logger.Infow("批量导出完成", fastlog.Int("count", len(skills)))
+	return nil
 }
 
 // ExportSkill 导出单个 Skill 为标准格式 ZIP 文件
@@ -414,20 +453,29 @@ func (s *SkillService) ExportSkillsToZip(skillIds []int64, savePath string) erro
 func (s *SkillService) ExportSkill(id int64, zipPath string) error {
 	sk, err := s.GetSkill(id)
 	if err != nil {
+		s.logger.Errorw("获取 Skill 失败", fastlog.Int64("id", id), fastlog.Error(err))
 		return fmt.Errorf("获取 Skill (ID=%d) 失败: %w", id, err)
 	}
 
 	storagePath, err := s.settingsSvc.GetSkillStoragePath()
 	if err != nil {
+		s.logger.Errorw("获取 Skill 存储路径失败", fastlog.Error(err))
 		return fmt.Errorf("获取 Skill 存储路径失败: %w", err)
 	}
 
 	skillDir := filepath.Join(storagePath, sk.RelativePath)
-	return utils.ZipDir(skillDir, zipPath)
+	if err := utils.ZipDir(skillDir, zipPath); err != nil {
+		s.logger.Errorw("Skill 导出失败", fastlog.String("name", sk.Name), fastlog.String("path", zipPath), fastlog.Error(err))
+		return err
+	}
+
+	s.logger.Infow("Skill 导出成功", fastlog.String("name", sk.Name), fastlog.String("path", zipPath))
+	return nil
 }
 
 // ListSkillFiles 列出 Skill 目录下的文件和子目录
 func (s *SkillService) ListSkillFiles(id int64) ([]db.SkillFile, error) {
+	s.logger.Debugw("ListSkillFiles", fastlog.Int64("id", id))
 	sk, err := s.GetSkill(id)
 	if err != nil {
 		return nil, err
@@ -464,6 +512,7 @@ func (s *SkillService) ListSkillFiles(id int64) ([]db.SkillFile, error) {
 
 // GetRecentSkills 获取最近修改的 Skill 列表
 func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
+	s.logger.Debugw("GetRecentSkills", fastlog.Int("limit", limit))
 	if limit <= 0 {
 		limit = 10
 	}
@@ -477,6 +526,7 @@ func (s *SkillService) GetRecentSkills(limit int) ([]db.Skill, error) {
 
 // CountSkills 统计 Skill 总数
 func (s *SkillService) CountSkills() (int64, error) {
+	s.logger.Debugw("CountSkills")
 	var count int64
 	if err := db.DB.Model(&db.Skill{}).Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("统计 Skill 总数失败: %w", err)
@@ -553,6 +603,7 @@ func (s *SkillService) DeleteAllSkills(deleteFiles bool) (int64, error) {
 
 // GetPinnedSkills 获取置顶的 Skill 列表
 func (s *SkillService) GetPinnedSkills(limit int) ([]db.Skill, error) {
+	s.logger.Debugw("GetPinnedSkills", fastlog.Int("limit", limit))
 	if limit <= 0 {
 		limit = 3
 	}

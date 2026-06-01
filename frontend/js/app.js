@@ -419,7 +419,7 @@ const App = {
                         SkillsView.loadSkills();
                     }
                 } catch (err) {
-                    Toast.error(`导入失败：${err.message || '未知错误'}`);
+                    console.error('[拖拽] 导入失败:', err);
                 }
             }, false);
         }

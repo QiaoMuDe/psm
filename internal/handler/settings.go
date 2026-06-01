@@ -8,9 +8,11 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"gitee.com/MM-Q/fastlog"
 	"gitee.com/MM-Q/verman"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	psmlog "psm/internal/log"
 	"psm/internal/service"
 	"psm/internal/utils"
 )
@@ -19,12 +21,14 @@ import (
 type SettingsHandler struct {
 	ctx         context.Context
 	settingsSvc *service.SettingsService
+	logger      *fastlog.Logger
 }
 
 // Init 初始化 SettingsHandler
-func (h *SettingsHandler) Init(ctx context.Context, settingsSvc *service.SettingsService) {
+func (h *SettingsHandler) Init(ctx context.Context, settingsSvc *service.SettingsService, logger *fastlog.Logger) {
 	h.ctx = ctx
 	h.settingsSvc = settingsSvc
+	h.logger = logger
 }
 
 // GetSettings 获取所有设置项
@@ -54,6 +58,8 @@ func (h *SettingsHandler) SetAppHome(newPath string) error {
 		return fmt.Errorf("获取旧家目录失败: %w", err)
 	}
 
+	h.logger.Infow("程序家目录迁移", fastlog.String("old", oldPath), fastlog.String("new", newPath))
+
 	if oldPath == newPath {
 		return nil
 	}
@@ -68,14 +74,17 @@ func (h *SettingsHandler) SetAppHome(newPath string) error {
 		}
 
 		if err := utils.EnsureDir(dst); err != nil {
+			h.logger.Errorw("创建目标目录失败", fastlog.Error(err), fastlog.String("dir", dir))
 			return fmt.Errorf("创建目标目录失败: %w", err)
 		}
 
 		if err := copyDir(src, dst); err != nil {
+			h.logger.Errorw("迁移目录失败", fastlog.Error(err), fastlog.String("dir", dir))
 			return fmt.Errorf("迁移 %s 目录失败: %w", dir, err)
 		}
 	}
 
+	h.logger.Infow("程序家目录迁移完成", fastlog.String("new_path", newPath))
 	return h.settingsSvc.UpdateSetting("app_home", newPath)
 }
 
@@ -194,6 +203,27 @@ func (h *SettingsHandler) RevealInExplorer(path string) error {
 func (h *SettingsHandler) OpenFile(path string) error {
 	cmd := exec.Command("cmd", "/c", "start", "", path)
 	return cmd.Start()
+}
+
+// GetLogLevel 获取当前日志级别
+func (h *SettingsHandler) GetLogLevel() string {
+	return psmlog.GetLevel()
+}
+
+// SetLogLevel 设置日志级别并保存到配置
+func (h *SettingsHandler) SetLogLevel(level string) error {
+	if err := psmlog.SetLevel(level); err != nil {
+		h.logger.Errorw("设置日志级别失败", fastlog.String("level", level), fastlog.Error(err))
+		return err
+	}
+
+	if err := h.settingsSvc.UpdateSetting("log_level", level); err != nil {
+		h.logger.Errorw("保存日志级别配置失败", fastlog.String("level", level), fastlog.Error(err))
+		return err
+	}
+
+	h.logger.Infow("日志级别已更改", fastlog.String("level", level))
+	return nil
 }
 
 // copyDir 递归复制目录

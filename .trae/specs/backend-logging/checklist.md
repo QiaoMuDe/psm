@@ -1,0 +1,22 @@
+# Checklist
+
+- [x] `go.mod` 中包含 `gitee.com/MM-Q/fastlog` 直接依赖
+- [x] `internal/log/log.go` 存在，提供 `Init` / `Get` / `Close` 三个函数
+- [x] `App` 结构体包含 `logger` 字段
+- [x] `app.startup()` 调用 `log.Init()` 创建 Logger，并传递给所有 Handler 和 Service
+- [x] `app.shutdown()` 调用 `log.Close()` 关闭 Logger
+- [x] `db.InitDB()` 签名包含 `*fastlog.Logger` 参数，内部使用 fastlog 记录日志
+- [x] `db/gorm.go` 不再导入标准 `log` 包
+- [x] 5 个 Handler 结构体均包含 `logger *fastlog.Logger` 字段
+- [x] 5 个 Handler 的 `Init()` 方法均接受 `*fastlog.Logger` 参数
+- [x] 3 个 Service 结构体均包含 `logger *fastlog.Logger` 字段
+- [x] 3 个 Service 的构造函数均接受 `*fastlog.Logger` 参数
+- [x] `handler/ai.go` 中 AI 请求入口/完成/失败/配置缺失均有日志
+- [x] `handler/backup.go` 中备份/恢复/重置操作均有日志
+- [x] `handler/settings.go` 中家目录迁移有日志
+- [x] `service/skill.go` 中 Skill 导入成功/跳过/失败/批量完成有日志
+- [x] `service/prompt.go` 中 Prompt 导入导出有日志
+- [x] `go build ./...` 编译通过，无错误
+- [ ] 应用启动后 `~/.psm/logs/` 目录下生成 `psm.log` 文件
+- [ ] 日志文件中包含 "应用启动成功" 和 "数据库初始化完成" 的 INFO 级别记录
+- [ ] 日志文件中包含 "应用关闭" 的 INFO 级别记录

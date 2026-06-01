@@ -95,6 +95,10 @@ const API = {
     getAIModels: () => API.call(window.go.main.App.GetAIModels),
     testAIConnection: (apiURL, apiKey) => API.call(window.go.main.App.TestAIConnection, apiURL, apiKey),
 
+    // ===== 日志级别 API =====
+    getLogLevel: () => API.call(window.go.main.App.GetLogLevel),
+    setLogLevel: (level) => API.call(window.go.main.App.SetLogLevel, level),
+
     // ===== 批量操作 API =====
     // 批量更新 Prompt 分类
     batchUpdateCategory: (ids, category) => API.call(window.go.main.App.BatchUpdateCategory, ids, category),

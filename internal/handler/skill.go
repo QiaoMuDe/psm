@@ -1,24 +1,30 @@
 package handler
 
 import (
+	"strings"
+
+	"gitee.com/MM-Q/fastlog"
+
 	"psm/internal/db"
 	"psm/internal/service"
 	"psm/internal/utils"
-	"strings"
 )
 
 // SkillHandler 处理 Skill 相关的方法，嵌入到 App 结构体
 type SkillHandler struct {
 	skillSvc *service.SkillService
+	logger   *fastlog.Logger
 }
 
 // Init 初始化 SkillHandler
-func (h *SkillHandler) Init(skillSvc *service.SkillService) {
+func (h *SkillHandler) Init(skillSvc *service.SkillService, logger *fastlog.Logger) {
 	h.skillSvc = skillSvc
+	h.logger = logger
 }
 
 // CreateSkill 创建空 Skill
 func (h *SkillHandler) CreateSkill(name, description string, tags []string) (*db.Skill, error) {
+	h.logger.Infow("创建 Skill", fastlog.String("name", name))
 	return h.skillSvc.CreateSkill(name, description, tags)
 }
 
@@ -34,41 +40,49 @@ func (h *SkillHandler) GetSkills(keyword string) ([]db.Skill, error) {
 
 // UpdateSkill 更新 Skill 元数据，同时同步 SKILL.md 文件
 func (h *SkillHandler) UpdateSkill(id int64, name, description string, tags []string) error {
+	h.logger.Infow("更新 Skill", fastlog.Int64("id", id))
 	return h.skillSvc.UpdateSkill(id, name, description, tags)
 }
 
 // DeleteSkill 删除 Skill
 func (h *SkillHandler) DeleteSkill(id int64, deleteFiles bool) error {
+	h.logger.Infow("删除 Skill", fastlog.Int64("id", id), fastlog.Bool("delete_files", deleteFiles))
 	return h.skillSvc.DeleteSkill(id, deleteFiles)
 }
 
 // BatchDeleteSkills 批量删除多个 Skill
 func (h *SkillHandler) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, error) {
+	h.logger.Warnw("批量删除 Skill", fastlog.Int("count", len(ids)), fastlog.Bool("delete_files", deleteFiles))
 	return h.skillSvc.BatchDeleteSkills(ids, deleteFiles)
 }
 
 // ImportSkill 从 ZIP 文件导入 Skill
 func (h *SkillHandler) ImportSkill(zipPath string) (*db.Skill, error) {
+	h.logger.Infow("导入 Skill", fastlog.String("path", zipPath))
 	return h.skillSvc.ImportSkill(zipPath)
 }
 
 // BatchImportSkills 批量导入多个 Skill ZIP 文件
 func (h *SkillHandler) BatchImportSkills(zipPaths []string) (*db.ImportResult, error) {
+	h.logger.Infow("批量导入 Skill", fastlog.Int("count", len(zipPaths)))
 	return h.skillSvc.BatchImportSkills(zipPaths)
 }
 
 // ExportSkill 导出 Skill 为 ZIP 文件
 func (h *SkillHandler) ExportSkill(id int64, zipPath string) error {
+	h.logger.Infow("导出 Skill", fastlog.Int64("id", id))
 	return h.skillSvc.ExportSkill(id, zipPath)
 }
 
 // ExportSkills 批量导出 Skill 为 ZIP 文件
 func (h *SkillHandler) ExportSkills(skillIds []int64, savePath string) error {
+	h.logger.Infow("批量导出 Skill", fastlog.Int("count", len(skillIds)))
 	return h.skillSvc.ExportSkillsToZip(skillIds, savePath)
 }
 
 // ImportSkillAuto 自动识别 ZIP 格式并导入 Skill
 func (h *SkillHandler) ImportSkillAuto(zipPath string) (*db.ImportResult, error) {
+	h.logger.Infow("自动导入 Skill", fastlog.String("path", zipPath))
 	hasMarker, _ := utils.HasExportMarker(zipPath)
 	if hasMarker {
 		return h.skillSvc.ImportSkillFromExportZip(zipPath)
@@ -102,6 +116,7 @@ func (h *SkillHandler) CountSkills() (int64, error) {
 
 // TogglePinSkill 切换 Skill 的置顶状态
 func (h *SkillHandler) TogglePinSkill(id int64) error {
+	h.logger.Infow("切换 Skill 置顶状态", fastlog.Int64("id", id))
 	return h.skillSvc.TogglePinSkill(id)
 }
 
@@ -112,15 +127,18 @@ func (h *SkillHandler) GetPinnedSkills(limit int) ([]db.Skill, error) {
 
 // BatchAddSkillTags 批量为 Skill 添加标签
 func (h *SkillHandler) BatchAddSkillTags(ids []int64, tags []string) error {
+	h.logger.Infow("批量添加 Skill 标签", fastlog.Int("count", len(ids)))
 	return h.skillSvc.BatchAddTags(ids, tags)
 }
 
 // BatchRemoveSkillTags 批量移除 Skill 标签
 func (h *SkillHandler) BatchRemoveSkillTags(ids []int64, tags []string) error {
+	h.logger.Infow("批量移除 Skill 标签", fastlog.Int("count", len(ids)))
 	return h.skillSvc.BatchRemoveTags(ids, tags)
 }
 
 // BatchSetPinSkill 批量设置 Skill 置顶状态
 func (h *SkillHandler) BatchSetPinSkill(ids []int64, pinned bool) error {
+	h.logger.Infow("批量设置 Skill 置顶", fastlog.Int("count", len(ids)), fastlog.Bool("pinned", pinned))
 	return h.skillSvc.BatchSetPin(ids, pinned)
 }

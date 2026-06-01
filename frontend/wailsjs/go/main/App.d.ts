@@ -58,6 +58,8 @@ export function GetCategories():Promise<Array<string>>;
 
 export function GetDataStats():Promise<handler.DataStats>;
 
+export function GetLogLevel():Promise<string>;
+
 export function GetOrphanSkills():Promise<Array<db.Skill>>;
 
 export function GetPinnedPrompts(arg1:number):Promise<Array<db.Prompt>>;
@@ -133,6 +135,8 @@ export function SaveZIPFileDialog(arg1:string):Promise<string>;
 export function SelectDirectoryDialog():Promise<string>;
 
 export function SetAppHome(arg1:string):Promise<void>;
+
+export function SetLogLevel(arg1:string):Promise<void>;
 
 export function TestAIConnection(arg1:string,arg2:string):Promise<string>;
 
