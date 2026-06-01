@@ -905,6 +905,14 @@ const PromptsView = {
         });
 
         document.getElementById('ai-gen-start-btn').addEventListener('click', async () => {
+            const reviewSection = document.getElementById('ai-gen-review-section');
+            if (reviewSection && reviewSection.style.display !== 'none') {
+                document.getElementById('ai-gen-input-section').style.display = '';
+                reviewSection.style.display = 'none';
+                document.getElementById('ai-gen-confirm-btn').style.display = 'none';
+                document.getElementById('ai-gen-start-btn').textContent = '生成';
+            }
+
             const desc = document.getElementById('ai-gen-description').value.trim();
             if (!desc) {
                 Toast.warning('请输入描述');
@@ -986,6 +994,8 @@ const PromptsView = {
         document.getElementById('ai-gen-name').value = name;
         document.getElementById('ai-gen-content').value = content;
         document.getElementById('ai-gen-confirm-btn').style.display = '';
+        document.getElementById('ai-gen-start-btn').textContent = '重新生成';
+        document.getElementById('ai-gen-start-btn').style.display = '';
         Toast.success('提示词生成完成，请检查并确认');
     },
 
