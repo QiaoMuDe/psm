@@ -1,0 +1,97 @@
+<div class="translate-page">
+    <div class="translate-langbar">
+        <div class="translate-langbar-inner">
+            <div class="lang-group">
+                <span class="lang-label">从</span>
+                <div class="lang-picker">
+                    <select class="lang-select" id="translate-source-lang">
+                        <option value="简体中文">简体中文</option>
+                        <option value="English">English</option>
+                        <option value="日本語">日本語</option>
+                        <option value="한국어">한국어</option>
+                        <option value="Français">Français</option>
+                        <option value="Deutsch">Deutsch</option>
+                    </select>
+                    <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+            </div>
+            <button class="swap-btn" id="translate-swap-btn" title="交换语言和文本">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="17 1 21 5 17 9"/>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <polyline points="7 23 3 19 7 15"/>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+            </button>
+            <div class="lang-group">
+                <span class="lang-label">到</span>
+                <div class="lang-picker">
+                    <select class="lang-select" id="translate-target-lang">
+                        <option value="English">English</option>
+                        <option value="简体中文">简体中文</option>
+                        <option value="日本語">日本語</option>
+                        <option value="한국어">한국어</option>
+                        <option value="Français">Français</option>
+                        <option value="Deutsch">Deutsch</option>
+                    </select>
+                    <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+            </div>
+            <button class="translate-btn" id="translate-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 8l6 0"/>
+                        <path d="M4 6l7.586 0.001a2 2 0 0 1 1.414 0.586l2.003 2.003a2 2 0 0 0 1.414 0.586L15 8.001"/>
+                        <path d="M14 16l-3.5 0"/>
+                        <path d="M15 15l0 -3.5"/>
+                        <path d="M12.5 15l-4 0"/>
+                        <path d="M15 18l-3.5 0"/>
+                        <path d="M9 18l0 -3.5"/>
+                    </svg>
+                    <span>翻译</span>
+                </button>
+        </div>
+    </div>
+    <div class="translate-deck">
+        <div class="panel panel-source" id="panel-source">
+            <div class="panel-marker panel-marker-source"></div>
+            <div class="panel-head">
+                <span class="panel-name">原文</span>
+                <div class="panel-actions">
+                    <button class="panel-action" id="translate-copy-source" title="复制原文">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                    <button class="panel-action" id="translate-clear-source" title="清空原文">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-well">
+                <textarea class="panel-textarea" id="translate-source" placeholder="输入要翻译的内容..." rows="6"></textarea>
+            </div>
+            <div class="panel-foot">
+                <span class="panel-count" id="translate-source-count">0</span>
+            </div>
+        </div>
+        <div class="panel panel-target" id="panel-target">
+            <div class="panel-marker panel-marker-target"></div>
+            <div class="panel-head">
+                <span class="panel-name">译文</span>
+                <div class="panel-actions">
+                    <button class="panel-action" id="translate-copy-target" title="复制译文">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                    <button class="panel-action" id="translate-clear-target" title="清空译文">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-well">
+                <textarea class="panel-textarea" id="translate-target" placeholder="翻译结果将显示在这里..." readonly rows="6"></textarea>
+                <div class="target-cursor" id="target-cursor"></div>
+            </div>
+            <div class="panel-foot">
+                <span class="panel-count" id="translate-target-count">0</span>
+            </div>
+        </div>
+    </div>
+</div>

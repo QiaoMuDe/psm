@@ -7,108 +7,26 @@ const TranslateView = {
     tokenUnlisten: null,
     doneUnlisten: null,
     errorUnlisten: null,
+    _template: null,
+    _keydownHandler: null,
 
     /**
      * 渲染翻译模块视图
      * @param {HTMLElement} container - 容器元素
      */
     async render(container) {
-        container.innerHTML = `
-            <div class="translate-page">
-                <div class="translate-header">
-                    <div class="translate-lang-bar">
-                        <select class="form-select translate-lang-select" id="translate-source-lang">
-                            <option value="简体中文">简体中文</option>
-                            <option value="English">English</option>
-                            <option value="日本語">日本語</option>
-                            <option value="한국어">한국어</option>
-                            <option value="Français">Français</option>
-                            <option value="Deutsch">Deutsch</option>
-                        </select>
-                        <button class="btn btn-ghost btn-sm" id="translate-swap-btn" title="交换语言和文本">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="17 1 21 5 17 9"/>
-                                <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                                <polyline points="7 23 3 19 7 15"/>
-                                <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                            </svg>
-                        </button>
-                        <select class="form-select translate-lang-select" id="translate-target-lang">
-                            <option value="English">English</option>
-                            <option value="简体中文">简体中文</option>
-                            <option value="日本語">日本語</option>
-                            <option value="한국어">한국어</option>
-                            <option value="Français">Français</option>
-                            <option value="Deutsch">Deutsch</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary" id="translate-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 8l6 0"/>
-                            <path d="M4 6l7.586 0.001a2 2 0 0 1 1.414 0.586l2.003 2.003a2 2 0 0 0 1.414 0.586L15 8.001"/>
-                            <path d="M14 16l-3.5 0"/>
-                            <path d="M15 15l0 -3.5"/>
-                            <path d="M12.5 15l-4 0"/>
-                            <path d="M15 18l-3.5 0"/>
-                            <path d="M9 18l0 -3.5"/>
-                        </svg>
-                        翻译
-                    </button>
-                </div>
-                <div class="translate-panels">
-                    <div class="translate-panel">
-                        <div class="translate-panel-header">
-                            <span class="translate-panel-label">原文</span>
-                            <div class="translate-panel-actions">
-                                <button class="btn btn-ghost btn-xs" id="translate-copy-source" title="复制原文">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                </button>
-                                <button class="btn btn-ghost btn-xs" id="translate-clear-source" title="清空原文">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="translate-panel-body">
-                            <textarea class="translate-textarea" id="translate-source" placeholder="输入要翻译的内容..." rows="6"></textarea>
-                        </div>
-                        <div class="translate-panel-footer">
-                            <span class="char-count" id="translate-source-count">0 字</span>
-                        </div>
-                    </div>
-                    <div class="translate-panel-divider">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14"/>
-                            <path d="M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                    <div class="translate-panel">
-                        <div class="translate-panel-header">
-                            <span class="translate-panel-label">译文</span>
-                            <div class="translate-panel-actions">
-                                <button class="btn btn-ghost btn-xs" id="translate-copy-target" title="复制译文">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                </button>
-                                <button class="btn btn-ghost btn-xs" id="translate-clear-target" title="清空译文">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="translate-panel-body">
-                            <textarea class="translate-textarea" id="translate-target" placeholder="翻译结果将显示在这里..." readonly rows="6"></textarea>
-                        </div>
-                        <div class="translate-panel-footer">
-                            <span class="char-count" id="translate-target-count">0 字</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        if (!this._template) {
+            const resp = await fetch('html/translate.html');
+            this._template = await resp.text();
+        }
 
+        container.innerHTML = this._template;
         this.bindEvents();
+        document.getElementById('translate-source').focus();
     },
 
     /**
-     * 绑定所有事件监听器
+     * 绑定/刷新所有事件监听器
      */
     bindEvents() {
         document.getElementById('translate-btn').addEventListener('click', () => this.translate());
@@ -120,7 +38,11 @@ const TranslateView = {
 
         document.getElementById('translate-source').addEventListener('input', () => this.updateCharCount());
 
-        document.addEventListener('keydown', this._handleKeydown);
+        if (this._keydownHandler) {
+            document.removeEventListener('keydown', this._keydownHandler);
+        }
+        this._keydownHandler = (e) => this._handleKeydown(e);
+        document.addEventListener('keydown', this._keydownHandler);
     },
 
     /**
@@ -146,17 +68,24 @@ const TranslateView = {
     setLoading(active) {
         const source = document.getElementById('translate-source');
         const btn = document.getElementById('translate-btn');
-        const divider = document.querySelector('.translate-panel-divider');
+        const cursor = document.getElementById('target-cursor');
+        const targetPanel = document.getElementById('panel-target');
+        const label = btn.querySelector('span');
 
         source.readOnly = active;
-        if (divider) divider.classList.toggle('active', active);
+        if (targetPanel) targetPanel.classList.toggle('is-receiving', active);
+        if (cursor) cursor.classList.toggle('active', active);
 
         if (active) {
-            btn.innerHTML = `<span class="btn-spinner"></span>翻译中...`;
+            btn.classList.add('is-loading');
+            label.textContent = '翻译中';
             btn.disabled = true;
         } else {
-            btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l6 0"/><path d="M4 6l7.586 0.001a2 2 0 0 1 1.414 0.586l2.003 2.003a2 2 0 0 0 1.414 0.586L15 8.001"/><path d="M14 16l-3.5 0"/><path d="M15 15l0 -3.5"/><path d="M12.5 15l-4 0"/><path d="M15 18l-3.5 0"/><path d="M9 18l0 -3.5"/></svg> 翻译`;
+            btn.classList.remove('is-loading');
+            label.textContent = '翻译';
             btn.disabled = false;
+            if (targetPanel) targetPanel.classList.remove('is-receiving');
+            if (cursor) cursor.classList.remove('active');
         }
     },
 
@@ -226,6 +155,9 @@ const TranslateView = {
      * 交换源语言和目标语言，同时交换文本内容
      */
     swapLanguages() {
+        const btn = document.getElementById('translate-swap-btn');
+        btn.classList.add('swapping');
+
         const sourceLang = document.getElementById('translate-source-lang');
         const targetLang = document.getElementById('translate-target-lang');
         const sourceText = document.getElementById('translate-source');
@@ -240,6 +172,8 @@ const TranslateView = {
         targetText.value = tempText;
 
         this.updateCharCount();
+
+        setTimeout(() => btn.classList.remove('swapping'), 400);
     },
 
     /**
@@ -249,6 +183,7 @@ const TranslateView = {
         if (this.translating) return;
         document.getElementById('translate-source').value = '';
         this.updateCharCount();
+        document.getElementById('translate-source').focus();
     },
 
     /**
@@ -294,7 +229,7 @@ const TranslateView = {
     updateCharCount() {
         const sourceLen = document.getElementById('translate-source').value.length;
         const targetLen = document.getElementById('translate-target').value.length;
-        document.getElementById('translate-source-count').textContent = `${sourceLen} 字`;
-        document.getElementById('translate-target-count').textContent = `${targetLen} 字`;
+        document.getElementById('translate-source-count').textContent = `${sourceLen}`;
+        document.getElementById('translate-target-count').textContent = `${targetLen}`;
     }
 };

@@ -3,7 +3,6 @@
  * 提供应用设置管理功能，所有图标使用内联 SVG
  */
 const SettingsView = {
-    _fontIndex: -1,
 
     /**
      * 渲染设置视图
@@ -370,22 +369,6 @@ const SettingsView = {
     },
 
     /**
-     * 更新字体选项高亮状态
-     * @param {HTMLElement} dropdown - 下拉框元素
-     */
-    updateFontHighlight(dropdown) {
-        const options = Array.from(dropdown.querySelectorAll('.font-family-option')).filter(opt => opt.style.display !== 'none');
-        options.forEach((option, index) => {
-            if (index === this._fontIndex) {
-                option.classList.add('font-family-active');
-                option.scrollIntoView({ block: 'nearest' });
-            } else {
-                option.classList.remove('font-family-active');
-            }
-        });
-    },
-
-    /**
      * 应用字体族到根元素
      * @param {string} family - 字体族名称
      */
@@ -448,12 +431,21 @@ const SettingsView = {
         const dropdown = document.getElementById('setting-font-family-dropdown');
         const hiddenInput = document.getElementById('setting-font-family');
 
+        const fontNav = KeyboardNav.bind(searchInput, {
+            getItems: () => dropdown.querySelectorAll('.font-family-option:not([style*="display: none"])'),
+            onEnter: (item) => item.click(),
+            onEscape: () => dropdown.classList.remove('active'),
+            allowCancel: true,
+            highlightClass: 'font-family-active',
+        });
+
         searchInput.addEventListener('focus', () => {
             dropdown.classList.add('active');
             const selected = dropdown.querySelector('.font-family-option.selected');
             if (selected) {
-                this._fontIndex = Array.from(dropdown.querySelectorAll('.font-family-option')).indexOf(selected);
-                selected.scrollIntoView({ block: 'nearest' });
+                const visibleOptions = dropdown.querySelectorAll('.font-family-option:not([style*="display: none"])');
+                const idx = Array.from(visibleOptions).indexOf(selected);
+                if (idx >= 0) fontNav.setIndex(idx);
             }
         });
 
@@ -464,30 +456,7 @@ const SettingsView = {
                 const fontName = option.dataset.value || 'Space Grotesk';
                 option.style.display = fontName.toLowerCase().includes(query) ? '' : 'none';
             });
-            this._fontIndex = -1;
-            this.updateFontHighlight(dropdown);
-        });
-
-        searchInput.addEventListener('keydown', (e) => {
-            const options = Array.from(dropdown.querySelectorAll('.font-family-option')).filter(opt => opt.style.display !== 'none');
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                this._fontIndex = Math.min(this._fontIndex + 1, options.length - 1);
-                this.updateFontHighlight(dropdown);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                this._fontIndex = Math.max(this._fontIndex - 1, -1);
-                this.updateFontHighlight(dropdown);
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (this._fontIndex >= 0 && options[this._fontIndex]) {
-                    options[this._fontIndex].click();
-                }
-            } else if (e.key === 'Escape') {
-                dropdown.classList.remove('active');
-                this._fontIndex = -1;
-            }
+            fontNav.reset();
         });
 
         dropdown.addEventListener('click', (e) => {
@@ -500,13 +469,13 @@ const SettingsView = {
             option.classList.add('selected');
             this.applyFontFamily(value);
             dropdown.classList.remove('active');
-            this._fontIndex = -1;
+            fontNav.reset();
         });
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.font-family-selector')) {
                 dropdown.classList.remove('active');
-                this._fontIndex = -1;
+                fontNav.reset();
             }
         });
 
@@ -669,17 +638,16 @@ const SettingsView = {
         const searchInput = document.getElementById('model-search-input');
         const modelInput = document.getElementById('setting-ai-model');
         let allModels = [];
-        let modelIndex = -1;
 
-        const updateModelHighlight = () => {
-            const items = Array.from(modelList.querySelectorAll('.model-dropdown-item'));
-            items.forEach((item, i) => {
-                item.classList.toggle('highlight', i === modelIndex);
-            });
-            if (modelIndex >= 0 && items[modelIndex]) {
-                items[modelIndex].scrollIntoView({ block: 'nearest' });
-            }
-        };
+        const modelNav = KeyboardNav.bind(searchInput, {
+            getItems: () => modelList.querySelectorAll('.model-dropdown-item'),
+            onEnter: (item) => {
+                modelInput.value = item.dataset.model;
+                dropdown.classList.remove('active');
+            },
+            onEscape: () => dropdown.classList.remove('active'),
+            allowCancel: true,
+        });
 
         fetchBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -698,7 +666,7 @@ const SettingsView = {
 
             try {
                 allModels = await API.getAIModels();
-                modelIndex = -1;
+                modelNav.reset();
                 this.renderModelList(modelList, allModels, modelInput.value, searchInput.value);
                 dropdown.classList.add('active');
                 searchInput.value = '';
@@ -717,48 +685,24 @@ const SettingsView = {
         });
 
         searchInput.addEventListener('input', () => {
-            modelIndex = -1;
+            modelNav.reset();
             this.renderModelList(modelList, allModels, modelInput.value, searchInput.value);
         });
 
         searchInput.addEventListener('click', (e) => e.stopPropagation());
-
-        searchInput.addEventListener('keydown', (e) => {
-            const items = Array.from(modelList.querySelectorAll('.model-dropdown-item'));
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                modelIndex = Math.min(modelIndex + 1, items.length - 1);
-                updateModelHighlight();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                modelIndex = Math.max(modelIndex - 1, -1);
-                updateModelHighlight();
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (modelIndex >= 0 && items[modelIndex]) {
-                    modelInput.value = items[modelIndex].dataset.model;
-                    dropdown.classList.remove('active');
-                    modelIndex = -1;
-                }
-            } else if (e.key === 'Escape') {
-                dropdown.classList.remove('active');
-                modelIndex = -1;
-            }
-        });
 
         modelList.addEventListener('click', (e) => {
             const item = e.target.closest('.model-dropdown-item');
             if (!item) return;
             modelInput.value = item.dataset.model;
             dropdown.classList.remove('active');
-            modelIndex = -1;
+            modelNav.reset();
         });
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.settings-model-control')) {
                 dropdown.classList.remove('active');
-                modelIndex = -1;
+                modelNav.reset();
             }
         });
     },

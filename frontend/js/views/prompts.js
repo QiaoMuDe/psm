@@ -755,24 +755,28 @@ const PromptsView = {
         if (!input || !dropdown) return;
 
         let allCategories = [];
-        let categoryIndex = -1;
 
         try {
             allCategories = (await API.getCategories() || []).filter(c => c.trim());
         } catch (e) { /* ignore */ }
 
-        const updateHighlight = () => {
-            const items = dropdown.querySelectorAll('.model-dropdown-item');
-            items.forEach((item, i) => item.classList.toggle('highlight', i === categoryIndex));
-            if (categoryIndex >= 0 && items[categoryIndex]) {
-                items[categoryIndex].scrollIntoView({ block: 'nearest' });
-            }
-        };
+        const categoryNav = KeyboardNav.bind(input, {
+            getItems: () => {
+                if (dropdown.style.display === 'none') return [];
+                return dropdown.querySelectorAll('.model-dropdown-item');
+            },
+            onEnter: (item) => {
+                input.value = item.dataset.value;
+                dropdown.style.display = 'none';
+            },
+            onEscape: () => { dropdown.style.display = 'none'; },
+            allowCancel: false,
+        });
 
         const renderList = (filter) => {
             const val = (filter || '').toLowerCase();
             const filtered = val ? allCategories.filter(c => c.toLowerCase().includes(val)) : allCategories;
-            categoryIndex = -1;
+            categoryNav.reset();
             if (filtered.length === 0) {
                 dropdown.style.display = 'none';
                 return;
@@ -792,27 +796,6 @@ const PromptsView = {
 
         input.addEventListener('focus', () => renderList(input.value));
         input.addEventListener('input', () => renderList(input.value));
-
-        input.addEventListener('keydown', (e) => {
-            const items = dropdown.querySelectorAll('.model-dropdown-item');
-            if (dropdown.style.display === 'none' || items.length === 0) return;
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                categoryIndex = Math.min(categoryIndex + 1, items.length - 1);
-                updateHighlight();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                categoryIndex = Math.max(categoryIndex - 1, 0);
-                updateHighlight();
-            } else if (e.key === 'Enter' && categoryIndex >= 0) {
-                e.preventDefault();
-                input.value = items[categoryIndex].dataset.value;
-                dropdown.style.display = 'none';
-            } else if (e.key === 'Escape') {
-                dropdown.style.display = 'none';
-            }
-        });
 
         document.addEventListener('mousedown', (e) => {
             if (!input.contains(e.target) && !dropdown.contains(e.target)) {

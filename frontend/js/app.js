@@ -166,6 +166,74 @@ const ShortcutManager = {
         Modal.open('快捷键说明', content, { width: '480px' });
     }
 };
+
+/**
+ * 下拉列表键盘导航工具
+ * 统一处理 ArrowDown/ArrowUp/Enter/Escape 键盘导航逻辑
+ * @param {HTMLElement|string} element - 接收键盘事件的元素或其 ID
+ * @param {Object} options - 配置选项
+ * @param {Function} options.getItems - 返回当前可见候选项列表 (() => NodeList|HTMLElement[])
+ * @param {Function} options.onEnter - 回车选中回调 (item, index) => void
+ * @param {Function} options.onEscape - Esc 关闭回调 () => void
+ * @param {string} [options.highlightClass='highlight'] - 高亮 CSS 类名
+ * @param {boolean} [options.allowCancel=true] - ArrowUp 是否允许取消选中（索引回到 -1）
+ * @param {boolean} [options.enableScroll=true] - 高亮时是否自动滚动到可视区域
+ * @returns {{ getIndex: () => number, reset: () => void }}
+ */
+const KeyboardNav = {
+    bind(element, options) {
+        const el = typeof element === 'string' ? document.getElementById(element) : element;
+        if (!el) return { getIndex: () => -1, reset: () => {} };
+
+        const {
+            getItems,
+            onEnter,
+            onEscape,
+            highlightClass = 'highlight',
+            allowCancel = true,
+            enableScroll = true,
+        } = options;
+
+        let index = -1;
+
+        const update = () => {
+            const items = getItems();
+            Array.from(items).forEach((item, i) => {
+                item.classList.toggle(highlightClass, i === index);
+            });
+            if (enableScroll && index >= 0 && items[index]) {
+                items[index].scrollIntoView({ block: 'nearest' });
+            }
+        };
+
+        el.addEventListener('keydown', (e) => {
+            const items = getItems();
+            if (!items || items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                index = Math.min(index + 1, items.length - 1);
+                update();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                index = Math.max(index - 1, allowCancel ? -1 : 0);
+                update();
+            } else if (e.key === 'Enter' && index >= 0 && items[index]) {
+                e.preventDefault();
+                onEnter(items[index], index);
+            } else if (e.key === 'Escape') {
+                onEscape();
+            }
+        });
+
+        return {
+            getIndex: () => index,
+            setIndex: (i) => { index = i; update(); },
+            reset: () => { index = -1; update(); },
+        };
+    },
+};
+
 const App = {
     currentView: 'dashboard',
     loadedScripts: {},
