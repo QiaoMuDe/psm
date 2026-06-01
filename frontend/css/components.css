@@ -2187,6 +2187,10 @@ tr.highlight-flash {
     font-weight: 500;
 }
 
+.model-dropdown-item.highlight {
+    background: var(--accent-light);
+}
+
 .model-dropdown-empty {
     padding: 16px 12px;
     text-align: center;

@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.10.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
+> 版本: 2.11.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
 
 ---
 
@@ -126,7 +126,7 @@ psm/
 | 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置 | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
 | Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶) | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
 | Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
-| AI 服务 | 流式生成提示词、流式优化提示词、获取模型列表、测试连接 | `internal/handler/ai.go` | 输入: 描述/内容 → 输出: Events 流式推送 |
+| AI 服务 | 流式生成提示词（含重新生成）、流式优化提示词、获取模型列表（含键盘导航）、测试连接 | `internal/handler/ai.go` | 输入: 描述/内容 → 输出: Events 流式推送 |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
 | 前端 SPA | 路由管理、视图切换、组件系统（含右键菜单） | `frontend/js/app.js` + views/ | 用户交互 → API 调用 |
@@ -385,6 +385,7 @@ psm/
     → 结束时 Emit("ai:done")
 → 前端监听 ai:token 事件，累加显示在 textarea 中
 → 完成后解析 JSON，展示可编辑的名称+内容（淡入动画）
+→ 按钮文本变为"重新生成"，用户可点击回到输入区并自动触发新一轮生成
 → 用户确认后打开新建表单，预填充 AI 生成结果
 ```
 
@@ -411,7 +412,8 @@ psm/
   → 解析响应 data[].id 列表
 → 弹出下拉列表（.model-dropdown），顶部搜索框可过滤
 → 当前选中模型高亮显示 ✓
-→ 点击模型项 → 自动填充到输入框
+→ 支持键盘导航: ↑↓移动高亮 / Enter选择 / Esc关闭
+→ 点击模型项或 Enter → 自动填充到输入框
 ```
 
 **AI 测试连接流程**:
@@ -810,3 +812,6 @@ skills (独立表 + 文件系统)
 82. **全局输入框背景色**: `.form-input/.form-select/.form-textarea` 统一使用 `var(--bg-page)` 背景色
 83. **优化按钮位置区分**: `:has(.form-input)` 选择器让 input 按钮垂直居中，textarea 按钮右下角
 84. **api.js updateSkill 修复**: 补充缺失的 `tags` 参数，修复 Skill 保存时参数数量不匹配错误
+85. **AI 生成重新生成功能**: AI 生成提示词模态框生成完成后，"生成"按钮文本变为"重新生成"，点击后恢复输入区并自动触发新一轮生成（无需手动再点），按钮文本恢复为"生成"
+86. **模型下拉键盘导航**: 设置页"获取模型"下拉列表支持 ArrowUp/ArrowDown/Enter/Escape 键盘操作，`modelIndex` 追踪高亮索引，`.highlight` CSS 类标记当前项，搜索过滤和打开下拉时自动重置索引
+87. **优化按钮空值提示修复**: `bindOptimizeButton` 空值提示从"请先输入提示词内容"改为"请先输入内容"，适配名称/内容/描述等多种优化场景

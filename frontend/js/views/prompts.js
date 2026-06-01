@@ -688,7 +688,7 @@ const PromptsView = {
 
             const currentContent = textarea.value.trim();
             if (!currentContent) {
-                Toast.warning('请先输入提示词内容');
+                Toast.warning('请先输入内容');
                 return;
             }
 

@@ -542,6 +542,17 @@ const SettingsView = {
         const searchInput = document.getElementById('model-search-input');
         const modelInput = document.getElementById('setting-ai-model');
         let allModels = [];
+        let modelIndex = -1;
+
+        const updateModelHighlight = () => {
+            const items = Array.from(modelList.querySelectorAll('.model-dropdown-item'));
+            items.forEach((item, i) => {
+                item.classList.toggle('highlight', i === modelIndex);
+            });
+            if (modelIndex >= 0 && items[modelIndex]) {
+                items[modelIndex].scrollIntoView({ block: 'nearest' });
+            }
+        };
 
         fetchBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -560,6 +571,7 @@ const SettingsView = {
 
             try {
                 allModels = await API.getAIModels();
+                modelIndex = -1;
                 this.renderModelList(modelList, allModels, modelInput.value, searchInput.value);
                 dropdown.classList.add('active');
                 searchInput.value = '';
@@ -578,14 +590,33 @@ const SettingsView = {
         });
 
         searchInput.addEventListener('input', () => {
+            modelIndex = -1;
             this.renderModelList(modelList, allModels, modelInput.value, searchInput.value);
         });
 
         searchInput.addEventListener('click', (e) => e.stopPropagation());
 
         searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
+            const items = Array.from(modelList.querySelectorAll('.model-dropdown-item'));
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                modelIndex = Math.min(modelIndex + 1, items.length - 1);
+                updateModelHighlight();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                modelIndex = Math.max(modelIndex - 1, -1);
+                updateModelHighlight();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (modelIndex >= 0 && items[modelIndex]) {
+                    modelInput.value = items[modelIndex].dataset.model;
+                    dropdown.classList.remove('active');
+                    modelIndex = -1;
+                }
+            } else if (e.key === 'Escape') {
                 dropdown.classList.remove('active');
+                modelIndex = -1;
             }
         });
 
@@ -594,11 +625,13 @@ const SettingsView = {
             if (!item) return;
             modelInput.value = item.dataset.model;
             dropdown.classList.remove('active');
+            modelIndex = -1;
         });
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.settings-model-control')) {
                 dropdown.classList.remove('active');
+                modelIndex = -1;
             }
         });
     },
