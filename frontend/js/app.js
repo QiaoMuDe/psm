@@ -601,4 +601,100 @@ function showTemplateVarsModal(vars, callback) {
     });
 }
 
+/**
+ * 定位弹出菜单，确保不超出视口边界
+ * @param {HTMLElement} el - 要定位的元素
+ * @param {number} x - 期望的 X 坐标
+ * @param {number} y - 期望的 Y 坐标
+ */
+function positionPopup(el, x, y) {
+    const rect = el.getBoundingClientRect();
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    let left = x;
+    let top = y;
+    if (x + rect.width > viewW) left = x - rect.width;
+    if (y + rect.height > viewH) top = y - rect.height;
+    if (left < 0) left = 0;
+    if (top < 0) top = 0;
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+}
+
+/**
+ * 使用 AI 流式事件注册，统一管理 ai:token/ai:done/ai:error 事件
+ * @param {Function} apiMethod - 调用 API 的方法，接收剩余参数
+ * @param {Object} callbacks - 回调对象
+ * @param {Function} [callbacks.onToken] - 收到 token 回调
+ * @param {Function} [callbacks.onDone] - 完成回调
+ * @param {Function} [callbacks.onError] - 错误回调
+ * @returns {{ cleanup: Function, call: Function }}
+ */
+function withAIStream(apiMethod, callbacks) {
+    const { onToken, onDone, onError } = callbacks;
+    let tokenUnlisten = null;
+    let doneUnlisten = null;
+    let errorUnlisten = null;
+
+    const cleanup = () => {
+        if (tokenUnlisten) tokenUnlisten();
+        if (doneUnlisten) doneUnlisten();
+        if (errorUnlisten) errorUnlisten();
+        tokenUnlisten = doneUnlisten = errorUnlisten = null;
+    };
+
+    if (window.runtime && window.runtime.EventsOn) {
+        tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
+            if (onToken) onToken(token);
+        });
+
+        doneUnlisten = window.runtime.EventsOn('ai:done', () => {
+            cleanup();
+            if (onDone) onDone();
+        });
+
+        errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
+            cleanup();
+            if (onError) onError(errMsg);
+        });
+    }
+
+    return {
+        cleanup,
+        call: async (...args) => {
+            try {
+                await apiMethod(...args);
+            } catch (err) {
+                cleanup();
+                if (onError) onError(err.message || '操作失败');
+            }
+        }
+    };
+}
+
+/**
+ * 复制文本到剪贴板
+ * 优先使用 navigator.clipboard.writeText，失败时回退到 textarea + execCommand 模式
+ * @param {string} text - 要复制的文本
+ * @returns {Promise<void>}
+ */
+function copyToClipboard(text) {
+    return new Promise(async (resolve) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            resolve();
+        } catch (err) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            resolve();
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => App.init());

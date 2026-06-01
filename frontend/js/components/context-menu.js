@@ -41,18 +41,7 @@ const ContextMenu = {
         this.el.innerHTML = html;
         this.el.style.display = 'block';
 
-        const rect = this.el.getBoundingClientRect();
-        const viewW = window.innerWidth;
-        const viewH = window.innerHeight;
-        let left = x;
-        let top = y;
-        if (x + rect.width > viewW) left = x - rect.width;
-        if (y + rect.height > viewH) top = y - rect.height;
-        if (left < 0) left = 0;
-        if (top < 0) top = 0;
-
-        this.el.style.left = left + 'px';
-        this.el.style.top = top + 'px';
+        positionPopup(this.el, x, y);
 
         this.el.querySelectorAll('.context-menu-item').forEach(el => {
             el.addEventListener('click', (e) => {

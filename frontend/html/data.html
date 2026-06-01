@@ -1,0 +1,112 @@
+<div class="page-header">
+    <h2 class="page-title">数据管理</h2>
+    <p class="page-subtitle">查看数据概况、备份恢复和清理孤立数据</p>
+</div>
+<div class="view-content">
+    <div class="data-stats" id="data-stats">
+        <div class="data-stat-item">
+            <div class="data-stat-value" id="stat-prompt-count">-</div>
+            <div class="data-stat-label">提示词</div>
+        </div>
+        <div class="data-stat-item">
+            <div class="data-stat-value" id="stat-skill-count">-</div>
+            <div class="data-stat-label">技能</div>
+        </div>
+        <div class="data-stat-item">
+            <div class="data-stat-value" id="stat-db-size">-</div>
+            <div class="data-stat-label">数据库大小</div>
+        </div>
+    </div>
+    <div class="card" style="border: 1px solid var(--primary);">
+        <div class="card-header">
+            <h3 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                快速备份
+            </h3>
+        </div>
+        <div class="card-body">
+            <div id="quick-backup-status" style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">检测中...</div>
+            <div style="display: flex; gap: var(--spacing-2);">
+                <button class="btn btn-primary" id="quick-backup-btn">一键备份</button>
+                <button class="btn btn-default" id="quick-restore-btn" disabled>一键还原</button>
+            </div>
+        </div>
+    </div>
+    <div class="grid grid-3">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    导出数据
+                </h3>
+            </div>
+            <div class="card-body">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                    将所有设置、提示词和技能（含文件）打包为 ZIP 文件。
+                </p>
+                <button class="btn btn-primary" id="backup-data-btn">导出备份</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    导入数据
+                </h3>
+            </div>
+            <div class="card-body">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                    从备份文件恢复数据。同名记录会被跳过。
+                </p>
+                <button class="btn btn-default" id="restore-data-btn">导入恢复</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                    </svg>
+                    清理数据
+                </h3>
+            </div>
+            <div class="card-body">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                    检测并清理数据库中文件已不存在的孤立技能记录。
+                </p>
+                <div id="orphan-status" style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">检测中...</div>
+                <button class="btn btn-danger" id="cleanup-orphan-btn" style="display:none">清理孤立数据</button>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="margin-top: var(--spacing-4); border: 1px solid var(--danger);">
+        <div class="card-header">
+            <h3 class="card-title" style="color: var(--danger);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                危险操作
+            </h3>
+        </div>
+        <div class="card-body">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                重置所有数据：清空全部提示词和技能（含文件），恢复默认设置。此操作不可撤销！
+            </p>
+            <button class="btn btn-danger" id="reset-all-btn">重置所有数据</button>
+        </div>
+    </div>
+</div>

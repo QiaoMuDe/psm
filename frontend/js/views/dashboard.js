@@ -10,69 +10,11 @@ const DashboardView = {
      * @param {HTMLElement} container - 容器元素
      */
     async render(container) {
-        container.innerHTML = `
-            <div class="page-header">
-                <h2 class="page-title">仪表盘</h2>
-            </div>
-            <div class="view-content">
-                <div class="stats-grid">
-                    <div class="stat-card" data-view="prompts">
-                        <div class="stat-icon stat-icon-blue">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="prompt-count">0</div>
-                            <div class="stat-label">Prompt 数量</div>
-                        </div>
-                    </div>
-                    <div class="stat-card" data-view="skills">
-                        <div class="stat-icon stat-icon-teal">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                            </svg>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="skill-count">0</div>
-                            <div class="stat-label">Skill 数量</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="global-search-wrapper">
-                    <div class="global-search-box">
-                        <div class="global-search-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                            </svg>
-                        </div>
-                        <input type="text" class="global-search-input" id="global-search" placeholder="搜索提示词或技能..." autocomplete="off" />
-                        <div class="search-dropdown" id="search-dropdown" style="display: none;"></div>
-                    </div>
-                </div>
-
-                <div class="card popular-section" id="popular-section">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 20V10"/>
-                                <path d="M18 20V4"/>
-                                <path d="M6 20v-4"/>
-                            </svg>
-                            最常用提示词
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="popular-list" id="popular-list">
-                            <div class="empty-state-small">
-                                <p>暂无使用记录</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        if (!this._template) {
+            const resp = await fetch('html/dashboard.html');
+            this._template = await resp.text();
+        }
+        container.innerHTML = this._template;
         try {
             const [promptCount, skillCount, popularPrompts] = await Promise.all([
                 API.countPrompts(),
@@ -84,9 +26,7 @@ const DashboardView = {
             container.querySelectorAll('.stat-card[data-view]').forEach(card => {
                 card.addEventListener('click', () => App.navigate(card.dataset.view));
             });
-
             this.renderPopularList(container, popularPrompts);
-
             this.bindSearchEvents();
         } catch (err) {
             console.error('加载仪表盘数据失败:', err);
@@ -178,7 +118,7 @@ const DashboardView = {
                 const icon = item.type === 'Prompt'
                     ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
                     : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
-                const highlightedName = DashboardView.highlightText(item.name, keyword);
+                const highlightedName = highlightText(item.name, keyword);
                 html += `
                     <div class="search-result-item" data-view="${item.type.toLowerCase()}s" data-id="${item.id}">
                         <div class="search-result-icon ${item.type === 'Prompt' ? 'search-icon-blue' : 'search-icon-teal'}">${icon}</div>
@@ -200,20 +140,6 @@ const DashboardView = {
         } catch (err) {
             console.error('搜索失败:', err);
         }
-    },
-
-    /**
-     * 高亮搜索关键词
-     * @param {string} text - 原始文本
-     * @param {string} keyword - 搜索关键词
-     * @returns {string} 高亮后的 HTML
-     */
-    highlightText(text, keyword) {
-        if (!text || !keyword) return escapeHtml(text);
-        const escaped = escapeHtml(text);
-        const escapedKeyword = escapeHtml(keyword);
-        const regex = new RegExp(`(${escapedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        return escaped.replace(regex, '<span class="search-highlight">$1</span>');
     },
 
     /**

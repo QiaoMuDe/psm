@@ -4,9 +4,6 @@
  */
 const TranslateView = {
     translating: false,
-    tokenUnlisten: null,
-    doneUnlisten: null,
-    errorUnlisten: null,
     _template: null,
     _keydownHandler: null,
 
@@ -117,38 +114,24 @@ const TranslateView = {
             cleanupDone = true;
             this.translating = false;
             this.setLoading(false);
-            this.cleanupListeners();
             this.updateCharCount();
         };
 
-        this.tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
-            accumulated += token;
-            target.value = accumulated;
+        const stream = withAIStream(API.translateContent, {
+            onToken: (token) => {
+                accumulated += token;
+                target.value = accumulated;
+            },
+            onDone: () => {
+                cleanup();
+            },
+            onError: (errMsg) => {
+                cleanup();
+                Toast.error(errMsg);
+            }
         });
 
-        this.doneUnlisten = window.runtime.EventsOn('ai:done', () => {
-            cleanup();
-        });
-
-        this.errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
-            cleanup();
-            Toast.error(errMsg);
-        });
-
-        try {
-            await API.translateContent(sourceText, targetLang);
-        } catch (err) {
-            cleanup();
-        }
-    },
-
-    /**
-     * 清理 AI 事件监听器
-     */
-    cleanupListeners() {
-        if (this.tokenUnlisten) { this.tokenUnlisten(); this.tokenUnlisten = null; }
-        if (this.doneUnlisten) { this.doneUnlisten(); this.doneUnlisten = null; }
-        if (this.errorUnlisten) { this.errorUnlisten(); this.errorUnlisten = null; }
+        await stream.call(sourceText, targetLang);
     },
 
     /**

@@ -18,105 +18,18 @@ const SkillsView = {
      */
     async render(container, highlightId = null) {
         this.highlightId = highlightId;
-        container.innerHTML = `
-            <div class="page-header">
-                <h2 class="page-title">Skill 管理</h2>
-            </div>
-            <div class="card view-toolbar">
-                <div class="card-header">
-                    <div class="toolbar">
-                        <div class="toolbar-left">
-                            <div class="search-box">
-                                <input type="text" id="skill-search" placeholder="搜索 Skill..." />
-                            </div>
-                        </div>
-                        <div class="toolbar-right">
-                            <div class="view-toggle">
-                                <button class="view-toggle-btn${this.currentView === 'list' ? ' active' : ''}" data-view="list" title="列表视图">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-                                    </svg>
-                                </button>
-                                <button class="view-toggle-btn${this.currentView === 'card' ? ' active' : ''}" data-view="card" title="卡片视图">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="toolbar-separator"></div>
-                            <div class="action-buttons">
-                                <button class="btn btn-primary btn-sm" id="add-skill-btn">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                                    </svg>
-                                    新增
-                                </button>
-                                <button class="btn btn-default btn-sm" id="batch-manage-skill-btn">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                                    批量管理
-                                </button>
-                            </div>
-                            <div class="toolbar-separator"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="batch-bar" id="skill-batch-bar" style="display:none;">
-                    <div class="batch-bar-left">
-                        <label class="batch-select-all-label">
-                            <input type="checkbox" class="select-all-checkbox" id="skill-select-all" />
-                            全选
-                        </label>
-                        <span id="skill-selected-count">0 项已选</span>
-                    </div>
-                    <div class="batch-bar-right">
-                        <button class="btn btn-default btn-sm" id="import-skill-btn">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="17 8 12 3 7 8"/>
-                                <line x1="12" y1="3" x2="12" y2="15"/>
-                            </svg>
-                            导入
-                        </button>
-                        <button class="btn btn-default btn-sm" id="export-skill-btn">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="7 10 12 15 17 10"/>
-                                <line x1="12" y1="15" x2="12" y2="3"/>
-                            </svg>
-                            导出
-                        </button>
-                        <div class="batch-dropdown-wrap">
-                            <button class="btn btn-default btn-sm" id="skill-more-actions-btn">更多操作 ▾</button>
-                        </div>
-                        <button class="btn btn-danger btn-sm" id="skill-batch-delete-btn">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            批量删除
-                        </button>
-                        <button class="btn btn-default btn-sm" id="skill-exit-batch-btn">退出管理</button>
-                    </div>
-                </div>
-                <div class="view-content">
-                    <div id="skill-list">
-                        <div class="loading">加载中...</div>
-                    </div>
-                </div>
-            </div>
-        `;
+        if (!this._template) {
+            const resp = await fetch('html/skills.html');
+            this._template = await resp.text();
+        }
+        container.innerHTML = this._template;
 
-        this.syncViewToggle();
-        await this.loadSkills();
-        this.bindEvents();
-    },
-
-    /**
-     * 同步视图切换按钮的激活状态
-     */
-    syncViewToggle() {
+        // 设置视图切换按钮的 active 状态
         document.querySelectorAll('.view-toggle-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.view === this.currentView);
         });
+        await this.loadSkills();
+        this.bindEvents();
     },
 
     /**
@@ -945,17 +858,7 @@ const SkillsView = {
         if (!btn || !field) return;
 
         let originalContent = null;
-        let tokenUnlisten = null;
-        let doneUnlisten = null;
-        let errorUnlisten = null;
         let accumulated = '';
-
-        const cleanup = () => {
-            if (tokenUnlisten) tokenUnlisten();
-            if (doneUnlisten) doneUnlisten();
-            if (errorUnlisten) errorUnlisten();
-            tokenUnlisten = doneUnlisten = errorUnlisten = null;
-        };
 
         const setOptimizing = (optimizing) => {
             const row = field.closest('.ai-optimize-row');
@@ -996,16 +899,14 @@ const SkillsView = {
             accumulated = '';
             setOptimizing(true);
 
-            if (window.runtime && window.runtime.EventsOn) {
-                tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
+            const stream = withAIStream(apiMethod || API.optimizePrompt, {
+                onToken: (token) => {
                     accumulated += token;
                     field.value = accumulated;
                     field.dispatchEvent(new Event('input'));
-                });
-
-                doneUnlisten = window.runtime.EventsOn('ai:done', () => {
+                },
+                onDone: () => {
                     const result = accumulated;
-                    cleanup();
                     field.disabled = false;
                     if (result) {
                         field.value = result;
@@ -1013,29 +914,17 @@ const SkillsView = {
                         Toast.success('优化完成');
                     }
                     setOptimizing(false);
-                });
-
-                errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
-                    cleanup();
+                },
+                onError: (errMsg) => {
                     field.value = originalContent;
                     originalContent = null;
                     field.dispatchEvent(new Event('input'));
                     setOptimizing(false);
                     Toast.error(errMsg);
-                });
-            }
+                }
+            });
 
-            try {
-                const method = apiMethod || API.optimizePrompt;
-                await method(currentContent);
-            } catch (err) {
-                cleanup();
-                field.value = originalContent;
-                originalContent = null;
-                field.dispatchEvent(new Event('input'));
-                setOptimizing(false);
-                Toast.error(err.message || '优化失败');
-            }
+            await stream.call(currentContent);
         });
     }
 };

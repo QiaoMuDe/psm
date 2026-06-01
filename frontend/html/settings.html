@@ -1,0 +1,263 @@
+<div class="page-header">
+    <h2 class="page-title">设置</h2>
+    <button class="btn btn-primary btn-sm" id="save-settings-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        保存设置
+    </button>
+</div>
+<div class="view-content">
+    <div class="settings-section">
+        <div class="settings-section-header">
+            <div class="settings-section-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            </div>
+            <div class="settings-section-info">
+                <h3 class="settings-section-title">外观</h3>
+                <p class="settings-section-desc">自定义应用的视觉外观</p>
+            </div>
+        </div>
+        <div class="settings-section-body">
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">主题</span>
+                    <span class="settings-row-desc">选择应用的颜色主题</span>
+                </div>
+                <div class="settings-row-control">
+                    <select id="setting-theme" class="form-select">
+                        <option value="light">亮色</option>
+                        <option value="dark">暗色</option>
+                        <option value="midnight">午夜蓝</option>
+                        <option value="ocean">海洋蓝</option>
+                        <option value="rose">玫瑰红</option>
+                        <option value="lavender">薰衣草紫</option>
+                        <option value="auto">跟随系统</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">字体大小</span>
+                    <span class="settings-row-desc">调整全局字体大小偏移量</span>
+                </div>
+                <div class="settings-row-control settings-font-size-control">
+                    <select id="setting-font-size" class="form-select">
+                        <option value="-2">较小 (-2px)</option>
+                        <option value="-1">略小 (-1px)</option>
+                        <option value="0">默认 (0px)</option>
+                        <option value="1">略大 (+1px)</option>
+                        <option value="2">较大 (+2px)</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                    <input type="number" id="setting-font-size-custom" class="form-input form-input-sm" min="-5" max="5" value="0" disabled />
+                    <span class="settings-unit">px</span>
+                </div>
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">字体族</span>
+                    <span class="settings-row-desc">选择应用界面的字体</span>
+                </div>
+                <div class="settings-row-control settings-font-family-control">
+                    <div class="font-family-selector">
+                        <input type="text" id="setting-font-family-search" class="form-input" placeholder="搜索字体..." autocomplete="off" />
+                        <div id="setting-font-family-dropdown" class="font-family-dropdown">
+                            <div class="font-family-option" data-value="">
+                                <span class="font-family-preview" style="font-family: 'Space Grotesk'">默认 (Space Grotesk)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="setting-font-family" value="" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <div class="settings-section-header">
+            <div class="settings-section-icon settings-section-icon-teal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+            </div>
+            <div class="settings-section-info">
+                <h3 class="settings-section-title">存储</h3>
+                <p class="settings-section-desc">管理程序家目录，Skill 和备份文件跟随此目录</p>
+            </div>
+        </div>
+        <div class="settings-section-body">
+            <div class="settings-row settings-row-column">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">程序家目录</span>
+                    <span class="settings-row-desc">Skill 和备份文件将存储在此目录下</span>
+                </div>
+                <div class="settings-path-row">
+                    <input type="text" class="form-input" id="setting-app-home" readonly />
+                    <button class="btn btn-default" id="open-app-home-btn" title="在文件管理器中打开">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                        打开
+                    </button>
+                    <button class="btn btn-default" id="change-app-home-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        更改
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-section ai-section">
+        <div class="settings-section-header">
+            <div class="settings-section-icon settings-section-icon-purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+            </div>
+            <div class="settings-section-info">
+                <h3 class="settings-section-title">AI</h3>
+                <p class="settings-section-desc">配置 AI 模型，用于一键生成提示词</p>
+            </div>
+        </div>
+        <div class="settings-section-body">
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">API 地址</span>
+                    <span class="settings-row-desc">OpenAI 兼容的基础路径，如 https://api.openai.com/v1</span>
+                </div>
+                <div class="settings-row-control settings-api-url-control">
+                    <input type="text" class="form-input" id="setting-ai-api-url" placeholder="https://api.openai.com/v1" />
+                    <button type="button" class="btn btn-default" id="test-ai-connection-btn" title="测试 API 连接">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        测试连接
+                    </button>
+                </div>
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">API Key</span>
+                    <span class="settings-row-desc">模型服务的访问密钥</span>
+                </div>
+                <div class="settings-row-control settings-api-key-control">
+                    <input type="password" class="form-input" id="setting-ai-api-key" placeholder="sk-..." />
+                    <button type="button" class="btn btn-default btn-icon" id="toggle-ai-api-key-btn" title="显示/隐藏">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">模型名称</span>
+                    <span class="settings-row-desc">使用的模型标识，如 gpt-4o-mini、deepseek-chat</span>
+                </div>
+                <div class="settings-row-control settings-model-control">
+                    <input type="text" class="form-input" id="setting-ai-model" placeholder="gpt-4o-mini" />
+                    <button type="button" class="btn btn-default" id="fetch-models-btn" title="获取可用模型列表">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        获取模型
+                    </button>
+                    <div id="model-dropdown" class="model-dropdown">
+                        <div class="model-dropdown-search">
+                            <input type="text" class="form-input" id="model-search-input" placeholder="搜索模型..." />
+                        </div>
+                        <div class="model-dropdown-list" id="model-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-row settings-row-column">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">生成提示词系统提示</span>
+                    <span class="settings-row-desc">AI 生成提示词时使用的系统提示词，可自定义修改</span>
+                </div>
+                <div class="settings-row-control settings-row-control-full">
+                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-generate-prompt" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="settings-row settings-row-column">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">优化提示词系统提示</span>
+                    <span class="settings-row-desc">AI 优化提示词内容时使用的系统提示词，可自定义修改</span>
+                </div>
+                <div class="settings-row-control settings-row-control-full">
+                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-prompt" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="settings-row settings-row-column">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">优化名称系统提示</span>
+                    <span class="settings-row-desc">AI 优化名称时使用的系统提示词，适用于提示词和技能的名称优化</span>
+                </div>
+                <div class="settings-row-control settings-row-control-full">
+                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-name" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="settings-row settings-row-column">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">优化描述系统提示</span>
+                    <span class="settings-row-desc">AI 优化描述时使用的系统提示词，适用于技能描述优化</span>
+                </div>
+                <div class="settings-row-control settings-row-control-full">
+                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-description" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="settings-row settings-row-column">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">翻译系统提示</span>
+                    <span class="settings-row-desc">AI 翻译内容时使用的系统提示词，可自定义修改</span>
+                </div>
+                <div class="settings-row-control settings-row-control-full">
+                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-translate-prompt" rows="6"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志设置 -->
+    <div class="settings-section">
+        <div class="settings-section-header">
+            <h3>日志设置</h3>
+        </div>
+        <div class="settings-section-body">
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span class="settings-row-title">日志级别</span>
+                    <span class="settings-row-desc">控制日志输出详细程度，DEBUG 最详细，ERROR 仅错误</span>
+                </div>
+                <div class="settings-row-control settings-model-control">
+                    <div class="log-level-segments" id="log-level-select" tabindex="0">
+                        <input type="hidden" id="log-level-value" value="WARN" />
+                        <div class="segments-track" id="log-level-track">
+                            <div class="segments-highlight" id="log-level-highlight"></div>
+                            <div class="segment-item active" data-level="DEBUG" data-index="0">DEBUG</div>
+                            <div class="segment-item" data-level="INFO" data-index="1">INFO</div>
+                            <div class="segment-item" data-level="WARN" data-index="2">WARN</div>
+                            <div class="segment-item" data-level="ERROR" data-index="3">ERROR</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

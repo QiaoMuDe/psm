@@ -20,98 +20,14 @@ const PromptsView = {
 
     async render(container, highlightId = null) {
         this.highlightId = highlightId;
-        container.innerHTML = `
-            <div class="page-header">
-                <h2 class="page-title">Prompt 管理</h2>
-            </div>
-            <div class="card view-toolbar">
-                <div class="card-header">
-                    <div class="toolbar">
-                        <div class="toolbar-left">
-                            <div class="search-box">
-                                <input type="text" id="prompt-search" placeholder="搜索提示词..." />
-                            </div>
-                            <select class="form-select" id="prompt-category" style="width: 140px;">
-                                <option value="all">所有分类</option>
-                            </select>
-                        </div>
-                        <div class="toolbar-right">
-                            <div class="view-toggle">
-                                <button class="view-toggle-btn${this.currentView === 'list' ? ' active' : ''}" data-view="list" title="列表视图">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-                                    </svg>
-                                </button>
-                                <button class="view-toggle-btn${this.currentView === 'card' ? ' active' : ''}" data-view="card" title="卡片视图">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="toolbar-separator"></div>
-                            <div class="action-buttons">
-                                <button class="btn btn-default btn-sm" id="batch-manage-prompt-btn">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                                    批量管理
-                                </button>
-                            </div>
-                            <div class="toolbar-separator"></div>
-                            <button class="btn btn-default btn-sm" id="ai-generate-prompt-btn">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                </svg>
-                                AI 生成
-                            </button>
-                            <button class="btn btn-primary btn-sm" id="add-prompt-btn">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                                </svg>
-                                新建
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="batch-bar" id="prompt-batch-bar" style="display:none;">
-                    <div class="batch-bar-left">
-                        <label class="batch-select-all-label">
-                            <input type="checkbox" class="select-all-checkbox" id="prompt-select-all" />
-                            全选
-                        </label>
-                        <span id="prompt-selected-count">0 项已选</span>
-                    </div>
-                    <div class="batch-bar-right">
-                        <button class="btn btn-default btn-sm" id="import-prompt-btn">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                            </svg>
-                            导入
-                        </button>
-                        <button class="btn btn-default btn-sm" id="export-prompt-btn">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                            </svg>
-                            导出
-                        </button>
-                        <div class="batch-dropdown-wrap">
-                            <button class="btn btn-default btn-sm" id="prompt-more-actions-btn">更多操作 ▾</button>
-                        </div>
-                        <button class="btn btn-danger btn-sm" id="prompt-batch-delete-btn">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            批量删除
-                        </button>
-                        <button class="btn btn-default btn-sm" id="prompt-exit-batch-btn">退出管理</button>
-                    </div>
-                </div>
-                <div class="view-content">
-                    <div id="prompt-list">
-                        <div class="loading">加载中...</div>
-                    </div>
-                </div>
-            </div>
-        `;
-
+        if (!this._template) {
+            const resp = await fetch('html/prompts.html');
+            this._template = await resp.text();
+        }
+        container.innerHTML = this._template;
+        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === this.currentView);
+        });
         await this.loadCategories();
         await this.loadPrompts();
         this.bindEvents();
@@ -652,17 +568,7 @@ const PromptsView = {
         if (!btn || !textarea) return;
 
         let originalContent = null;
-        let tokenUnlisten = null;
-        let doneUnlisten = null;
-        let errorUnlisten = null;
         let accumulated = '';
-
-        const cleanup = () => {
-            if (tokenUnlisten) tokenUnlisten();
-            if (doneUnlisten) doneUnlisten();
-            if (errorUnlisten) errorUnlisten();
-            tokenUnlisten = doneUnlisten = errorUnlisten = null;
-        };
 
         const setOptimizing = (optimizing) => {
             const row = textarea.closest('.ai-optimize-row');
@@ -703,16 +609,14 @@ const PromptsView = {
             accumulated = '';
             setOptimizing(true);
 
-            if (window.runtime && window.runtime.EventsOn) {
-                tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
+            const stream = withAIStream(apiMethod || API.optimizePrompt, {
+                onToken: (token) => {
                     accumulated += token;
                     textarea.value = accumulated;
                     textarea.dispatchEvent(new Event('input'));
-                });
-
-                doneUnlisten = window.runtime.EventsOn('ai:done', () => {
+                },
+                onDone: () => {
                     const result = accumulated;
-                    cleanup();
                     textarea.disabled = false;
                     if (result) {
                         textarea.value = result;
@@ -720,29 +624,17 @@ const PromptsView = {
                         Toast.success('优化完成');
                     }
                     setOptimizing(false);
-                });
-
-                errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
-                    cleanup();
+                },
+                onError: (errMsg) => {
                     textarea.value = originalContent;
                     originalContent = null;
                     textarea.dispatchEvent(new Event('input'));
                     setOptimizing(false);
                     Toast.error(errMsg);
-                });
-            }
+                }
+            });
 
-            try {
-                const method = apiMethod || API.optimizePrompt;
-                await method(currentContent);
-            } catch (err) {
-                cleanup();
-                textarea.value = originalContent;
-                originalContent = null;
-                textarea.dispatchEvent(new Event('input'));
-                setOptimizing(false);
-                Toast.error(err.message || '优化失败');
-            }
+            await stream.call(currentContent);
         });
     },
 
@@ -937,18 +829,7 @@ const PromptsView = {
 
         Modal.open('AI 生成提示词', content, { width: '560px', footer });
 
-        let tokenUnlisten = null;
-        let doneUnlisten = null;
-        let errorUnlisten = null;
         let accumulated = '';
-
-        const cleanup = () => {
-            if (tokenUnlisten) tokenUnlisten();
-            if (doneUnlisten) doneUnlisten();
-            if (errorUnlisten) errorUnlisten();
-            tokenUnlisten = doneUnlisten = errorUnlisten = null;
-            accumulated = '';
-        };
 
         const setLoading = (loading) => {
             document.getElementById('ai-gen-start-btn').style.display = loading ? 'none' : '';
@@ -958,13 +839,13 @@ const PromptsView = {
         };
 
         document.getElementById('ai-gen-cancel-btn').addEventListener('click', () => {
-            cleanup();
+            accumulated = '';
             Modal.close();
         });
 
         document.getElementById('ai-gen-stop-btn').addEventListener('click', async () => {
             await API.cancelAIGeneration();
-            cleanup();
+            accumulated = '';
             setLoading(false);
         });
 
@@ -986,34 +867,24 @@ const PromptsView = {
             accumulated = '';
             setLoading(true);
 
-            if (window.runtime && window.runtime.EventsOn) {
-                tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
+            const stream = withAIStream(API.generatePrompt, {
+                onToken: (token) => {
                     accumulated += token;
-                });
-
-                doneUnlisten = window.runtime.EventsOn('ai:done', () => {
+                },
+                onDone: () => {
                     const result = accumulated;
-                    cleanup();
                     setLoading(false);
                     if (result) {
                         PromptsView.showAIReviewSection(result);
                     }
-                });
-
-                errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
-                    cleanup();
+                },
+                onError: (errMsg) => {
                     setLoading(false);
                     Toast.error(errMsg);
-                });
-            }
+                }
+            });
 
-            try {
-                await API.generatePrompt(desc);
-            } catch (err) {
-                cleanup();
-                setLoading(false);
-                Toast.error(err.message || '生成失败');
-            }
+            await stream.call(desc);
         });
 
         document.getElementById('ai-gen-confirm-btn').addEventListener('click', () => {
@@ -1326,43 +1197,17 @@ const PromptsView = {
                     if (vars.length > 0) {
                         showTemplateVarsModal(vars, async (values) => {
                             const replaced = replaceTemplateVars(content, values);
-                            try {
-                                await navigator.clipboard.writeText(replaced);
-                                await incrementUsage();
-                                Toast.success('内容已复制到剪贴板');
-                            } catch (err) {
-                                const textarea = document.createElement('textarea');
-                                textarea.value = replaced;
-                                textarea.style.position = 'fixed';
-                                textarea.style.left = '-9999px';
-                                document.body.appendChild(textarea);
-                                textarea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textarea);
-                                await incrementUsage();
-                                Toast.success('内容已复制到剪贴板');
-                            }
+                            await copyToClipboard(replaced);
+                            await incrementUsage();
+                            Toast.success('内容已复制到剪贴板');
                         });
                         return;
                     }
                 }
 
-                try {
-                    await navigator.clipboard.writeText(content);
-                    await incrementUsage();
-                    Toast.success('内容已复制到剪贴板');
-                } catch (err) {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = content;
-                    textarea.style.position = 'fixed';
-                    textarea.style.left = '-9999px';
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    await incrementUsage();
-                    Toast.success('内容已复制到剪贴板');
-                }
+                await copyToClipboard(content);
+                await incrementUsage();
+                Toast.success('内容已复制到剪贴板');
             });
         }
     },
@@ -1389,43 +1234,17 @@ const PromptsView = {
             if (vars.length > 0) {
                 showTemplateVarsModal(vars, async (values) => {
                     const replaced = replaceTemplateVars(prompt.content, values);
-                    try {
-                        await navigator.clipboard.writeText(replaced);
-                        await incrementUsage();
-                        Toast.success('内容已复制到剪贴板');
-                    } catch (err) {
-                        const textarea = document.createElement('textarea');
-                        textarea.value = replaced;
-                        textarea.style.position = 'fixed';
-                        textarea.style.left = '-9999px';
-                        document.body.appendChild(textarea);
-                        textarea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textarea);
-                        await incrementUsage();
-                        Toast.success('内容已复制到剪贴板');
-                    }
+                    await copyToClipboard(replaced);
+                    await incrementUsage();
+                    Toast.success('内容已复制到剪贴板');
                 });
                 return;
             }
         }
 
-        try {
-            await navigator.clipboard.writeText(prompt.content);
-            await incrementUsage();
-            Toast.success('内容已复制到剪贴板');
-        } catch (err) {
-            const textarea = document.createElement('textarea');
-            textarea.value = prompt.content;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            await incrementUsage();
-            Toast.success('内容已复制到剪贴板');
-        }
+        await copyToClipboard(prompt.content);
+        await incrementUsage();
+        Toast.success('内容已复制到剪贴板');
     },
 
     /**
@@ -1455,43 +1274,17 @@ const PromptsView = {
             if (vars.length > 0) {
                 showTemplateVarsModal(vars, async (values) => {
                     const replaced = replaceTemplateVars(content, values);
-                    try {
-                        await navigator.clipboard.writeText(replaced);
-                        await incrementUsage();
-                        Toast.success('内容已复制到剪贴板');
-                    } catch (err) {
-                        const textarea = document.createElement('textarea');
-                        textarea.value = replaced;
-                        textarea.style.position = 'fixed';
-                        textarea.style.left = '-9999px';
-                        document.body.appendChild(textarea);
-                        textarea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textarea);
-                        await incrementUsage();
-                        Toast.success('内容已复制到剪贴板');
-                    }
+                    await copyToClipboard(replaced);
+                    await incrementUsage();
+                    Toast.success('内容已复制到剪贴板');
                 });
                 return;
             }
         }
 
-        try {
-            await navigator.clipboard.writeText(content);
-            await incrementUsage();
-            Toast.success('内容已复制到剪贴板');
-        } catch (err) {
-            const textarea = document.createElement('textarea');
-            textarea.value = content;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            await incrementUsage();
-            Toast.success('内容已复制到剪贴板');
-        }
+        await copyToClipboard(content);
+        await incrementUsage();
+        Toast.success('内容已复制到剪贴板');
     },
 
     handleBatchUpdateCategory() {
@@ -1654,42 +1447,16 @@ const PromptsView = {
                     if (vars.length > 0) {
                         showTemplateVarsModal(vars, async (values) => {
                             const replaced = replaceTemplateVars(prompt.content, values);
-                            try {
-                                await navigator.clipboard.writeText(replaced);
-                                await incrementUsage();
-                                Toast.success('内容已复制到剪贴板');
-                            } catch (err) {
-                                const textarea = document.createElement('textarea');
-                                textarea.value = replaced;
-                                textarea.style.position = 'fixed';
-                                textarea.style.left = '-9999px';
-                                document.body.appendChild(textarea);
-                                textarea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textarea);
-                                await incrementUsage();
-                                Toast.success('内容已复制到剪贴板');
-                            }
+                            await copyToClipboard(replaced);
+                            await incrementUsage();
+                            Toast.success('内容已复制到剪贴板');
                         });
                         return;
                     }
                 }
-                try {
-                    await navigator.clipboard.writeText(prompt.content);
-                    await incrementUsage();
-                    Toast.success('内容已复制到剪贴板');
-                } catch (err) {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = prompt.content;
-                    textarea.style.position = 'fixed';
-                    textarea.style.left = '-9999px';
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    await incrementUsage();
-                    Toast.success('内容已复制到剪贴板');
-                }
+                await copyToClipboard(prompt.content);
+                await incrementUsage();
+                Toast.success('内容已复制到剪贴板');
             }},
             { separator: true },
             { label: '编辑', icon: editIcon, action: () => this.openEditModal(id) },
