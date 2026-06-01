@@ -2150,6 +2150,10 @@ tr.highlight-flash {
     flex: 1;
 }
 
+.category-combo {
+    position: relative;
+}
+
 .model-dropdown {
     position: absolute;
     top: calc(100% + 4px);

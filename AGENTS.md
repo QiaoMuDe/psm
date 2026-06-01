@@ -759,6 +759,9 @@ skills (独立表 + 文件系统)
 54. **程序家目录迁移**: 使用 `gofs.MoveEx(src, dst, true)` 替代自定义 copyDir，支持跨文件系统移动，附操作日志记录
 55. **孤立技能检测增强**: 检查目录不存在 OR 目录存在但缺少 SKILL.md 文件，均视为孤立数据
 56. **孤立技能清理增强**: 删除数据库记录时同时清理磁盘残留目录（`os.RemoveAll`），失败仅 warn 不阻塞
+57. **分类组合框**: Prompt 新建/编辑/AI生成模态框的分类输入改为 input + 下拉选择组合框（`.category-combo`），支持输入新分类或选择已有分类
+58. **分类下拉键盘导航**: 分类下拉列表支持 ↑↓ 移动高亮 / Enter 选择 / Esc 关闭，复用 `.model-dropdown-item.highlight` 样式
+59. **分类列表实时刷新**: 新建/编辑/AI生成提示词成功后自动调用 `loadCategories()` 刷新搜索栏分类下拉
 
 ---
 
@@ -896,3 +899,7 @@ skills (独立表 + 文件系统)
 110. **前端双重 toast 修复**: API.call 已 Toast.error，app.js drop handler catch 中重复 Toast.error 改为 console.error
 111. **翻译按钮 spinner**: 使用 `.btn-spinner` CSS 类（14px 白色边框旋转圆圈），`animation: spin 0.6s linear infinite`
 112. **翻译模块 readonly 样式**: textarea readonly 时背景保持 `var(--bg-page)`，无透明度变化
+113. **版本号重复 v 修复**: app.js `showAboutDialog` 中 `v${escapeHtml(version)}` 改为 `${escapeHtml(version)}`，因为 verman 的 `git_version` 已自带 v 前缀
+114. **分类组合框结构**: `.category-combo`（position:relative）包裹 `#prompt-category-input` + `#category-dropdown`（`.model-dropdown`），三个模态框（新建/AI生成/编辑）均使用
+115. **分类组合框逻辑**: `bindCategoryCombo()` 方法，focus 时显示全部分类，input 时实时过滤，mousedown 选择，keydown 键盘导航（ArrowUp/Down/Enter/Escape），document mousedown 关闭
+116. **分类刷新时机**: 新建/编辑/AI生成成功后先 `loadCategories()` 再 `loadPrompts()`，确保搜索栏分类下拉即时更新

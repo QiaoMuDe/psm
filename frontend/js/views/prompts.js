@@ -746,6 +746,81 @@ const PromptsView = {
     },
 
     /**
+     * 绑定分类组合框：输入 + 下拉选择已有分类
+     */
+    async bindCategoryCombo() {
+        const input = document.getElementById('prompt-category-input');
+        const dropdown = document.getElementById('category-dropdown');
+        if (!input || !dropdown) return;
+
+        let allCategories = [];
+        let categoryIndex = -1;
+
+        try {
+            allCategories = await API.getCategories() || [];
+        } catch (e) { /* ignore */ }
+
+        const updateHighlight = () => {
+            const items = dropdown.querySelectorAll('.model-dropdown-item');
+            items.forEach((item, i) => item.classList.toggle('highlight', i === categoryIndex));
+            if (categoryIndex >= 0 && items[categoryIndex]) {
+                items[categoryIndex].scrollIntoView({ block: 'nearest' });
+            }
+        };
+
+        const renderList = (filter) => {
+            const val = (filter || '').toLowerCase();
+            const filtered = val ? allCategories.filter(c => c.toLowerCase().includes(val)) : allCategories;
+            categoryIndex = -1;
+            if (filtered.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            dropdown.innerHTML = filtered.map(c =>
+                `<div class="model-dropdown-item" data-value="${escapeHtml(c)}">${escapeHtml(c)}</div>`
+            ).join('');
+            dropdown.style.display = 'block';
+            dropdown.querySelectorAll('.model-dropdown-item').forEach(item => {
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    input.value = item.dataset.value;
+                    dropdown.style.display = 'none';
+                });
+            });
+        };
+
+        input.addEventListener('focus', () => renderList(input.value));
+        input.addEventListener('input', () => renderList(input.value));
+
+        input.addEventListener('keydown', (e) => {
+            const items = dropdown.querySelectorAll('.model-dropdown-item');
+            if (dropdown.style.display === 'none' || items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                categoryIndex = Math.min(categoryIndex + 1, items.length - 1);
+                updateHighlight();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                categoryIndex = Math.max(categoryIndex - 1, 0);
+                updateHighlight();
+            } else if (e.key === 'Enter' && categoryIndex >= 0) {
+                e.preventDefault();
+                input.value = items[categoryIndex].dataset.value;
+                dropdown.style.display = 'none';
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    },
+
+    /**
      * 打开新建 Prompt 模态框
      */
     openCreateModal() {
@@ -765,7 +840,10 @@ const PromptsView = {
                 </div>
                 <div class="form-group">
                     <label class="form-label">分类</label>
-                    <input type="text" class="form-input" id="prompt-category-input" placeholder="输入分类名称" />
+                    <div class="category-combo">
+                        <input type="text" class="form-input" id="prompt-category-input" placeholder="输入或选择分类" autocomplete="off" />
+                        <div class="model-dropdown" id="category-dropdown"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">内容 <span class="required-mark">*</span></label>
@@ -805,6 +883,7 @@ const PromptsView = {
         PromptsView.bindOptimizeButton('btn-optimize-name-create', 'prompt-name', API.optimizeName);
         PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
         PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
+        this.bindCategoryCombo();
 
         document.getElementById('prompt-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -819,6 +898,7 @@ const PromptsView = {
                 await API.createPrompt(name, content, category, tags, isTemplate);
                 Toast.success('创建成功');
                 Modal.close();
+                await this.loadCategories();
                 await this.loadPrompts();
             } catch (err) {
                 // 错误已由 API.call 处理
@@ -1016,7 +1096,10 @@ const PromptsView = {
                 </div>
                 <div class="form-group">
                     <label class="form-label">分类</label>
-                    <input type="text" class="form-input" id="prompt-category-input" placeholder="输入分类名称" />
+                    <div class="category-combo">
+                        <input type="text" class="form-input" id="prompt-category-input" placeholder="输入或选择分类" autocomplete="off" />
+                        <div class="model-dropdown" id="category-dropdown"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">内容 <span class="required-mark">*</span></label>
@@ -1056,6 +1139,7 @@ const PromptsView = {
         PromptsView.bindOptimizeButton('btn-optimize-name-ai', 'prompt-name', API.optimizeName);
         PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
         PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
+        this.bindCategoryCombo();
 
         document.getElementById('prompt-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1070,6 +1154,7 @@ const PromptsView = {
                 await API.createPrompt(pName, pContent, pCategory, pTags, pIsTemplate);
                 Toast.success('创建成功');
                 Modal.close();
+                await this.loadCategories();
                 await this.loadPrompts();
             } catch (err) {
                 // 错误已由 API.call 处理
@@ -1101,7 +1186,10 @@ const PromptsView = {
                     </div>
                     <div class="form-group">
                         <label class="form-label">分类</label>
-                        <input type="text" class="form-input" id="prompt-category-input" value="${escapeHtml(prompt.category || '')}" />
+                        <div class="category-combo">
+                            <input type="text" class="form-input" id="prompt-category-input" value="${escapeHtml(prompt.category || '')}" autocomplete="off" />
+                            <div class="model-dropdown" id="category-dropdown"></div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">内容 <span class="required-mark">*</span></label>
@@ -1141,6 +1229,7 @@ const PromptsView = {
         PromptsView.bindOptimizeButton('btn-optimize-name-edit', 'prompt-name', API.optimizeName);
         PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
         PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
+        this.bindCategoryCombo();
 
         document.getElementById('prompt-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1155,6 +1244,7 @@ const PromptsView = {
                 await API.updatePrompt(id, name, content, category, tags, isTemplate);
                 Toast.success('更新成功');
                 Modal.close();
+                await this.loadCategories();
                 await this.loadPrompts();
             } catch (err) {
                 // 错误已由 API.call 处理
