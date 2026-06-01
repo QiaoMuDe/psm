@@ -3,12 +3,11 @@ package handler
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"os/exec"
 	"path/filepath"
 
 	"gitee.com/MM-Q/fastlog"
+	gofs "gitee.com/MM-Q/go-kit/fs"
 	"gitee.com/MM-Q/verman"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -69,22 +68,20 @@ func (h *SettingsHandler) SetAppHome(newPath string) error {
 		src := filepath.Join(oldPath, dir)
 		dst := filepath.Join(newPath, dir)
 
-		if _, err := os.Stat(src); os.IsNotExist(err) {
+		if !gofs.Exists(src) {
+			h.logger.Debugw("源目录不存在，跳过", fastlog.String("dir", dir), fastlog.String("src", src))
 			continue
 		}
 
-		if err := utils.EnsureDir(dst); err != nil {
-			h.logger.Errorw("创建目标目录失败", fastlog.Error(err), fastlog.String("dir", dir))
-			return fmt.Errorf("创建目标目录失败: %w", err)
-		}
-
-		if err := copyDir(src, dst); err != nil {
-			h.logger.Errorw("迁移目录失败", fastlog.Error(err), fastlog.String("dir", dir))
+		h.logger.Infow("开始迁移目录", fastlog.String("dir", dir), fastlog.String("src", src), fastlog.String("dst", dst))
+		if err := gofs.MoveEx(src, dst, true); err != nil {
+			h.logger.Errorw("迁移目录失败", fastlog.String("dir", dir), fastlog.Error(err))
 			return fmt.Errorf("迁移 %s 目录失败: %w", dir, err)
 		}
+		h.logger.Infow("目录迁移完成", fastlog.String("dir", dir))
 	}
 
-	h.logger.Infow("程序家目录迁移完成", fastlog.String("new_path", newPath))
+	h.logger.Infow("程序家目录迁移完成", fastlog.String("old", oldPath), fastlog.String("new", newPath))
 	return h.settingsSvc.UpdateSetting("app_home", newPath)
 }
 
@@ -224,43 +221,4 @@ func (h *SettingsHandler) SetLogLevel(level string) error {
 
 	h.logger.Infow("日志级别已更改", fastlog.String("level", level))
 	return nil
-}
-
-// copyDir 递归复制目录
-func copyDir(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		dstPath := filepath.Join(dst, relPath)
-
-		if info.IsDir() {
-			return utils.EnsureDir(dstPath)
-		}
-
-		return copyFile(path, dstPath)
-	})
-}
-
-// copyFile 复制单个文件
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = in.Close() }()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = out.Close() }()
-
-	_, err = io.Copy(out, in)
-	return err
 }

@@ -255,7 +255,7 @@ func (h *BackupHandler) ResetAllData() (map[string]int64, error) {
 	}, nil
 }
 
-// CleanupOrphanSkills 清理孤立 Skill 数据
+// CleanupOrphanSkills 清理孤立 Skill 数据并删除残留目录
 func (h *BackupHandler) CleanupOrphanSkills() (int, error) {
 	h.logger.Warnw("清理孤立 Skill")
 
@@ -266,6 +266,23 @@ func (h *BackupHandler) CleanupOrphanSkills() (int, error) {
 	if len(orphans) == 0 {
 		return 0, nil
 	}
+
+	storagePath, err := h.settingsSvc.GetSkillStoragePath()
+	if err != nil {
+		return 0, fmt.Errorf("获取存储路径失败: %w", err)
+	}
+
+	for _, sk := range orphans {
+		skillDir := filepath.Join(storagePath, sk.RelativePath)
+		if _, statErr := os.Stat(skillDir); statErr == nil {
+			if rmErr := os.RemoveAll(skillDir); rmErr != nil {
+				h.logger.Warnw("删除残留目录失败", fastlog.String("dir", skillDir), fastlog.Error(rmErr))
+			} else {
+				h.logger.Infow("已删除残留目录", fastlog.String("dir", skillDir))
+			}
+		}
+	}
+
 	ids := make([]int64, len(orphans))
 	for i, sk := range orphans {
 		ids[i] = sk.ID

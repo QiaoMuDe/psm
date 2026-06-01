@@ -534,7 +534,7 @@ func (s *SkillService) CountSkills() (int64, error) {
 	return count, nil
 }
 
-// GetOrphanSkills 检测文件目录已不存在的 Skill 记录
+// GetOrphanSkills 检测文件目录不存在或缺少 SKILL.md 的 Skill 记录
 func (s *SkillService) GetOrphanSkills() ([]db.Skill, error) {
 	storagePath, err := s.settingsSvc.GetSkillStoragePath()
 	if err != nil {
@@ -550,6 +550,11 @@ func (s *SkillService) GetOrphanSkills() ([]db.Skill, error) {
 	for _, sk := range skills {
 		skillDir := filepath.Join(storagePath, sk.RelativePath)
 		if _, err := os.Stat(skillDir); os.IsNotExist(err) {
+			orphans = append(orphans, sk)
+			continue
+		}
+		skillMD := filepath.Join(skillDir, "SKILL.md")
+		if _, err := os.Stat(skillMD); os.IsNotExist(err) {
 			orphans = append(orphans, sk)
 		}
 	}

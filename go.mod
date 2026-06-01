@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	gitee.com/MM-Q/fastlog v1.6.2
+	gitee.com/MM-Q/go-kit v0.0.20
 	gitee.com/MM-Q/verman v0.0.19
 	github.com/glebarez/sqlite v1.11.0
 	github.com/wailsapp/wails/v2 v2.11.0
@@ -14,7 +15,6 @@ require (
 require (
 	gitee.com/MM-Q/color v1.0.4 // indirect
 	gitee.com/MM-Q/comprx v0.1.7 // indirect
-	gitee.com/MM-Q/go-kit v0.0.20 // indirect
 	gitee.com/MM-Q/logrotatex v1.2.5 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
