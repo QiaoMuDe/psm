@@ -1,0 +1,24 @@
+# Checklist
+
+- [x] 后端 TranslateContent 方法存在，接收 content 和 targetLang 两个参数，复用 streamChat
+- [x] DefaultSettings 中包含 ai_translate_prompt 默认值
+- [x] api.js 中包含 translateContent 封装方法
+- [x] index.html 侧边栏 skills 和 data 之间有翻译导航项
+- [x] app.js navigate switch 包含 case 'translate' 分支
+- [x] app.js navMap 映射为 {1: dashboard, 2: prompts, 3: skills, 4: translate, 5: data, 6: settings}
+- [x] translate.js 存在且导出 TranslateView 对象
+- [x] 翻译页面包含左右两个 textarea
+- [x] 语言下拉框包含 6 种语言选项
+- [x] 交换按钮交换语言选择和文本内容
+- [x] 翻译按钮点击后显示"翻译中..."并禁用，完成后恢复
+- [x] 译文 textarea 通过 ai:token 事件逐 token 追加内容
+- [x] 原文区清空按钮同时清空原文和译文
+- [x] 译文区清空按钮只清空译文
+- [x] 复制按钮将内容复制到剪贴板并 Toast.success
+- [x] 字数统计实时显示在两个输入框下方
+- [x] Ctrl+Enter 触发翻译，Ctrl+L 清空内容
+- [x] 空输入时点击翻译显示 Toast.warning
+- [x] 设置页 AI 分组包含翻译系统提示词 textarea
+- [x] 保存设置时 ai_translate_prompt 值被正确收集并保存
+- [x] go build ./... 编译通过
+- [x] golangci-lint run 无告警

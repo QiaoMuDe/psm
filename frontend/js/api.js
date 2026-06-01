@@ -91,6 +91,7 @@ const API = {
     optimizePrompt: (content) => API.call(window.go.main.App.OptimizePrompt, content),
     optimizeName: (content) => API.call(window.go.main.App.OptimizeName, content),
     optimizeDescription: (content) => API.call(window.go.main.App.OptimizeDescription, content),
+    translateContent: (text, lang) => API.call(window.go.main.App.TranslateContent, text, lang),
     cancelAIGeneration: () => API.call(window.go.main.App.CancelAIGeneration),
     getAIModels: () => API.call(window.go.main.App.GetAIModels),
     testAIConnection: (apiURL, apiKey) => API.call(window.go.main.App.TestAIConnection, apiURL, apiKey),

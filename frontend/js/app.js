@@ -75,7 +75,7 @@ const ShortcutManager = {
 
         if (modalOpen) return;
 
-        const navMap = { '1': 'dashboard', '2': 'prompts', '3': 'skills', '4': 'data', '5': 'settings' };
+        const navMap = { '1': 'dashboard', '2': 'prompts', '3': 'skills', '4': 'translate', '5': 'data', '6': 'settings' };
         if (!inInput && !combo.includes('+') && navMap[combo]) {
             App.navigate(navMap[combo]);
             e.preventDefault();
@@ -127,7 +127,7 @@ const ShortcutManager = {
             { keys: 'Ctrl + F', desc: '搜索' },
             { keys: 'Ctrl + S', desc: '保存设置' },
             { keys: 'Escape', desc: '关闭弹窗 / 退出批量模式' },
-            { keys: '1 ~ 5', desc: '快速导航（仪表盘/提示词/技能/数据/设置）' },
+            { keys: '1 ~ 6', desc: '快速导航（仪表盘/提示词/技能/翻译/数据/设置）' },
             { keys: 'Ctrl + ?', desc: '显示快捷键说明' },
         ];
 
@@ -135,6 +135,11 @@ const ShortcutManager = {
             { keys: 'Delete', desc: '删除选中' },
             { keys: 'Ctrl + A', desc: '全选' },
             { keys: 'Ctrl + D', desc: '取消全选' },
+        ];
+
+        const translateKeys = [
+            { keys: 'Ctrl + Enter', desc: '开始翻译' },
+            { keys: 'Ctrl + L', desc: '清空原文和译文' },
         ];
 
         const renderTable = (items) => items.map(item =>
@@ -150,6 +155,10 @@ const ShortcutManager = {
                 <div class="shortcut-section">
                     <div class="shortcut-section-title">提示词 / 技能模块（批量模式下）</div>
                     <table class="shortcut-table"><tbody>${renderTable(batchKeys)}</tbody></table>
+                </div>
+                <div class="shortcut-section">
+                    <div class="shortcut-section-title">翻译模块</div>
+                    <table class="shortcut-table"><tbody>${renderTable(translateKeys)}</tbody></table>
                 </div>
             </div>
         `;
@@ -248,6 +257,10 @@ const App = {
                 case 'skills':
                     await App.loadScript('js/views/skills.js');
                     await SkillsView.render(container, highlightId);
+                    break;
+                case 'translate':
+                    await App.loadScript('js/views/translate.js');
+                    await TranslateView.render(container);
                     break;
                 case 'data':
                     await App.loadScript('js/views/data.js');

@@ -235,6 +235,15 @@ const SettingsView = {
                                 <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-description" rows="6"></textarea>
                             </div>
                         </div>
+                        <div class="settings-row settings-row-column">
+                            <div class="settings-row-label">
+                                <span class="settings-row-title">翻译系统提示</span>
+                                <span class="settings-row-desc">AI 翻译内容时使用的系统提示词，可自定义修改</span>
+                            </div>
+                            <div class="settings-row-control settings-row-control-full">
+                                <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-translate-prompt" rows="6"></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -311,6 +320,7 @@ const SettingsView = {
             document.getElementById('setting-ai-optimize-prompt').value = settings.ai_optimize_prompt || '';
             document.getElementById('setting-ai-optimize-name').value = settings.ai_optimize_name || '';
             document.getElementById('setting-ai-optimize-description').value = settings.ai_optimize_description || '';
+            document.getElementById('setting-ai-translate-prompt').value = settings.ai_translate_prompt || '';
 
             // 加载日志级别
             const logLevel = await API.getLogLevel();
@@ -517,6 +527,7 @@ const SettingsView = {
                     ai_optimize_prompt: document.getElementById('setting-ai-optimize-prompt').value,
                     ai_optimize_name: document.getElementById('setting-ai-optimize-name').value,
                     ai_optimize_description: document.getElementById('setting-ai-optimize-description').value,
+                    ai_translate_prompt: document.getElementById('setting-ai-translate-prompt').value,
                 });
                 await API.setLogLevel(document.getElementById('log-level-value').value);
                 App.settings = await API.getSettings();

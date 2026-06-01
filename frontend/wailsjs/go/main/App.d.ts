@@ -144,6 +144,8 @@ export function TogglePinPrompt(arg1:number):Promise<void>;
 
 export function TogglePinSkill(arg1:number):Promise<void>;
 
+export function TranslateContent(arg1:string,arg2:string):Promise<void>;
+
 export function UpdatePrompt(arg1:number,arg2:string,arg3:string,arg4:string,arg5:Array<string>,arg6:boolean):Promise<void>;
 
 export function UpdateSetting(arg1:string,arg2:string):Promise<void>;

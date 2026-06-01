@@ -97,6 +97,18 @@ func (h *AIHandler) OptimizeDescription(content string) error {
 	return h.streamChat(prompt, content)
 }
 
+// TranslateContent 流式翻译内容到目标语言
+func (h *AIHandler) TranslateContent(content, targetLang string) error {
+	h.logger.Infow("AI 翻译请求", fastlog.String("target_lang", targetLang))
+	prompt, err := h.getSystemPrompt("ai_translate_prompt")
+	if err != nil || prompt == "" {
+		h.logger.Warnw("未配置翻译系统提示词", fastlog.String("key", "ai_translate_prompt"))
+		return fmt.Errorf("未配置翻译系统提示词")
+	}
+	userMsg := fmt.Sprintf("请将以下内容翻译成%s：\n\n%s", targetLang, content)
+	return h.streamChat(prompt, userMsg)
+}
+
 // getSystemPrompt 从 settings 读取系统提示词
 func (h *AIHandler) getSystemPrompt(key string) (string, error) {
 	return h.settingsSvc.GetSetting(key)

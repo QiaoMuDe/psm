@@ -282,6 +282,10 @@ export function TogglePinSkill(arg1) {
   return window['go']['main']['App']['TogglePinSkill'](arg1);
 }
 
+export function TranslateContent(arg1, arg2) {
+  return window['go']['main']['App']['TranslateContent'](arg1, arg2);
+}
+
 export function UpdatePrompt(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['UpdatePrompt'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
