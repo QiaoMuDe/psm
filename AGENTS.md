@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.11.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
+> 版本: 2.12.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
 
 ---
 
@@ -60,13 +60,20 @@ psm/
 │
 ├── frontend/                        # 前端资源（纯 HTML + CSS + JS，无框架依赖）
 │   ├── index.html                   # 主页面：侧边栏导航 + 内容区 + Toast/Modal/Confirm/ContextMenu 容器
+│   ├── html/                        # 独立 HTML 模板文件（fetch + _template 缓存模式）
+│   │   ├── settings.html            # 设置页静态模板（265 行）
+│   │   ├── data.html                # 数据管理页静态模板（114 行）
+│   │   ├── dashboard.html           # 仪表盘页静态模板（63 行）
+│   │   ├── prompts.html             # Prompt 管理页静态模板（91 行）
+│   │   ├── skills.html              # Skill 管理页静态模板（86 行）
+│   │   └── translate.html           # AI 翻译页静态模板
 │   ├── css/
 │   │   ├── variables.css            # CSS 变量定义：6 种主题颜色/间距/字体/阴影/圆角/全局字体偏移
 │   │   ├── layout.css               # 布局样式：应用容器/侧边栏/主内容区/响应式/视图内容滚动
 │   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索/置顶内容/跳转闪烁/动画效果/点击动画/Skill详情弹窗/日志级别分段滑块
 │   └── js/
 │       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换 + 获取置顶内容 + 文件操作
-│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮
+│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮 + KeyboardNav 工具函数 + copyToClipboard/withAIStream/positionPopup 全局工具函数
 │       ├── components/
 │       │   ├── toast.js             # Toast 消息组件（success/error/warning/info + SVG 图标）
 │       │   ├── modal.js             # 模态框组件（打开/关闭/内容填充）
@@ -74,12 +81,12 @@ psm/
 │       │   ├── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭/支持弹窗环境）
 │       │   └── dropdown-menu.js     # 下拉菜单组件（批量操作"更多操作"菜单，自动边界定位/点击外部关闭）
 │       └── views/
-│           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖 + 键盘导航）
-│           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明
-│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/标签筛选/批量管理(修改分类/添加移除标签/置顶)/右键菜单(查看/编辑/导出/删除)/ZIP 导入导出/文件浏览/置顶/搜索高亮/Skill 详情弹窗/文件右键菜单
-│           ├── settings.js          # 设置页：程序家目录配置 + 6 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局 + 日志级别分段滑块
-│           ├── data.js              # 数据管理：一键备份还原 + 完整备份恢复 + 数据重置
-│           └── translate.js         # AI 翻译：左右分栏布局/语言选择/流式翻译/语言交换/复制清除/动画效果
+│           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖 + 键盘导航），模板已抽取到 html/dashboard.html
+│           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明/AI 生成提示词（回车确认），模板已抽取到 html/prompts.html
+│           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/标签筛选/批量管理/右键菜单/ZIP 导入导出/文件浏览/置顶/搜索高亮/Skill 详情弹窗/文件右键菜单，模板已抽取到 html/skills.html
+│   │   ├── settings.js          # 设置页：程序家目录配置 + 6 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局 + 日志级别分段滑块，模板已抽取到 html/settings.html
+│           ├── data.js              # 数据管理：一键备份还原 + 完整备份恢复 + 数据重置，模板已抽取到 html/data.html
+│           └── translate.js         # AI 翻译：层叠书桌双卡片布局/语言选择/流式翻译/语言交换/复制清除/动画效果，模板已抽取到 html/translate.html
 │
 ├── tools/
 │   └── seed/
@@ -123,16 +130,16 @@ psm/
 | 导入导出 | JSON 格式的 Prompt 元数据读写 | `internal/utils/export.go` | encoding/json |
 | 备份恢复 | 完整备份（data.json + Skill 文件）、恢复（跳过同名） | `internal/utils/backup.go` | archive/zip, encoding/json |
 | 字体工具 | 系统字体族列表获取（Windows API EnumFontFamiliesW） | `internal/utils/font.go` | syscall (Windows GDI) |
-| 日志封装 | fastlog 全局 Logger、Init/Get/Close/SetLevel/GetLevel | `internal/log/log.go` | gitee.com/MM-Q/fastlog |
+| 日志封装 | fastlog 全局 Logger、Init/Get/Close/SetLevel/GetLevel、全模块日志覆盖（8 文件 54 处）、级别语义修正 | `internal/log/log.go` | gitee.com/MM-Q/fastlog |
 
 ### 业务核心模块
 
 | 模块 | 核心功能 | 文件 | 核心输入/输出 |
 |------|----------|------|---------------|
-| 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置、日志级别获取设置 | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
-| Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶) | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
-| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
-| AI 服务 | 流式生成提示词（含重新生成）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接 | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
+| 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置、日志级别获取设置、全方法日志覆盖（Errorw/Infow） | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
+| Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶)、全方法日志覆盖（Errorw/Warnw/Infow） | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
+| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶)、全方法日志覆盖（Errorw/Debugw/Infow/Warnw） | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
+| AI 服务 | 流式生成提示词（含重新生成、回车确认）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接、withAIStream 统一事件管理（EventsOff 防泄漏） | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
 | 前端 SPA | 路由管理、视图切换、组件系统（含右键菜单） | `frontend/js/app.js` + views/ | 用户交互 → API 调用 |
@@ -903,3 +910,14 @@ skills (独立表 + 文件系统)
 114. **分类组合框结构**: `.category-combo`（position:relative）包裹 `#prompt-category-input` + `#category-dropdown`（`.model-dropdown`），三个模态框（新建/AI生成/编辑）均使用
 115. **分类组合框逻辑**: `bindCategoryCombo()` 方法，focus 时显示全部分类，input 时实时过滤，mousedown 选择，keydown 键盘导航（ArrowUp/Down/Enter/Escape），document mousedown 关闭
 116. **分类刷新时机**: 新建/编辑/AI生成成功后先 `loadCategories()` 再 `loadPrompts()`，确保搜索栏分类下拉即时更新
+117. **HTML 模板抽取架构**: 6 个视图的静态 HTML 模板从 JS 模板字面量抽取到独立 `.html` 文件（`frontend/html/`），使用 `fetch + _template` 缓存模式，消除 TS 语言服务对模板字面量的泛型误报
+118. **KeyboardNav 工具函数**: `app.js` 中 `KeyboardNav.bind()` 统一处理 ArrowDown/ArrowUp/Enter/Escape 键盘导航，替换 dashboard/settings/prompts 中的重复代码约 62 行
+119. **全局 copyToClipboard**: app.js 中统一复制函数，navigator.clipboard + textarea 后备，替换 prompts.js 中 8 处后备复制代码
+120. **全局 withAIStream**: app.js 中统一 AI 流式事件管理，`EventsOff('ai:token','ai:done','ai:error')` 防御性清理，替换 translate/prompts/skills 中的重复事件注册
+121. **全局 positionPopup**: app.js 中统一弹出菜单定位函数，替换 context-menu.js 和 dropdown-menu.js 中的重复边界检测逻辑
+122. **后端全模块日志覆盖**: 8 个文件 54 处日志补充，覆盖所有错误路径（Errorw）和成功路径（Infow），service 层批量操作统一 Debugw 追踪
+123. **日志级别语义修正**: 14 处 Warnw→Infow 修复，将成功/完成/操作状态的日志从错误级别修正为信息级别，正确使用日志语义
+124. **AI 翻译模块层叠书桌设计**: 三层视觉体系（--bg-page → --bg-surface + box-shadow → panel-well inset box-shadow），逐层递进区分输入框焦点态 accent 光晕
+125. **AI 生成回车确认**: 描述输入框支持 Enter 触发生成，Shift+Enter 保留，提升操作效率
+126. **Wails Event 监听器防泄漏**: withAIStream 改用 `EventsOff` 直接移除所有同名监听器，替代依赖 `EventsOn` 返回值（在回调内调用不可靠），从根本上杜绝事件监听器堆积
+127. **withAIStream 重构**: 移除对 EventsOn 返回值的依赖，cleanup 直接调用 `EventsOff('ai:token', 'ai:done', 'ai:error')`，入口处先防御性清理再注册，所有调用点统一使用实例属性持有 stream 引用
