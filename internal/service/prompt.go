@@ -125,7 +125,7 @@ func (s *PromptService) BatchDeletePrompts(ids []int64) (int64, error) {
 func (s *PromptService) GetCategories() ([]string, error) {
 	s.logger.Debugw("GetCategories")
 	var categories []string
-	if err := db.DB.Model(&db.Prompt{}).Distinct().Pluck("category", &categories).Error; err != nil {
+	if err := db.DB.Model(&db.Prompt{}).Distinct("category").Where("category != '' AND category IS NOT NULL").Pluck("category", &categories).Error; err != nil {
 		return nil, fmt.Errorf("查询分类列表失败: %w", err)
 	}
 	return categories, nil

@@ -124,7 +124,8 @@ const PromptsView = {
         try {
             const categories = await API.getCategories();
             const select = document.getElementById('prompt-category');
-            categories.forEach(cat => {
+            select.innerHTML = '<option value="all">所有分类</option>';
+            categories.filter(c => c.trim()).forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat;
                 option.textContent = cat;
@@ -757,7 +758,7 @@ const PromptsView = {
         let categoryIndex = -1;
 
         try {
-            allCategories = await API.getCategories() || [];
+            allCategories = (await API.getCategories() || []).filter(c => c.trim());
         } catch (e) { /* ignore */ }
 
         const updateHighlight = () => {
