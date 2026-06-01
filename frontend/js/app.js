@@ -310,7 +310,7 @@ const App = {
                 </div>
                 <div class="about-name">PSM</div>
                 <div class="about-fullname">Skill & Prompt Manager</div>
-                <div class="about-version">v${escapeHtml(version)}</div>
+                <div class="about-version">${escapeHtml(version)}</div>
                 <div class="about-desc">统一管理 AI 开发中的 Skill（技能包）和 Prompt（提示词）</div>
                 <div class="about-link">
                     <a href="#" id="about-project-link">
