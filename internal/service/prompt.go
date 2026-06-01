@@ -34,7 +34,7 @@ func (s *PromptService) CreatePrompt(name, content, category string, tags []stri
 		s.logger.Errorw("创建 Prompt 失败", fastlog.Error(err), fastlog.String("name", name))
 		return nil, fmt.Errorf("创建 Prompt 失败: %w", err)
 	}
-	s.logger.Warnw("Prompt 创建成功", fastlog.String("name", name), fastlog.Int64("id", prompt.ID))
+	s.logger.Infow("Prompt 创建成功", fastlog.String("name", name), fastlog.Int64("id", prompt.ID))
 	return &prompt, nil
 }
 
@@ -44,8 +44,10 @@ func (s *PromptService) GetPrompt(id int64) (*db.Prompt, error) {
 	var prompt db.Prompt
 	if err := db.DB.First(&prompt, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
+			s.logger.Warnw("Prompt 不存在", fastlog.Int64("id", id))
 			return nil, fmt.Errorf("prompt (ID=%d) 不存在", id)
 		}
+		s.logger.Errorw("查询 Prompt 失败", fastlog.Error(err), fastlog.Int64("id", id))
 		return nil, fmt.Errorf("查询 Prompt 失败: %w", err)
 	}
 	return &prompt, nil
@@ -67,6 +69,7 @@ func (s *PromptService) GetPrompts(keyword, category string) ([]db.Prompt, error
 	}
 
 	if err := query.Order("is_pinned DESC, updated_at DESC").Find(&prompts).Error; err != nil {
+		s.logger.Errorw("查询 Prompt 列表失败", fastlog.Error(err))
 		return nil, fmt.Errorf("查询 Prompt 列表失败: %w", err)
 	}
 
@@ -91,6 +94,7 @@ func (s *PromptService) UpdatePrompt(id int64, name, content, category string, t
 		s.logger.Errorw("更新 Prompt 失败: 记录不存在", fastlog.Int64("id", id))
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
+	s.logger.Infow("Prompt 更新成功", fastlog.Int64("id", id))
 	return nil
 }
 
@@ -104,7 +108,7 @@ func (s *PromptService) DeletePrompt(id int64) error {
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("prompt (ID=%d) 不存在", id)
 	}
-	s.logger.Warnw("Prompt 删除成功", fastlog.Int64("id", id))
+	s.logger.Infow("Prompt 删除成功", fastlog.Int64("id", id))
 	return nil
 }
 
@@ -118,6 +122,7 @@ func (s *PromptService) BatchDeletePrompts(ids []int64) (int64, error) {
 		s.logger.Errorw("批量删除 Prompt 失败", fastlog.Error(result.Error), fastlog.Int("count", len(ids)))
 		return 0, fmt.Errorf("批量删除 Prompt 失败: %w", result.Error)
 	}
+	s.logger.Infow("批量删除 Prompt 成功", fastlog.Int("count", len(ids)), fastlog.Int64("affected", result.RowsAffected))
 	return result.RowsAffected, nil
 }
 
@@ -149,7 +154,7 @@ func (s *PromptService) ExportPrompts(ids []int64, filePath string) error {
 		s.logger.Errorw("导出 Prompt 失败", fastlog.Error(err), fastlog.Int("count", len(prompts)))
 		return fmt.Errorf("导出 Prompt 到 JSON 失败: %w", err)
 	}
-	s.logger.Warnw("Prompt 导出完成", fastlog.Int("count", len(prompts)), fastlog.String("path", filePath))
+	s.logger.Infow("Prompt 导出完成", fastlog.Int("count", len(prompts)), fastlog.String("path", filePath))
 	return nil
 }
 
@@ -181,7 +186,7 @@ func (s *PromptService) ImportPrompts(filePath string) (int, error) {
 		}
 		count++
 	}
-	s.logger.Warnw("Prompt 导入完成", fastlog.Int("total", len(importedPrompts)), fastlog.Int("imported", count), fastlog.Int("skipped", skipped))
+	s.logger.Infow("Prompt 导入完成", fastlog.Int("total", len(importedPrompts)), fastlog.Int("imported", count), fastlog.Int("skipped", skipped))
 	return count, nil
 }
 
@@ -222,6 +227,7 @@ func (s *PromptService) TogglePinPrompt(id int64) error {
 		s.logger.Errorw("切换置顶状态失败", fastlog.Error(err), fastlog.Int64("id", id))
 		return fmt.Errorf("切换置顶状态失败: %w", err)
 	}
+	s.logger.Infow("切换 Prompt 置顶状态成功", fastlog.Int64("id", id), fastlog.Bool("pinned", newPinned))
 	return nil
 }
 
@@ -252,8 +258,10 @@ func (s *PromptService) IncrementUsage(id int64) error {
 func (s *PromptService) DeleteAllPrompts() (int64, error) {
 	result := db.DB.Unscoped().Where("1 = 1").Delete(&db.Prompt{})
 	if result.Error != nil {
+		s.logger.Errorw("删除所有 Prompt 失败", fastlog.Error(result.Error))
 		return 0, fmt.Errorf("删除所有 Prompt 失败: %w", result.Error)
 	}
+	s.logger.Infow("已删除所有 Prompt", fastlog.Int64("count", result.RowsAffected))
 	return result.RowsAffected, nil
 }
 
@@ -285,6 +293,7 @@ func (s *PromptService) BatchUpdateCategory(ids []int64, category string) error 
 		s.logger.Errorw("批量更新分类失败: 未找到匹配记录", fastlog.Int("count", len(ids)))
 		return fmt.Errorf("未找到匹配的 Prompt 记录")
 	}
+	s.logger.Infow("批量更新 Prompt 分类成功", fastlog.Int("count", len(ids)), fastlog.String("category", category))
 	return nil
 }
 
@@ -319,13 +328,16 @@ func (s *PromptService) BatchAddTags(ids []int64, tags []string) error {
 
 		newTagsJSON, err := json.Marshal(merged)
 		if err != nil {
+			s.logger.Errorw("批量添加标签失败: 序列化标签失败", fastlog.Error(err), fastlog.Int64("id", id))
 			return fmt.Errorf("序列化标签失败: %w", err)
 		}
 
 		if err := db.DB.Model(&db.Prompt{}).Where("id = ?", id).Update("tags", string(newTagsJSON)).Error; err != nil {
+			s.logger.Errorw("批量添加标签失败: 更新标签失败", fastlog.Error(err), fastlog.Int64("id", id))
 			return fmt.Errorf("更新 Prompt (ID=%d) 标签失败: %w", id, err)
 		}
 	}
+	s.logger.Infow("批量添加标签成功", fastlog.Int("count", len(ids)), fastlog.Int("tagCount", len(tags)))
 	return nil
 }
 
@@ -359,13 +371,16 @@ func (s *PromptService) BatchRemoveTags(ids []int64, tags []string) error {
 
 		newTagsJSON, err := json.Marshal(filtered)
 		if err != nil {
+			s.logger.Errorw("批量移除标签失败: 序列化标签失败", fastlog.Error(err), fastlog.Int64("id", id))
 			return fmt.Errorf("序列化标签失败: %w", err)
 		}
 
 		if err := db.DB.Model(&db.Prompt{}).Where("id = ?", id).Update("tags", string(newTagsJSON)).Error; err != nil {
+			s.logger.Errorw("批量移除标签失败: 更新标签失败", fastlog.Error(err), fastlog.Int64("id", id))
 			return fmt.Errorf("更新 Prompt (ID=%d) 标签失败: %w", id, err)
 		}
 	}
+	s.logger.Infow("批量移除标签成功", fastlog.Int("count", len(ids)), fastlog.Int("tagCount", len(tags)))
 	return nil
 }
 
@@ -376,10 +391,13 @@ func (s *PromptService) BatchSetPin(ids []int64, pinned bool) error {
 	}
 	result := db.DB.Model(&db.Prompt{}).Where("id IN ?", ids).Update("is_pinned", pinned)
 	if result.Error != nil {
+		s.logger.Errorw("批量设置置顶状态失败", fastlog.Error(result.Error), fastlog.Int("count", len(ids)), fastlog.Bool("pinned", pinned))
 		return fmt.Errorf("批量设置置顶状态失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
+		s.logger.Errorw("批量设置置顶状态失败: 未找到匹配记录", fastlog.Int("count", len(ids)), fastlog.Bool("pinned", pinned))
 		return fmt.Errorf("未找到匹配的 Prompt 记录")
 	}
+	s.logger.Infow("批量设置置顶状态成功", fastlog.Int("count", len(ids)), fastlog.Bool("pinned", pinned), fastlog.Int64("affected", result.RowsAffected))
 	return nil
 }

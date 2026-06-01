@@ -899,7 +899,10 @@ const SkillsView = {
             accumulated = '';
             setOptimizing(true);
 
-            const stream = withAIStream(apiMethod || API.optimizePrompt, {
+            if (SkillsView._optimizeStream) {
+                SkillsView._optimizeStream.cleanup();
+            }
+            SkillsView._optimizeStream = withAIStream(apiMethod || API.optimizePrompt, {
                 onToken: (token) => {
                     accumulated += token;
                     field.value = accumulated;
@@ -907,6 +910,7 @@ const SkillsView = {
                 },
                 onDone: () => {
                     const result = accumulated;
+                    SkillsView._optimizeStream = null;
                     field.disabled = false;
                     if (result) {
                         field.value = result;
@@ -916,6 +920,7 @@ const SkillsView = {
                     setOptimizing(false);
                 },
                 onError: (errMsg) => {
+                    SkillsView._optimizeStream = null;
                     field.value = originalContent;
                     originalContent = null;
                     field.dispatchEvent(new Event('input'));
@@ -924,7 +929,7 @@ const SkillsView = {
                 }
             });
 
-            await stream.call(currentContent);
+            await SkillsView._optimizeStream.call(currentContent);
         });
     }
 };

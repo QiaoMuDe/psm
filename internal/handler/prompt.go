@@ -32,6 +32,7 @@ func (h *PromptHandler) GetPrompt(id int64) (*db.Prompt, error) {
 
 // GetPrompts 获取 Prompt 列表，支持关键词搜索和分类筛选
 func (h *PromptHandler) GetPrompts(keyword, category string) ([]db.Prompt, error) {
+	h.logger.Debugw("获取 Prompt 列表", fastlog.String("keyword", keyword), fastlog.String("category", category))
 	return h.promptSvc.GetPrompts(keyword, category)
 }
 
@@ -48,7 +49,7 @@ func (h *PromptHandler) DeletePrompt(id int64) error {
 
 // BatchDeletePrompts 批量删除多个 Prompt
 func (h *PromptHandler) BatchDeletePrompts(ids []int64) (int64, error) {
-	h.logger.Warnw("批量删除 Prompt", fastlog.Int("count", len(ids)))
+	h.logger.Infow("批量删除 Prompt", fastlog.Int("count", len(ids)))
 	return h.promptSvc.BatchDeletePrompts(ids)
 }
 
@@ -59,11 +60,13 @@ func (h *PromptHandler) GetCategories() ([]string, error) {
 
 // ExportPrompts 导出 Prompt 为 JSON 文件
 func (h *PromptHandler) ExportPrompts(ids []int64, filePath string) error {
+	h.logger.Infow("导出 Prompt", fastlog.String("path", filePath))
 	return h.promptSvc.ExportPrompts(ids, filePath)
 }
 
 // ImportPrompts 从 JSON 文件导入 Prompt
 func (h *PromptHandler) ImportPrompts(filePath string) (*db.ImportResult, error) {
+	h.logger.Infow("导入 Prompt", fastlog.String("path", filePath))
 	count, err := h.promptSvc.ImportPrompts(filePath)
 	if err != nil {
 		return nil, err
@@ -94,11 +97,13 @@ func (h *PromptHandler) GetPinnedPrompts(limit int) ([]db.Prompt, error) {
 
 // IncrementPromptUsage 增加 Prompt 使用次数
 func (h *PromptHandler) IncrementPromptUsage(id int64) error {
+	h.logger.Debugw("增加 Prompt 使用次数", fastlog.Int64("id", id))
 	return h.promptSvc.IncrementUsage(id)
 }
 
 // GetTopUsedPrompts 获取最常用的 Prompt 列表
 func (h *PromptHandler) GetTopUsedPrompts(limit int) ([]db.Prompt, error) {
+	h.logger.Debugw("获取最常用 Prompt", fastlog.Int("limit", limit))
 	return h.promptSvc.GetTopUsedPrompts(limit)
 }
 

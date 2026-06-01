@@ -35,6 +35,7 @@ func (h *SkillHandler) GetSkill(id int64) (*db.Skill, error) {
 
 // GetSkills 根据关键词搜索 Skill 列表
 func (h *SkillHandler) GetSkills(keyword string) ([]db.Skill, error) {
+	h.logger.Debugw("获取 Skill 列表", fastlog.String("keyword", keyword))
 	return h.skillSvc.GetSkills(keyword)
 }
 
@@ -52,7 +53,7 @@ func (h *SkillHandler) DeleteSkill(id int64, deleteFiles bool) error {
 
 // BatchDeleteSkills 批量删除多个 Skill
 func (h *SkillHandler) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, error) {
-	h.logger.Warnw("批量删除 Skill", fastlog.Int("count", len(ids)), fastlog.Bool("delete_files", deleteFiles))
+	h.logger.Infow("批量删除 Skill", fastlog.Int("count", len(ids)), fastlog.Bool("delete_files", deleteFiles))
 	return h.skillSvc.BatchDeleteSkills(ids, deleteFiles)
 }
 
@@ -101,16 +102,19 @@ func (h *SkillHandler) ImportSkillAuto(zipPath string) (*db.ImportResult, error)
 
 // ListSkillFiles 列出 Skill 目录下的文件
 func (h *SkillHandler) ListSkillFiles(id int64) ([]db.SkillFile, error) {
+	h.logger.Debugw("获取 Skill 文件列表", fastlog.Int64("id", id))
 	return h.skillSvc.ListSkillFiles(id)
 }
 
 // GetRecentSkills 获取最近修改的 Skill 列表
 func (h *SkillHandler) GetRecentSkills(limit int) ([]db.Skill, error) {
+	h.logger.Debugw("获取最近 Skill", fastlog.Int("limit", limit))
 	return h.skillSvc.GetRecentSkills(limit)
 }
 
 // CountSkills 统计 Skill 总数
 func (h *SkillHandler) CountSkills() (int64, error) {
+	h.logger.Debugw("统计 Skill 数量")
 	return h.skillSvc.CountSkills()
 }
 
@@ -122,6 +126,7 @@ func (h *SkillHandler) TogglePinSkill(id int64) error {
 
 // GetPinnedSkills 获取置顶的 Skill 列表
 func (h *SkillHandler) GetPinnedSkills(limit int) ([]db.Skill, error) {
+	h.logger.Debugw("获取置顶 Skill", fastlog.Int("limit", limit))
 	return h.skillSvc.GetPinnedSkills(limit)
 }
 

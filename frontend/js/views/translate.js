@@ -117,21 +117,26 @@ const TranslateView = {
             this.updateCharCount();
         };
 
-        const stream = withAIStream(API.translateContent, {
+        if (this._translateStream) {
+            this._translateStream.cleanup();
+        }
+        this._translateStream = withAIStream(API.translateContent, {
             onToken: (token) => {
                 accumulated += token;
                 target.value = accumulated;
             },
             onDone: () => {
+                this._translateStream = null;
                 cleanup();
             },
             onError: (errMsg) => {
+                this._translateStream = null;
                 cleanup();
                 Toast.error(errMsg);
             }
         });
 
-        await stream.call(sourceText, targetLang);
+        await this._translateStream.call(sourceText, targetLang);
     },
 
     /**

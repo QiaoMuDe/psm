@@ -632,28 +632,26 @@ function positionPopup(el, x, y) {
  */
 function withAIStream(apiMethod, callbacks) {
     const { onToken, onDone, onError } = callbacks;
-    let tokenUnlisten = null;
-    let doneUnlisten = null;
-    let errorUnlisten = null;
 
     const cleanup = () => {
-        if (tokenUnlisten) tokenUnlisten();
-        if (doneUnlisten) doneUnlisten();
-        if (errorUnlisten) errorUnlisten();
-        tokenUnlisten = doneUnlisten = errorUnlisten = null;
+        if (window.runtime && window.runtime.EventsOff) {
+            window.runtime.EventsOff('ai:token', 'ai:done', 'ai:error');
+        }
     };
 
+    cleanup();
+
     if (window.runtime && window.runtime.EventsOn) {
-        tokenUnlisten = window.runtime.EventsOn('ai:token', (token) => {
+        window.runtime.EventsOn('ai:token', (token) => {
             if (onToken) onToken(token);
         });
 
-        doneUnlisten = window.runtime.EventsOn('ai:done', () => {
+        window.runtime.EventsOn('ai:done', () => {
             cleanup();
             if (onDone) onDone();
         });
 
-        errorUnlisten = window.runtime.EventsOn('ai:error', (errMsg) => {
+        window.runtime.EventsOn('ai:error', (errMsg) => {
             cleanup();
             if (onError) onError(errMsg);
         });

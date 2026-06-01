@@ -37,11 +37,13 @@ func (h *SettingsHandler) GetSettings() (map[string]string, error) {
 
 // UpdateSetting 更新单个设置项
 func (h *SettingsHandler) UpdateSetting(key, value string) error {
+	h.logger.Infow("更新设置", fastlog.String("key", key), fastlog.String("value", value))
 	return h.settingsSvc.UpdateSetting(key, value)
 }
 
 // UpdateSettings 批量更新设置项
 func (h *SettingsHandler) UpdateSettings(settings map[string]string) error {
+	h.logger.Infow("批量更新设置", fastlog.Int("count", len(settings)))
 	return h.settingsSvc.UpdateSettings(settings)
 }
 
@@ -91,6 +93,7 @@ func (h *SettingsHandler) OpenDataDirectory() error {
 	if err != nil {
 		return fmt.Errorf("获取家目录路径失败: %w", err)
 	}
+	h.logger.Infow("打开数据目录", fastlog.String("path", path))
 	return exec.Command("explorer", filepath.FromSlash(path)).Start()
 }
 
@@ -192,12 +195,14 @@ func (h *SettingsHandler) GetSystemFonts() []string {
 
 // RevealInExplorer 在文件管理器中打开指定路径
 func (h *SettingsHandler) RevealInExplorer(path string) error {
+	h.logger.Infow("在资源管理器中打开", fastlog.String("path", path))
 	cmd := exec.Command("explorer", path)
 	return cmd.Start()
 }
 
 // OpenFile 用系统默认程序打开文件
 func (h *SettingsHandler) OpenFile(path string) error {
+	h.logger.Infow("打开文件", fastlog.String("path", path))
 	cmd := exec.Command("cmd", "/c", "start", "", path)
 	return cmd.Start()
 }

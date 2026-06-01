@@ -83,6 +83,7 @@ func (s *SkillService) GetSkills(keyword string) ([]db.Skill, error) {
 	}
 
 	if err := query.Order("is_pinned DESC, updated_at DESC").Find(&skills).Error; err != nil {
+		s.logger.Errorw("查询 Skill 列表失败", fastlog.String("keyword", keyword), fastlog.Error(err))
 		return nil, fmt.Errorf("查询 Skill 列表失败: %w", err)
 	}
 	return skills, nil
@@ -102,9 +103,11 @@ func (s *SkillService) UpdateSkill(id int64, name, description string, tags []st
 	})
 
 	if result.Error != nil {
+		s.logger.Errorw("更新 Skill 失败", fastlog.Int64("id", id), fastlog.Error(result.Error))
 		return fmt.Errorf("更新 Skill 失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
+		s.logger.Warnw("更新 Skill 不存在", fastlog.Int64("id", id))
 		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 
@@ -112,6 +115,7 @@ func (s *SkillService) UpdateSkill(id int64, name, description string, tags []st
 	skillMDPath := filepath.Join(storagePath, sk.RelativePath, "SKILL.md")
 	_ = utils.UpdateSkillFrontmatter(skillMDPath, name, description)
 
+	s.logger.Infow("Skill 更新成功", fastlog.Int64("id", id))
 	return nil
 }
 
@@ -162,6 +166,7 @@ func (s *SkillService) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, 
 		for _, id := range ids {
 			sk, err := s.GetSkill(id)
 			if err != nil {
+				s.logger.Debugw("批量删除时获取 Skill 失败，跳过", fastlog.Int64("id", id), fastlog.Error(err))
 				continue
 			}
 			fullPath := filepath.Join(storagePath, sk.RelativePath)
@@ -171,8 +176,10 @@ func (s *SkillService) BatchDeleteSkills(ids []int64, deleteFiles bool) (int64, 
 
 	result := db.DB.Unscoped().Delete(&db.Skill{}, ids)
 	if result.Error != nil {
+		s.logger.Errorw("批量删除 Skill 失败", fastlog.Any("ids", ids), fastlog.Error(result.Error))
 		return 0, fmt.Errorf("批量删除 Skill 失败: %w", result.Error)
 	}
+	s.logger.Infow("批量删除 Skill 成功", fastlog.Int("count", len(ids)), fastlog.Int64("affected", result.RowsAffected))
 	return result.RowsAffected, nil
 }
 
@@ -536,6 +543,7 @@ func (s *SkillService) CountSkills() (int64, error) {
 
 // GetOrphanSkills 检测文件目录不存在或缺少 SKILL.md 的 Skill 记录
 func (s *SkillService) GetOrphanSkills() ([]db.Skill, error) {
+	s.logger.Debugw("检测孤立 Skill")
 	storagePath, err := s.settingsSvc.GetSkillStoragePath()
 	if err != nil {
 		return nil, fmt.Errorf("获取存储路径失败: %w", err)
@@ -563,10 +571,12 @@ func (s *SkillService) GetOrphanSkills() ([]db.Skill, error) {
 
 // DeleteSkills 批量删除指定 ID 的 Skill 记录
 func (s *SkillService) DeleteSkills(ids []int64) error {
+	s.logger.Debugw("删除 Skill 记录", fastlog.Int("count", len(ids)))
 	if len(ids) == 0 {
 		return nil
 	}
 	if err := db.DB.Unscoped().Delete(&db.Skill{}, ids).Error; err != nil {
+		s.logger.Errorw("删除 Skill 记录失败", fastlog.Any("ids", ids), fastlog.Error(err))
 		return fmt.Errorf("批量删除 Skill 失败: %w", err)
 	}
 	return nil
@@ -574,15 +584,19 @@ func (s *SkillService) DeleteSkills(ids []int64) error {
 
 // TogglePinSkill 切换 Skill 的置顶状态
 func (s *SkillService) TogglePinSkill(id int64) error {
+	s.logger.Debugw("切换 Skill 置顶状态", fastlog.Int64("id", id))
 	var sk db.Skill
 	if err := db.DB.First(&sk, id).Error; err != nil {
+		s.logger.Errorw("切换置顶状态时查询 Skill 失败", fastlog.Int64("id", id), fastlog.Error(err))
 		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 
 	newPinned := !sk.IsPinned
 	if err := db.DB.Model(&db.Skill{}).Where("id = ?", id).Update("is_pinned", newPinned).Error; err != nil {
+		s.logger.Errorw("切换置顶状态失败", fastlog.Int64("id", id), fastlog.Bool("newPinned", newPinned), fastlog.Error(err))
 		return fmt.Errorf("切换置顶状态失败: %w", err)
 	}
+	s.logger.Infow("切换 Skill 置顶状态成功", fastlog.Int64("id", id), fastlog.Bool("pinned", newPinned))
 	return nil
 }
 
@@ -601,8 +615,10 @@ func (s *SkillService) DeleteAllSkills(deleteFiles bool) (int64, error) {
 
 	result := db.DB.Unscoped().Where("1 = 1").Delete(&db.Skill{})
 	if result.Error != nil {
+		s.logger.Errorw("删除所有 Skill 失败", fastlog.Error(result.Error))
 		return 0, fmt.Errorf("删除所有 Skill 失败: %w", result.Error)
 	}
+	s.logger.Infow("删除所有 Skill 成功", fastlog.Int64("affected", result.RowsAffected))
 	return result.RowsAffected, nil
 }
 
@@ -626,6 +642,7 @@ func (s *SkillService) GetPinnedSkills(limit int) ([]db.Skill, error) {
 
 // BatchAddTags 批量为指定 Skill 添加标签（自动去重）
 func (s *SkillService) BatchAddTags(ids []int64, tags []string) error {
+	s.logger.Debugw("批量添加 Skill 标签", fastlog.Any("ids", ids), fastlog.Any("tags", tags))
 	if len(ids) == 0 {
 		return nil
 	}
@@ -655,18 +672,22 @@ func (s *SkillService) BatchAddTags(ids []int64, tags []string) error {
 
 		newTagsJSON, err := json.Marshal(merged)
 		if err != nil {
+			s.logger.Errorw("批量添加标签时序列化失败", fastlog.Int64("id", id), fastlog.Error(err))
 			return fmt.Errorf("序列化标签失败: %w", err)
 		}
 
 		if err := db.DB.Model(&db.Skill{}).Where("id = ?", id).Update("tags", string(newTagsJSON)).Error; err != nil {
+			s.logger.Errorw("批量添加标签时更新 Skill 失败", fastlog.Int64("id", id), fastlog.Error(err))
 			return fmt.Errorf("更新 Skill (ID=%d) 标签失败: %w", id, err)
 		}
 	}
+	s.logger.Infow("批量添加 Skill 标签成功", fastlog.Int("count", len(ids)))
 	return nil
 }
 
 // BatchRemoveTags 批量从指定 Skill 中移除标签
 func (s *SkillService) BatchRemoveTags(ids []int64, tags []string) error {
+	s.logger.Debugw("批量移除 Skill 标签", fastlog.Any("ids", ids), fastlog.Any("tags", tags))
 	if len(ids) == 0 {
 		return nil
 	}
@@ -695,27 +716,33 @@ func (s *SkillService) BatchRemoveTags(ids []int64, tags []string) error {
 
 		newTagsJSON, err := json.Marshal(filtered)
 		if err != nil {
+			s.logger.Errorw("批量移除标签时序列化失败", fastlog.Int64("id", id), fastlog.Error(err))
 			return fmt.Errorf("序列化标签失败: %w", err)
 		}
 
 		if err := db.DB.Model(&db.Skill{}).Where("id = ?", id).Update("tags", string(newTagsJSON)).Error; err != nil {
+			s.logger.Errorw("批量移除标签时更新 Skill 失败", fastlog.Int64("id", id), fastlog.Error(err))
 			return fmt.Errorf("更新 Skill (ID=%d) 标签失败: %w", id, err)
 		}
 	}
+	s.logger.Infow("批量移除 Skill 标签成功", fastlog.Int("count", len(ids)))
 	return nil
 }
 
 // BatchSetPin 批量设置指定 Skill 的置顶状态
 func (s *SkillService) BatchSetPin(ids []int64, pinned bool) error {
+	s.logger.Debugw("批量设置 Skill 置顶", fastlog.Any("ids", ids), fastlog.Bool("pinned", pinned))
 	if len(ids) == 0 {
 		return nil
 	}
 	result := db.DB.Model(&db.Skill{}).Where("id IN ?", ids).Update("is_pinned", pinned)
 	if result.Error != nil {
+		s.logger.Errorw("批量设置置顶状态失败", fastlog.Any("ids", ids), fastlog.Bool("pinned", pinned), fastlog.Error(result.Error))
 		return fmt.Errorf("批量设置置顶状态失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("未找到匹配的 Skill 记录")
 	}
+	s.logger.Infow("批量设置 Skill 置顶成功", fastlog.Int("count", len(ids)), fastlog.Bool("pinned", pinned))
 	return nil
 }

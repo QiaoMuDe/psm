@@ -273,11 +273,13 @@ func (h *AIHandler) GetAIModels() ([]string, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
+		h.logger.Errorw("获取模型列表失败", fastlog.Int("status", resp.StatusCode))
 		return nil, fmt.Errorf("获取模型列表失败 (HTTP %d)", resp.StatusCode)
 	}
 
 	var result modelsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		h.logger.Errorw("解析模型列表失败", fastlog.Error(err))
 		return nil, fmt.Errorf("解析模型列表失败: %w", err)
 	}
 
@@ -313,6 +315,7 @@ func (h *AIHandler) TestAIConnection(apiURL, apiKey string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		h.logger.Errorw("测试 AI 连接失败", fastlog.String("api_url", apiURL), fastlog.Error(err))
 		return "", fmt.Errorf("连接失败: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -321,6 +324,7 @@ func (h *AIHandler) TestAIConnection(apiURL, apiKey string) (string, error) {
 		return "连接成功", nil
 	}
 
+	h.logger.Errorw("测试 AI 连接返回非 200", fastlog.Int("status", resp.StatusCode))
 	return "", fmt.Errorf("连接失败 (HTTP %d)", resp.StatusCode)
 }
 

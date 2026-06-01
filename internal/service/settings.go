@@ -27,6 +27,7 @@ func (s *SettingsService) GetSettings() (map[string]string, error) {
 	s.logger.Debugw("GetSettings")
 	var settings []db.Settings
 	if err := db.DB.Find(&settings).Error; err != nil {
+		s.logger.Errorw("查询设置项失败", fastlog.Error(err))
 		return nil, fmt.Errorf("查询设置项失败: %w", err)
 	}
 
@@ -61,19 +62,26 @@ func (s *SettingsService) UpdateSetting(key, value string) error {
 		}
 		return fmt.Errorf("更新设置项 '%s' 失败: %w", key, result.Error)
 	}
+	s.logger.Infow("更新设置成功", fastlog.String("key", key))
 	return nil
 }
 
 // UpdateSettings 批量更新设置项
 func (s *SettingsService) UpdateSettings(settings map[string]string) error {
-	return db.DB.Transaction(func(tx *gorm.DB) error {
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		for key, value := range settings {
 			if err := tx.Where(db.Settings{Key: key}).Assign(db.Settings{Value: value}).FirstOrCreate(&db.Settings{}).Error; err != nil {
+				s.logger.Errorw("批量更新设置失败", fastlog.String("key", key), fastlog.Error(err))
 				return fmt.Errorf("更新设置项 '%s' 失败: %w", key, err)
 			}
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	s.logger.Infow("批量更新设置成功", fastlog.Int("count", len(settings)))
+	return nil
 }
 
 // GetAppHome 获取程序家目录路径
@@ -99,7 +107,7 @@ func (s *SettingsService) GetSkillStoragePath() (string, error) {
 
 // ResetSettings 重置所有设置为默认值
 func (s *SettingsService) ResetSettings() error {
-	s.logger.Warnw("重置所有设置")
+	s.logger.Infow("重置所有设置")
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Unscoped().Where("1 = 1").Delete(&db.Settings{}).Error; err != nil {
 			return fmt.Errorf("清空设置失败: %w", err)

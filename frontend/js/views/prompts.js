@@ -609,7 +609,10 @@ const PromptsView = {
             accumulated = '';
             setOptimizing(true);
 
-            const stream = withAIStream(apiMethod || API.optimizePrompt, {
+            if (PromptsView._optimizeStream) {
+                PromptsView._optimizeStream.cleanup();
+            }
+            PromptsView._optimizeStream = withAIStream(apiMethod || API.optimizePrompt, {
                 onToken: (token) => {
                     accumulated += token;
                     textarea.value = accumulated;
@@ -617,6 +620,7 @@ const PromptsView = {
                 },
                 onDone: () => {
                     const result = accumulated;
+                    PromptsView._optimizeStream = null;
                     textarea.disabled = false;
                     if (result) {
                         textarea.value = result;
@@ -626,6 +630,7 @@ const PromptsView = {
                     setOptimizing(false);
                 },
                 onError: (errMsg) => {
+                    PromptsView._optimizeStream = null;
                     textarea.value = originalContent;
                     originalContent = null;
                     textarea.dispatchEvent(new Event('input'));
@@ -634,7 +639,7 @@ const PromptsView = {
                 }
             });
 
-            await stream.call(currentContent);
+            await PromptsView._optimizeStream.call(currentContent);
         });
     },
 
@@ -867,24 +872,29 @@ const PromptsView = {
             accumulated = '';
             setLoading(true);
 
-            const stream = withAIStream(API.generatePrompt, {
+            if (PromptsView._genStream) {
+                PromptsView._genStream.cleanup();
+            }
+            PromptsView._genStream = withAIStream(API.generatePrompt, {
                 onToken: (token) => {
                     accumulated += token;
                 },
                 onDone: () => {
                     const result = accumulated;
+                    PromptsView._genStream = null;
                     setLoading(false);
                     if (result) {
                         PromptsView.showAIReviewSection(result);
                     }
                 },
                 onError: (errMsg) => {
+                    PromptsView._genStream = null;
                     setLoading(false);
                     Toast.error(errMsg);
                 }
             });
 
-            await stream.call(desc);
+            await PromptsView._genStream.call(desc);
         });
 
         document.getElementById('ai-gen-confirm-btn').addEventListener('click', () => {
@@ -898,9 +908,16 @@ const PromptsView = {
             PromptsView.openCreateModalWithData(name, content);
         });
 
+        const descInput = document.getElementById('ai-gen-description');
+        descInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('ai-gen-start-btn').click();
+            }
+        });
+
         setTimeout(() => {
-            const input = document.getElementById('ai-gen-description');
-            if (input) input.focus();
+            if (descInput) descInput.focus();
         }, 100);
     },
 

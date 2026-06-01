@@ -95,7 +95,7 @@ func (h *BackupHandler) BackupData(savePath string) error {
 		return err
 	}
 
-	h.logger.Warnw("备份完成", fastlog.String("path", savePath))
+	h.logger.Infow("备份完成", fastlog.String("path", savePath))
 
 	return nil
 }
@@ -175,7 +175,7 @@ func (h *BackupHandler) RestoreData(zipPath string) (*utils.BackupRestoreResult,
 		result.SkillsRestored++
 	}
 
-	h.logger.Warnw("数据恢复完成",
+	h.logger.Infow("数据恢复完成",
 		fastlog.Int("prompts_restored", result.PromptsRestored),
 		fastlog.Int("prompts_skipped", result.PromptsSkipped),
 		fastlog.Int("skills_restored", result.SkillsRestored),
@@ -194,7 +194,7 @@ type DataStats struct {
 
 // GetDataStats 获取数据统计信息
 func (h *BackupHandler) GetDataStats() (*DataStats, error) {
-	h.logger.Warnw("获取数据统计")
+	h.logger.Infow("获取数据统计")
 
 	promptCount, err := h.promptSvc.CountPrompts()
 	if err != nil {
@@ -223,14 +223,14 @@ func (h *BackupHandler) GetDataStats() (*DataStats, error) {
 
 // GetOrphanSkills 获取文件已不存在的孤立 Skill 列表
 func (h *BackupHandler) GetOrphanSkills() ([]db.Skill, error) {
-	h.logger.Warnw("检测孤立 Skill")
+	h.logger.Infow("检测孤立 Skill")
 
 	return h.skillSvc.GetOrphanSkills()
 }
 
 // ResetAllData 重置所有数据：清空提示词、技能（含文件）、恢复默认设置
 func (h *BackupHandler) ResetAllData() (map[string]int64, error) {
-	h.logger.Warnw("用户执行数据重置")
+	h.logger.Infow("用户执行数据重置")
 
 	promptCount, err := h.promptSvc.DeleteAllPrompts()
 	if err != nil {
@@ -257,7 +257,7 @@ func (h *BackupHandler) ResetAllData() (map[string]int64, error) {
 
 // CleanupOrphanSkills 清理孤立 Skill 数据并删除残留目录
 func (h *BackupHandler) CleanupOrphanSkills() (int, error) {
-	h.logger.Warnw("清理孤立 Skill")
+	h.logger.Infow("清理孤立 Skill")
 
 	orphans, err := h.skillSvc.GetOrphanSkills()
 	if err != nil {
@@ -304,7 +304,7 @@ func getBackupPath() (string, error) {
 
 // QuickBackupInfo 获取一键备份的状态信息
 func (h *BackupHandler) QuickBackupInfo() (map[string]interface{}, error) {
-	h.logger.Warnw("获取快速备份信息")
+	h.logger.Infow("获取快速备份信息")
 
 	backupPath, err := getBackupPath()
 	if err != nil {
@@ -326,6 +326,7 @@ func (h *BackupHandler) QuickBackupInfo() (map[string]interface{}, error) {
 
 // QuickBackup 一键备份到固定路径，覆盖上次备份
 func (h *BackupHandler) QuickBackup() error {
+	h.logger.Infow("执行快速备份")
 	backupPath, err := getBackupPath()
 	if err != nil {
 		return err
@@ -335,6 +336,7 @@ func (h *BackupHandler) QuickBackup() error {
 
 // QuickRestore 从固定备份路径一键还原
 func (h *BackupHandler) QuickRestore() (*utils.BackupRestoreResult, error) {
+	h.logger.Infow("执行快速恢复")
 	backupPath, err := getBackupPath()
 	if err != nil {
 		return nil, err
