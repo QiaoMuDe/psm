@@ -212,6 +212,7 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 		name = filepath.Base(zipPath)
 		name = strings.TrimSuffix(name, filepath.Ext(name))
 	}
+	name = utils.SanitizeFileName(name)
 
 	var existsSkill db.Skill
 	if err := db.DB.Where("name = ?", name).First(&existsSkill).Error; err == nil {
@@ -226,6 +227,9 @@ func (s *SkillService) ImportSkill(zipPath string) (*db.Skill, error) {
 	}
 
 	utils.FlattenIfNested(skillDir, name)
+
+	skillMDPath := filepath.Join(skillDir, "SKILL.md")
+	_ = utils.UpdateSkillFrontmatter(skillMDPath, name, metadata.Description)
 
 	skill := &db.Skill{
 		Name:         name,
@@ -317,6 +321,8 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 		if name == "" {
 			name = dirName
 		}
+		name = utils.SanitizeFileName(name)
+		dirName = utils.SanitizeFileName(dirName)
 
 		skillDir := filepath.Join(storagePath, dirName)
 		if err := utils.UnzipPrefixToDir(&zipReader.Reader, prefix, skillDir); err != nil {
@@ -325,6 +331,9 @@ func (s *SkillService) ImportSkillFromExportZip(zipPath string) (*db.ImportResul
 			result.Errors = append(result.Errors, fmt.Sprintf("%s: 解压失败: %v", dirName, err))
 			continue
 		}
+
+		skillMDPath := filepath.Join(skillDir, "SKILL.md")
+		_ = utils.UpdateSkillFrontmatter(skillMDPath, name, description)
 
 		tags := markerData.Skills[dirName]
 		isPinned := false

@@ -20,6 +20,9 @@ const PromptsView = {
 
     async render(container, highlightId = null) {
         this.highlightId = highlightId;
+        this.currentKeyword = '';
+        this.currentCategory = 'all';
+        this.currentTag = '';
         if (!this._template) {
             const resp = await fetch('html/prompts.html');
             this._template = await resp.text();

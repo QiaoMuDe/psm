@@ -45,6 +45,23 @@ func FixFileName(name string) string {
 	return name
 }
 
+// SanitizeFileName 将文件名中的文件系统非法字符替换为下划线
+// 非法字符包括: \ / : * ? " < > |
+func SanitizeFileName(name string) string {
+	replacer := strings.NewReplacer(
+		`\`, `_`,
+		`/`, `_`,
+		`:`, `_`,
+		`*`, `_`,
+		`?`, `_`,
+		`"`, `_`,
+		`<`, `_`,
+		`>`, `_`,
+		`|`, `_`,
+	)
+	return replacer.Replace(name)
+}
+
 // SkillExportMarker 技能导出 ZIP 的标识文件名，空文件仅用于格式识别
 const SkillExportMarker = ".psm-skill-export"
 

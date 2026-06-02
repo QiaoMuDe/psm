@@ -18,6 +18,7 @@ const SkillsView = {
      */
     async render(container, highlightId = null) {
         this.highlightId = highlightId;
+        this.currentKeyword = '';
         if (!this._template) {
             const resp = await fetch('html/skills.html');
             this._template = await resp.text();
