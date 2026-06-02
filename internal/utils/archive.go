@@ -260,7 +260,44 @@ type SkillMetadataFromZip struct {
 	Version     string `json:"version"`
 }
 
-// HasSkillMD 检查 ZIP 文件根目录下是否存在 SKILL.md 文件
+// findSkillMDPath 在 ZIP 中查找 SKILL.md 的路径，支持两种结构：
+// 1. SKILL.md 直接在根目录
+// 2. 根目录只有一个子目录，SKILL.md 在该子目录下
+func findSkillMDPath(reader *zip.ReadCloser) string {
+	rootSkillMD := ""
+	singleSubDir := ""
+	subDirSkillMD := ""
+
+	for _, file := range reader.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
+		base := filepath.Base(file.Name)
+		if !strings.EqualFold(base, "SKILL.md") {
+			continue
+		}
+		dir := filepath.Dir(file.Name)
+		if dir == "." {
+			rootSkillMD = file.Name
+		} else {
+			parts := strings.Split(filepath.ToSlash(dir), "/")
+			if len(parts) == 1 {
+				singleSubDir = parts[0]
+				subDirSkillMD = file.Name
+			}
+		}
+	}
+
+	if rootSkillMD != "" {
+		return rootSkillMD
+	}
+	if singleSubDir != "" && subDirSkillMD != "" {
+		return subDirSkillMD
+	}
+	return ""
+}
+
+// HasSkillMD 检查 ZIP 文件中是否存在 SKILL.md（支持根目录或单层子目录）
 func HasSkillMD(zipPath string) (bool, error) {
 	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
@@ -268,16 +305,7 @@ func HasSkillMD(zipPath string) (bool, error) {
 	}
 	defer func() { _ = reader.Close() }()
 
-	for _, file := range reader.File {
-		if file.FileInfo().IsDir() {
-			continue
-		}
-		base := filepath.Base(file.Name)
-		if strings.EqualFold(base, "SKILL.md") && filepath.Dir(file.Name) == "." {
-			return true, nil
-		}
-	}
-	return false, nil
+	return findSkillMDPath(reader) != "", nil
 }
 
 // ReadSkillMDFromZip 从 ZIP 文件中读取 SKILL.md 的内容
@@ -288,12 +316,13 @@ func ReadSkillMDFromZip(zipPath string) (string, error) {
 	}
 	defer func() { _ = reader.Close() }()
 
+	skillMDPath := findSkillMDPath(reader)
+	if skillMDPath == "" {
+		return "", nil
+	}
+
 	for _, file := range reader.File {
-		if file.FileInfo().IsDir() {
-			continue
-		}
-		base := filepath.Base(file.Name)
-		if strings.EqualFold(base, "SKILL.md") && filepath.Dir(file.Name) == "." {
+		if file.Name == skillMDPath {
 			rc, err := file.Open()
 			if err != nil {
 				return "", fmt.Errorf("打开 SKILL.md 失败: %w", err)
@@ -388,9 +417,6 @@ func FlattenIfNested(dirPath string, expectedName string) {
 	if err != nil || len(entries) != 1 || !entries[0].IsDir() {
 		return
 	}
-	if entries[0].Name() != expectedName {
-		return
-	}
 	nestedDir := filepath.Join(dirPath, entries[0].Name())
 	nestedEntries, err := os.ReadDir(nestedDir)
 	if err != nil || len(nestedEntries) == 0 {
@@ -412,29 +438,28 @@ func GetSkillMetadataFromZip(zipPath string) (*SkillMetadataFromZip, error) {
 	}
 	defer func() { _ = reader.Close() }()
 
-	for _, file := range reader.File {
-		if file.FileInfo().IsDir() {
-			continue
-		}
-		base := filepath.Base(file.Name)
-		if strings.EqualFold(base, "SKILL.md") && filepath.Dir(file.Name) == "." {
-			rc, err := file.Open()
-			if err != nil {
-				return nil, fmt.Errorf("打开 SKILL.md 失败: %w", err)
-			}
-			defer func() { _ = rc.Close() }()
+	skillMDPath := findSkillMDPath(reader)
+	if skillMDPath != "" {
+		for _, file := range reader.File {
+			if file.Name == skillMDPath {
+				rc, err := file.Open()
+				if err != nil {
+					return nil, fmt.Errorf("打开 SKILL.md 失败: %w", err)
+				}
+				defer func() { _ = rc.Close() }()
 
-			data, err := io.ReadAll(rc)
-			if err != nil {
-				return nil, fmt.Errorf("读取 SKILL.md 失败: %w", err)
-			}
+				data, err := io.ReadAll(rc)
+				if err != nil {
+					return nil, fmt.Errorf("读取 SKILL.md 失败: %w", err)
+				}
 
-			name, description := ParseSkillFrontmatter(string(data))
-			return &SkillMetadataFromZip{
-				Name:        name,
-				Description: description,
-				Version:     "1.0.0",
-			}, nil
+				name, description := ParseSkillFrontmatter(string(data))
+				return &SkillMetadataFromZip{
+					Name:        name,
+					Description: description,
+					Version:     "1.0.0",
+				}, nil
+			}
 		}
 	}
 
