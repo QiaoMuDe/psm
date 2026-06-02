@@ -699,12 +699,27 @@ const SkillsView = {
 
             try {
                 await API.updateSkill(skill.id, name, description, tags);
-                    Toast.success('更新成功');
-                    Modal.close();
-                    await this.loadSkills();
-                } catch (err) {
-                    // 错误已由 API.call 处理
+                Toast.success('更新成功');
+                Modal.close();
+                await this.loadSkills();
+            } catch (err) {
+                const nameInput = document.getElementById('skill-name');
+                const errMsg = (err && err.message) ? err.message : String(err || '');
+                if (nameInput && errMsg.includes('已存在')) {
+                    const existingMsg = nameInput.parentNode.querySelector('.input-error-msg');
+                    if (existingMsg) existingMsg.remove();
+                    nameInput.classList.remove('input-error-flash');
+                    void nameInput.offsetWidth;
+                    nameInput.classList.add('input-error-flash');
+                    const msg = document.createElement('div');
+                    msg.className = 'input-error-msg';
+                    msg.textContent = errMsg;
+                    nameInput.parentNode.appendChild(msg);
+                    nameInput.addEventListener('animationend', () => {
+                        nameInput.classList.remove('input-error-flash');
+                    }, { once: true });
                 }
+            }
             });
         } catch (err) {
             Toast.error('获取 Skill 详情失败');

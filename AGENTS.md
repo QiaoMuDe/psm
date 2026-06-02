@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.13.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
+> 版本: 2.14.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
 
 ---
 
@@ -138,7 +138,7 @@ psm/
 |------|----------|------|---------------|
 | 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置、日志级别获取设置、全方法日志覆盖（Errorw/Infow） | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
 | Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶)、全方法日志覆盖（Errorw/Warnw/Infow） | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
-| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) + 名称特殊字符清理(SanitizeFileName) + 导入时同步更新 SKILL.md frontmatter、全方法日志覆盖（Errorw/Debugw/Infow/Warnw） | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
+| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) + 名称特殊字符清理(SanitizeFileName) + 导入时同步更新 SKILL.md frontmatter + 编辑重命名同步目录+SKILL.md+DB relative_path + 目录冲突检测与回滚、全方法日志覆盖（Errorw/Debugw/Infow/Warnw） | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
 | AI 服务 | 流式生成提示词（含重新生成、回车确认）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接、withAIStream 统一事件管理（EventsOff 防泄漏） | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
@@ -302,16 +302,20 @@ psm/
     └── ...
 ```
 
-**Skill 编辑同步 SKILL.md**:
+**Skill 编辑同步 SKILL.md + 重命名目录**:
 ```
 用户编辑 Skill 名称/描述 → API.updateSkill(id, name, description)
 → SkillService.UpdateSkill:
-  → GORM Updates(map) 更新数据库记录
-  → utils.UpdateSkillFrontmatter(skillMDPath, name, description):
-    ├─ 文件存在 → 定位 frontmatter 区域（--- ... ---）→ 替换其中 name/description
+  → SanitizeFileName(name) 清理特殊字符
+  → 如果名称变更（sanitizedName != old RelativePath）:
+    → os.Stat(newDir) 检测目录冲突 → 存在则返回"技能名称已存在"错误
+    → os.Rename(oldDir, newDir) 重命名目录
+  → GORM Updates(map) 更新数据库记录（name/description/tags/relative_path）
+  → DB 更新失败 → os.Rename 回滚目录名
+  → utils.UpdateSkillFrontmatter(skillMDPath, sanitizedName, description):
+    ├─ 文件存在 → 定位 frontmatter 区域（--- ... ---）→ 整体替换
     ├─ 文件不存在 → 创建文件并写入 frontmatter
     └─ 无 frontmatter → 在文件头部插入 frontmatter
-  → 仅修改 frontmatter 部分，保留正文内容不被覆盖
 ```
 
 **卡片视图右键菜单流程**:
@@ -941,3 +945,8 @@ skills (独立表 + 文件系统)
 131. **搜索状态页面切换重置**: `prompts.js` 和 `skills.js` 的 `render` 方法开头重置搜索状态（currentKeyword/currentCategory/currentTag），切换模块后搜索框清空、列表恢复显示全部
 132. **设置页系统提示词折叠面板**: 设置页 AI 分区的 5 个系统提示词 textarea 包裹在 `.settings-collapse` 折叠容器中，默认收起；header 使用 `margin/padding` 技巧与 `.settings-row` 文字对齐；`bindCollapse()` 方法处理展开/收起交互
 133. **折叠面板 CSS 对齐技巧**: `.settings-collapse` 使用 `margin: 0 calc(-1 * var(--spacing-4)); padding: 0 var(--spacing-4)` 折出父容器 padding 再补回，使折叠头与 `.settings-row` 文字左边缘对齐；`.settings-collapse-body` 左侧额外 `var(--spacing-2)` 缩进
+134. **Skill 编辑重命名同步**: `UpdateSkill` 方法在名称变更时：SanitizeFileName 清理 → os.Stat 检测目录冲突 → os.Rename 重命名目录 → DB Updates(name/relative_path) → UpdateSkillFrontmatter 同步 SKILL.md；DB 失败时回滚目录名
+135. **Skill 目录冲突检测**: `UpdateSkill` 中 `os.Stat(newDir)` 检查目标目录是否存在，存在则返回 `"技能名称已存在: {name}"` 错误，不修改任何内容
+136. **Skill 重命名失败回滚**: DB Updates 失败时调用 `os.Rename(newDir, oldDir)` 回滚目录名，确保三处状态一致
+137. **前端名称冲突视觉反馈**: skills.js `openEditModal` 保存时捕获含"已存在"的错误，`#skill-name` 输入框添加 `.input-error-flash` 红色边框闪烁动画（`@keyframes input-error-flash`，`var(--danger)` ↔ `var(--border)`，2 次 1.2s），下方插入 `.input-error-msg` 红色提示文字，模态框不关闭
+138. **UpdateSkillFrontmatter 替换策略**: 整体替换 `--- ... ---` 区块，不解析 YAML 内容，兼容多行 description（`|` 语法）等复杂 frontmatter；正文部分通过定位第二个 `---` 后的偏移量原样保留

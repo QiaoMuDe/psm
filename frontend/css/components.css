@@ -2987,4 +2987,21 @@ tr.highlight-flash {
     display: block;
 }
 
+/* ==================== 输入框错误闪烁 ==================== */
+
+@keyframes input-error-flash {
+    0%, 100% { border-color: var(--border); }
+    25%, 75% { border-color: var(--danger); }
+}
+
+.input-error-flash {
+    animation: input-error-flash 0.6s ease-in-out 2;
+}
+
+.input-error-msg {
+    font-size: calc(12px + var(--font-size-offset));
+    color: var(--danger);
+    margin-top: var(--spacing-1);
+}
+
 

@@ -89,31 +89,54 @@ func (s *SkillService) GetSkills(keyword string) ([]db.Skill, error) {
 	return skills, nil
 }
 
-// UpdateSkill 更新 Skill 元数据，同时同步更新技能目录中的 SKILL.md frontmatter
+// UpdateSkill 更新 Skill 元数据，名称变更时同步重命名磁盘目录和 SKILL.md frontmatter
 func (s *SkillService) UpdateSkill(id int64, name, description string, tags []string) error {
 	sk, err := s.GetSkill(id)
 	if err != nil {
 		return err
 	}
 
+	storagePath, _ := s.settingsSvc.GetSkillStoragePath()
+	oldDir := filepath.Join(storagePath, sk.RelativePath)
+	sanitizedName := utils.SanitizeFileName(name)
+	nameChanged := sanitizedName != sk.RelativePath
+
+	if nameChanged {
+		newDir := filepath.Join(storagePath, sanitizedName)
+		if _, err := os.Stat(newDir); err == nil {
+			return fmt.Errorf("技能名称已存在: %s", name)
+		}
+
+		if err := os.Rename(oldDir, newDir); err != nil {
+			s.logger.Errorw("重命名技能目录失败", fastlog.Int64("id", id), fastlog.Error(err))
+			return fmt.Errorf("重命名目录失败: %w", err)
+		}
+	}
+
 	result := db.DB.Model(&db.Skill{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":        name,
-		"description": description,
-		"tags":        utils.MustMarshalJSON(tags),
+		"name":          sanitizedName,
+		"description":   description,
+		"tags":          utils.MustMarshalJSON(tags),
+		"relative_path": sanitizedName,
 	})
 
 	if result.Error != nil {
+		if nameChanged {
+			_ = os.Rename(filepath.Join(storagePath, sanitizedName), oldDir)
+		}
 		s.logger.Errorw("更新 Skill 失败", fastlog.Int64("id", id), fastlog.Error(result.Error))
 		return fmt.Errorf("更新 Skill 失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
+		if nameChanged {
+			_ = os.Rename(filepath.Join(storagePath, sanitizedName), oldDir)
+		}
 		s.logger.Warnw("更新 Skill 不存在", fastlog.Int64("id", id))
 		return fmt.Errorf("skill (ID=%d) 不存在", id)
 	}
 
-	storagePath, _ := s.settingsSvc.GetSkillStoragePath()
-	skillMDPath := filepath.Join(storagePath, sk.RelativePath, "SKILL.md")
-	_ = utils.UpdateSkillFrontmatter(skillMDPath, name, description)
+	skillMDPath := filepath.Join(storagePath, sanitizedName, "SKILL.md")
+	_ = utils.UpdateSkillFrontmatter(skillMDPath, sanitizedName, description)
 
 	s.logger.Infow("Skill 更新成功", fastlog.Int64("id", id))
 	return nil
