@@ -2933,4 +2933,58 @@ tr.highlight-flash {
     }
 }
 
+/* ==================== 设置页折叠面板 ==================== */
+
+.settings-collapse {
+    margin: 0 calc(-1 * var(--spacing-4));
+    padding: 0 var(--spacing-4);
+}
+
+.settings-collapse-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) 0;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--transition-fast);
+}
+
+.settings-collapse:hover > .settings-collapse-header,
+.settings-collapse-header:hover {
+    background-color: var(--bg-page);
+}
+
+.settings-collapse-title {
+    font-size: calc(14px + var(--font-size-offset));
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.settings-collapse-desc {
+    font-size: calc(12px + var(--font-size-offset));
+    color: var(--text-secondary);
+    flex: 1;
+}
+
+.settings-collapse-chevron {
+    color: var(--text-secondary);
+    transition: transform var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.settings-collapse.open .settings-collapse-chevron {
+    transform: rotate(180deg);
+}
+
+.settings-collapse-body {
+    display: none;
+    padding: 0 0 0 var(--spacing-2);
+}
+
+.settings-collapse.open .settings-collapse-body {
+    display: block;
+}
+
 

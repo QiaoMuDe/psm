@@ -188,49 +188,58 @@
                     </div>
                 </div>
             </div>
-            <div class="settings-row settings-row-column">
-                <div class="settings-row-label">
-                    <span class="settings-row-title">生成提示词系统提示</span>
-                    <span class="settings-row-desc">AI 生成提示词时使用的系统提示词，可自定义修改</span>
+            <div class="settings-collapse" id="ai-prompts-collapse">
+                <div class="settings-collapse-header" data-target="ai-prompts-collapse">
+                    <span class="settings-collapse-title">系统提示词</span>
+                    <span class="settings-collapse-desc">自定义 AI 各功能的系统提示词，一般无需修改</span>
+                    <svg class="settings-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-                <div class="settings-row-control settings-row-control-full">
-                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-generate-prompt" rows="6"></textarea>
-                </div>
-            </div>
-            <div class="settings-row settings-row-column">
-                <div class="settings-row-label">
-                    <span class="settings-row-title">优化提示词系统提示</span>
-                    <span class="settings-row-desc">AI 优化提示词内容时使用的系统提示词，可自定义修改</span>
-                </div>
-                <div class="settings-row-control settings-row-control-full">
-                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-prompt" rows="6"></textarea>
-                </div>
-            </div>
-            <div class="settings-row settings-row-column">
-                <div class="settings-row-label">
-                    <span class="settings-row-title">优化名称系统提示</span>
-                    <span class="settings-row-desc">AI 优化名称时使用的系统提示词，适用于提示词和技能的名称优化</span>
-                </div>
-                <div class="settings-row-control settings-row-control-full">
-                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-name" rows="6"></textarea>
-                </div>
-            </div>
-            <div class="settings-row settings-row-column">
-                <div class="settings-row-label">
-                    <span class="settings-row-title">优化描述系统提示</span>
-                    <span class="settings-row-desc">AI 优化描述时使用的系统提示词，适用于技能描述优化</span>
-                </div>
-                <div class="settings-row-control settings-row-control-full">
-                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-description" rows="6"></textarea>
-                </div>
-            </div>
-            <div class="settings-row settings-row-column">
-                <div class="settings-row-label">
-                    <span class="settings-row-title">翻译系统提示</span>
-                    <span class="settings-row-desc">AI 翻译内容时使用的系统提示词，可自定义修改</span>
-                </div>
-                <div class="settings-row-control settings-row-control-full">
-                    <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-translate-prompt" rows="6"></textarea>
+                <div class="settings-collapse-body">
+                    <div class="settings-row settings-row-column">
+                        <div class="settings-row-label">
+                            <span class="settings-row-title">生成提示词系统提示</span>
+                            <span class="settings-row-desc">AI 生成提示词时使用的系统提示词，可自定义修改</span>
+                        </div>
+                        <div class="settings-row-control settings-row-control-full">
+                            <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-generate-prompt" rows="6"></textarea>
+                        </div>
+                    </div>
+                    <div class="settings-row settings-row-column">
+                        <div class="settings-row-label">
+                            <span class="settings-row-title">优化提示词系统提示</span>
+                            <span class="settings-row-desc">AI 优化提示词内容时使用的系统提示词，可自定义修改</span>
+                        </div>
+                        <div class="settings-row-control settings-row-control-full">
+                            <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-prompt" rows="6"></textarea>
+                        </div>
+                    </div>
+                    <div class="settings-row settings-row-column">
+                        <div class="settings-row-label">
+                            <span class="settings-row-title">优化名称系统提示</span>
+                            <span class="settings-row-desc">AI 优化名称时使用的系统提示词，适用于提示词和技能的名称优化</span>
+                        </div>
+                        <div class="settings-row-control settings-row-control-full">
+                            <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-name" rows="6"></textarea>
+                        </div>
+                    </div>
+                    <div class="settings-row settings-row-column">
+                        <div class="settings-row-label">
+                            <span class="settings-row-title">优化描述系统提示</span>
+                            <span class="settings-row-desc">AI 优化描述时使用的系统提示词，适用于技能描述优化</span>
+                        </div>
+                        <div class="settings-row-control settings-row-control-full">
+                            <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-optimize-description" rows="6"></textarea>
+                        </div>
+                    </div>
+                    <div class="settings-row settings-row-column">
+                        <div class="settings-row-label">
+                            <span class="settings-row-title">翻译系统提示</span>
+                            <span class="settings-row-desc">AI 翻译内容时使用的系统提示词，可自定义修改</span>
+                        </div>
+                        <div class="settings-row-control settings-row-control-full">
+                            <textarea class="form-textarea settings-prompt-textarea" id="setting-ai-translate-prompt" rows="6"></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

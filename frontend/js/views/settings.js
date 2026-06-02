@@ -286,6 +286,7 @@ const SettingsView = {
 
         this.bindModelFetcher();
         this.bindLogLevelSelect();
+        this.bindCollapse();
     },
 
     /**
@@ -366,6 +367,20 @@ const SettingsView = {
                 levelInput.value = levels[next];
                 this.setLogLevelSegments(levels[next]);
             }
+        });
+    },
+
+    /**
+     * 绑定设置页折叠面板展开/收起交互
+     */
+    bindCollapse() {
+        document.querySelectorAll('.settings-collapse-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const collapse = header.closest('.settings-collapse');
+                if (collapse) {
+                    collapse.classList.toggle('open');
+                }
+            });
         });
     },
 

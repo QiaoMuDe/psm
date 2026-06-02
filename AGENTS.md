@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.12.0 | 更新日期: 2026-06-01 | 分析人: AI 架构师
+> 版本: 2.13.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
 
 ---
 
@@ -138,7 +138,7 @@ psm/
 |------|----------|------|---------------|
 | 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置、日志级别获取设置、全方法日志覆盖（Errorw/Infow） | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
 | Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶)、全方法日志覆盖（Errorw/Warnw/Infow） | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
-| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶)、全方法日志覆盖（Errorw/Debugw/Infow/Warnw） | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
+| Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) + 名称特殊字符清理(SanitizeFileName) + 导入时同步更新 SKILL.md frontmatter、全方法日志覆盖（Errorw/Debugw/Infow/Warnw） | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
 | AI 服务 | 流式生成提示词（含重新生成、回车确认）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接、withAIStream 统一事件管理（EventsOff 防泄漏） | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
@@ -261,15 +261,19 @@ psm/
   │   → 扫描 ZIP 根目录下所有子目录
   │   → 逐个检查同名 Skill 是否存在（跳过已存在）
   │   → 读取 SKILL.md frontmatter 提取元数据
+  │   → SanitizeFileName 清理 name 特殊字符
   │   → UnzipPrefixToDir 解压到存储目录（带前缀剥离）
+  │   → UpdateSkillFrontmatter 同步更新 SKILL.md frontmatter name
   │   → GORM Create(&Skill{}) 创建数据库记录
   │   → 返回 ImportResult（成功/跳过/失败统计）
   │
   └─ 无标识文件 → ImportSkill（公共格式）
-      → HasSkillMD 检查根目录 SKILL.md
+      → HasSkillMD 检查根目录或子目录 SKILL.md
       → GetSkillMetadataFromZip 解析 frontmatter
+      → SanitizeFileName 清理 name 特殊字符
       → 检查同名 Skill 是否已存在
       → UnzipToDir 解压 + FlattenIfNested 修复嵌套
+      → UpdateSkillFrontmatter 同步更新 SKILL.md frontmatter name
       → GORM Create(&Skill{}) 创建数据库记录
       → 返回 Skill 对象
 ```
@@ -931,3 +935,9 @@ skills (独立表 + 文件系统)
 125. **AI 生成回车确认**: 描述输入框支持 Enter 触发生成，Shift+Enter 保留，提升操作效率
 126. **Wails Event 监听器防泄漏**: withAIStream 改用 `EventsOff` 直接移除所有同名监听器，替代依赖 `EventsOn` 返回值（在回调内调用不可靠），从根本上杜绝事件监听器堆积
 127. **withAIStream 重构**: 移除对 EventsOn 返回值的依赖，cleanup 直接调用 `EventsOff('ai:token', 'ai:done', 'ai:error')`，入口处先防御性清理再注册，所有调用点统一使用实例属性持有 stream 引用
+128. **技能工具栏分隔符对齐**: `skills.html` 删除 `action-buttons` 后的多余 `toolbar-separator`，与 `prompts.html` 工具栏结构保持一致
+129. **SanitizeFileName 文件名清理**: `archive.go` 新增 `SanitizeFileName` 函数，将 `\ / : * ? " < > |` 替换为下划线，防止文件系统非法字符
+130. **导入技能名称同步清理**: `ImportSkill` 和 `ImportSkillFromExportZip` 两个导入路径均调用 `SanitizeFileName` 清理 name，解压后通过 `UpdateSkillFrontmatter` 同步更新 SKILL.md 中的 frontmatter name，确保目录名与文件内 name 一致
+131. **搜索状态页面切换重置**: `prompts.js` 和 `skills.js` 的 `render` 方法开头重置搜索状态（currentKeyword/currentCategory/currentTag），切换模块后搜索框清空、列表恢复显示全部
+132. **设置页系统提示词折叠面板**: 设置页 AI 分区的 5 个系统提示词 textarea 包裹在 `.settings-collapse` 折叠容器中，默认收起；header 使用 `margin/padding` 技巧与 `.settings-row` 文字对齐；`bindCollapse()` 方法处理展开/收起交互
+133. **折叠面板 CSS 对齐技巧**: `.settings-collapse` 使用 `margin: 0 calc(-1 * var(--spacing-4)); padding: 0 var(--spacing-4)` 折出父容器 padding 再补回，使折叠头与 `.settings-row` 文字左边缘对齐；`.settings-collapse-body` 左侧额外 `var(--spacing-2)` 缩进
