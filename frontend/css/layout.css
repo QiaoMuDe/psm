@@ -393,3 +393,16 @@
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+[data-theme="clean"] .sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+}
+
+[data-theme="clean"] .app-title {
+    color: var(--text-primary);
+}
+
+[data-theme="clean"] .sidebar-divider {
+    background-color: var(--border);
+}

@@ -14,7 +14,7 @@
 - AI 功能（设置页配置 API 地址/Key/模型、一键生成提示词、优化提示词/名称/描述、模型列表获取、连接测试、AI 翻译）
 - AI 翻译模块（独立侧边栏导航、左右分栏布局、流式翻译、语言交换、分栏动画）
 - 数据管理（完整备份恢复、一键备份还原、数据统计、孤立数据清理、数据重置、数据目录快捷打开）
-- 系统设置（程序家目录配置、6 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置、AI 配置）
+- 系统设置（程序家目录配置、8 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置、AI 配置）
 - 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框、最常用提示词）
 - 全局拖拽导入（支持拖入 ZIP 文件直接导入技能）
 - 快捷键系统（全局快捷键 + 模块快捷键 + 悬停复制）
@@ -68,7 +68,7 @@ psm/
 │   │   ├── skills.html              # Skill 管理页静态模板（86 行）
 │   │   └── translate.html           # AI 翻译页静态模板
 │   ├── css/
-│   │   ├── variables.css            # CSS 变量定义：6 种主题颜色/间距/字体/阴影/圆角/全局字体偏移
+│   │   ├── variables.css            # CSS 变量定义：8 种主题颜色/间距/字体/阴影/圆角/全局字体偏移
 │   │   ├── layout.css               # 布局样式：应用容器/侧边栏/主内容区/响应式/视图内容滚动
 │   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索/置顶内容/跳转闪烁/动画效果/点击动画/Skill详情弹窗/日志级别分段滑块
 │   └── js/
@@ -84,7 +84,7 @@ psm/
 │           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖 + 键盘导航），模板已抽取到 html/dashboard.html
 │           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明/AI 生成提示词（回车确认），模板已抽取到 html/prompts.html
 │           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/标签筛选/批量管理/右键菜单/ZIP 导入导出/文件浏览/置顶/搜索高亮/Skill 详情弹窗/文件右键菜单，模板已抽取到 html/skills.html
-│   │   ├── settings.js          # 设置页：程序家目录配置 + 6 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局 + 日志级别分段滑块，模板已抽取到 html/settings.html
+│   │   ├── settings.js          # 设置页：程序家目录配置 + 8 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局 + 日志级别分段滑块，模板已抽取到 html/settings.html
 │           ├── data.js              # 数据管理：一键备份还原 + 完整备份恢复 + 数据重置，模板已抽取到 html/data.html
 │           └── translate.js         # AI 翻译：层叠书桌双卡片布局/语言选择/流式翻译/语言交换/复制清除/动画效果，模板已抽取到 html/translate.html
 │
@@ -717,9 +717,9 @@ skills (独立表 + 文件系统)
 5. **Skill 导出双格式**: 单个 Skill 导出标准格式（SKILL.md 在 ZIP 根目录）；多个 Skill 导出 PSM 格式（`.psm-skill-export` 标识文件 + 技能目录）
 6. **双格式自动导入**: 自动识别导出格式（标识文件）和公共格式（SKILL.md），统一入口 `importSkillAuto`
 7. **零前端框架**: 原生 HTML/CSS/JS，Flat Design 设计系统，Space Grotesk 字体
-8. **CSS 三文件拆分**: variables.css（变量/6 种主题/全局字体偏移）、layout.css（布局）、components.css（组件），职责清晰
+8. **CSS 三文件拆分**: variables.css（变量/8 种主题/全局字体偏移）、layout.css（布局）、components.css（组件），职责清晰
 9. **纯 Go SQLite + GORM**: glebarez/sqlite（底层 modernc.org/sqlite）+ GORM ORM，无需 CGO，单 exe 部署，AutoMigrate 自动建表
-10. **6 种主题系统**: CSS 变量驱动（light/dark/midnight/ocean/rose/lavender），支持跟随系统，设置持久化到数据库
+10. **8 种主题系统**: CSS 变量驱动（light/clean/dark/midnight/monokai/nord/dracula/solarized），支持跟随系统，设置持久化到数据库
 11. **卡片视图右键菜单**: 卡片/表格行右键弹出操作菜单（查看/编辑/导出/删除），替代固定按钮，界面更简洁
 12. **批量管理模式**: 工具栏"批量管理"按钮触发，底部操作栏 + 全选 + 退出管理，非批量时界面无复选框干扰
 13. **默认卡片视图**: Prompt 和 Skill 模块默认使用卡片视图（可通过设置切换）
@@ -769,6 +769,10 @@ skills (独立表 + 文件系统)
 57. **分类组合框**: Prompt 新建/编辑/AI生成模态框的分类输入改为 input + 下拉选择组合框（`.category-combo`），支持输入新分类或选择已有分类
 58. **分类下拉键盘导航**: 分类下拉列表支持 ↑↓ 移动高亮 / Enter 选择 / Esc 关闭，复用 `.model-dropdown-item.highlight` 样式
 59. **分类列表实时刷新**: 新建/编辑/AI生成提示词成功后自动调用 `loadCategories()` 刷新搜索栏分类下拉
+60. **主题方案更新**: 删除 ocean/rose/lavender，新增 monokai（暖色暗色）/nord（北极冷色）/dracula（紫色暗色）/solarized（暖色亮色）/clean（纯白浅色），共 8 个主题
+61. **clean 主题**: 纯白侧边栏 `#FFFFFF` + 右侧 `border` 区分内容区，页面背景 `#F6F8FA`，覆盖侧边栏渐变和 app-title 颜色
+62. **Skill ZIP 双格式导入兼容**: `HasSkillMD`/`ReadSkillMDFromZip`/`GetSkillMetadataFromZip` 通过 `findSkillMDPath` 统一查找，支持根目录或单层子目录下的 SKILL.md
+63. **FlattenIfNested 放宽**: 移除子目录名匹配检查，只要只有一个子目录就展平，兼容不同打包方式
 
 ---
 
@@ -808,7 +812,7 @@ skills (独立表 + 文件系统)
 19. **右键菜单**: `ContextMenu` 组件，`show(x, y, items)` API，自动边界检测，点击外部/滚动自动关闭
 20. **仪表盘导航**: 统计卡片通过 `data-view` 属性 + `App.navigate()` 实现点击跳转
 21. **版本信息**: verman 库构建时注入，前端 `loadVersion()` 展示，未注入时显示 "dev"
-22. **6 种主题**: light/dark/midnight/ocean/rose/lavender + auto（跟随系统），均在 variables.css 定义
+22. **8 种主题**: light/clean/dark/midnight/monokai/nord/dracula/solarized + auto（跟随系统），均在 variables.css 定义
 23. **golangci-lint**: errcheck + staticcheck 全部通过
 24. **全局拖拽导入**: Wails `EnableFileDrop: true` + `OnFileDrop(callback, false)`
 25. **快捷键管理**: `ShortcutManager` 对象，`registerView(name, shortcuts)` 注册模块快捷键
@@ -910,6 +914,12 @@ skills (独立表 + 文件系统)
 114. **分类组合框结构**: `.category-combo`（position:relative）包裹 `#prompt-category-input` + `#category-dropdown`（`.model-dropdown`），三个模态框（新建/AI生成/编辑）均使用
 115. **分类组合框逻辑**: `bindCategoryCombo()` 方法，focus 时显示全部分类，input 时实时过滤，mousedown 选择，keydown 键盘导航（ArrowUp/Down/Enter/Escape），document mousedown 关闭
 116. **分类刷新时机**: 新建/编辑/AI生成成功后先 `loadCategories()` 再 `loadPrompts()`，确保搜索栏分类下拉即时更新
+117. **主题列表**: light(亮色)/clean(纯白)/dark(暗色)/midnight(午夜蓝)/monokai(暖色暗色)/nord(北极冷色)/dracula(紫色暗色)/solarized(暖色亮色)/auto(跟随系统)
+118. **clean 主题侧边栏**: `background: var(--bg-sidebar)` 覆盖渐变 + `border-right: 1px solid var(--border)` 区分内容区
+119. **clean 主题 app-title**: `[data-theme="clean"] .app-title { color: var(--text-primary) }` 覆盖硬编码白色
+120. **findSkillMDPath**: archive.go 新增辅助函数，遍历 ZIP 查找 SKILL.md，优先根目录其次单层子目录，`HasSkillMD`/`ReadSkillMDFromZip`/`GetSkillMetadataFromZip` 统一调用
+121. **FlattenIfNested 放宽**: 移除 `entries[0].Name() != expectedName` 检查，只要 `len(entries) == 1 && entries[0].IsDir()` 就展平
+122. **light 主题保留**: light 主题保持原有深色侧边栏 `#0F172A`，clean 是独立的纯白浅色主题
 117. **HTML 模板抽取架构**: 6 个视图的静态 HTML 模板从 JS 模板字面量抽取到独立 `.html` 文件（`frontend/html/`），使用 `fetch + _template` 缓存模式，消除 TS 语言服务对模板字面量的泛型误报
 118. **KeyboardNav 工具函数**: `app.js` 中 `KeyboardNav.bind()` 统一处理 ArrowDown/ArrowUp/Enter/Escape 键盘导航，替换 dashboard/settings/prompts 中的重复代码约 62 行
 119. **全局 copyToClipboard**: app.js 中统一复制函数，navigator.clipboard + textarea 后备，替换 prompts.js 中 8 处后备复制代码
