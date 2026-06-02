@@ -48,6 +48,10 @@ export function ExportSkill(arg1:number,arg2:string):Promise<void>;
 
 export function ExportSkills(arg1:Array<number>,arg2:string):Promise<void>;
 
+export function GenerateDescriptionFromContent(arg1:string):Promise<void>;
+
+export function GenerateNameFromContent(arg1:string):Promise<void>;
+
 export function GeneratePrompt(arg1:string):Promise<void>;
 
 export function GetAIModels():Promise<Array<string>>;

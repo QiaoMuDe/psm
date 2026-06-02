@@ -91,6 +91,11 @@ func (s *SkillService) GetSkills(keyword string) ([]db.Skill, error) {
 
 // UpdateSkill 更新 Skill 元数据，名称变更时同步重命名磁盘目录和 SKILL.md frontmatter
 func (s *SkillService) UpdateSkill(id int64, name, description string, tags []string) error {
+	sanitizedName := utils.SanitizeFileName(strings.TrimSpace(name))
+	if sanitizedName == "" {
+		return fmt.Errorf("技能名称不能为空")
+	}
+
 	sk, err := s.GetSkill(id)
 	if err != nil {
 		return err
@@ -98,7 +103,6 @@ func (s *SkillService) UpdateSkill(id int64, name, description string, tags []st
 
 	storagePath, _ := s.settingsSvc.GetSkillStoragePath()
 	oldDir := filepath.Join(storagePath, sk.RelativePath)
-	sanitizedName := utils.SanitizeFileName(name)
 	nameChanged := sanitizedName != sk.RelativePath
 
 	if nameChanged {

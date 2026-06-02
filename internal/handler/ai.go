@@ -97,6 +97,42 @@ func (h *AIHandler) OptimizeDescription(content string) error {
 	return h.streamChat(prompt, content)
 }
 
+// GenerateNameFromContent 根据提示词内容流式生成名称
+func (h *AIHandler) GenerateNameFromContent(content string) error {
+	h.logger.Infow("AI GenerateNameFromContent 被调用", fastlog.Int("content_len", len(content)))
+	prompt, err := h.getSystemPrompt("ai_generate_name_prompt")
+	if err != nil {
+		h.logger.Errorw("读取生成名称系统提示词失败", fastlog.Error(err))
+		return fmt.Errorf("未配置生成名称系统提示词，请在设置页配置")
+	}
+	if prompt == "" {
+		h.logger.Warnw("生成名称系统提示词为空")
+		return fmt.Errorf("生成名称系统提示词为空，请在设置页配置并填写内容")
+	}
+	h.logger.Infow("开始调用 streamChat 生成名称", fastlog.Int("prompt_len", len(prompt)))
+	err = h.streamChat(prompt, content)
+	h.logger.Infow("streamChat 生成名称返回", fastlog.Error(err))
+	return err
+}
+
+// GenerateDescriptionFromContent 根据内容流式生成描述
+func (h *AIHandler) GenerateDescriptionFromContent(content string) error {
+	h.logger.Infow("AI GenerateDescriptionFromContent 被调用", fastlog.Int("content_len", len(content)))
+	prompt, err := h.getSystemPrompt("ai_generate_desc_prompt")
+	if err != nil {
+		h.logger.Errorw("读取生成描述系统提示词失败", fastlog.Error(err))
+		return fmt.Errorf("未配置生成描述系统提示词，请在设置页配置")
+	}
+	if prompt == "" {
+		h.logger.Warnw("生成描述系统提示词为空")
+		return fmt.Errorf("生成描述系统提示词为空，请在设置页配置并填写内容")
+	}
+	h.logger.Infow("开始调用 streamChat 生成描述", fastlog.Int("prompt_len", len(prompt)))
+	err = h.streamChat(prompt, content)
+	h.logger.Infow("streamChat 生成描述返回", fastlog.Error(err))
+	return err
+}
+
 // TranslateContent 流式翻译内容到目标语言
 func (h *AIHandler) TranslateContent(content, targetLang string) error {
 	h.logger.Infow("AI 翻译请求", fastlog.String("target_lang", targetLang))
@@ -134,6 +170,8 @@ func (h *AIHandler) streamChat(systemMsg, userMsg string) error {
 	}
 
 	chatURL := buildChatURL(apiURL)
+
+	h.logger.Infow("streamChat 发起请求", fastlog.String("url", chatURL), fastlog.String("model", model))
 
 	reqBody := chatRequest{
 		Model:  model,
@@ -174,12 +212,15 @@ func (h *AIHandler) streamChat(systemMsg, userMsg string) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		if ctx.Err() == context.Canceled {
+			h.logger.Infow("streamChat 请求被取消")
 			return nil
 		}
 		h.logger.Errorw("发送 AI 请求失败", fastlog.Error(err))
 		return fmt.Errorf("请求 AI API 失败: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
+
+	h.logger.Infow("streamChat 收到响应", fastlog.Int("status_code", resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		h.logger.Errorw("AI API 请求失败", fastlog.Int("status_code", resp.StatusCode))
@@ -218,7 +259,9 @@ func (h *AIHandler) streamChat(systemMsg, userMsg string) error {
 		}
 	}
 
+	h.logger.Infow("streamChat SSE 循环结束", fastlog.Error(scanner.Err()))
 	runtime.EventsEmit(h.ctx, "ai:done", "")
+	h.logger.Infow("streamChat 已发送 ai:done 事件")
 	return nil
 }
 

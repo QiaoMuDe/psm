@@ -647,30 +647,21 @@ const SkillsView = {
             const skill = await API.getSkill(id);
             const skillTags = parseTags(skill.tags);
 
+            AIActionButton.cleanupAll();
             const content = `
                 <form id="skill-form">
                     <div class="form-group">
-                        <label class="form-label">名称 <span class="required-mark">*</span></label>
-                        <div class="ai-optimize-row">
-                            <input type="text" class="form-input" id="skill-name" value="${escapeHtml(skill.name)}" required />
-                            <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-skill-name" title="AI 优化名称">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                </svg>
-                                优化
-                            </button>
-                        </div>
+                    <label class="form-label">名称 <span class="required-mark">*</span></label>
+                    <div class="ai-optimize-row">
+                        <input type="text" class="form-input" id="skill-name" value="${escapeHtml(skill.name)}" required />
+                        <div class="ai-action-btn-wrap" id="ai-action-skill-name"></div>
                     </div>
+                </div>
                     <div class="form-group">
                     <label class="form-label">描述</label>
                     <div class="ai-optimize-row">
                         <textarea class="form-textarea" id="skill-description" rows="3">${skill.description || ''}</textarea>
-                        <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-skill-desc" title="AI 优化描述">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                            </svg>
-                            优化
-                        </button>
+                        <div class="ai-action-btn-wrap" id="ai-action-skill-desc"></div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -687,8 +678,20 @@ const SkillsView = {
 
         Modal.open('编辑 Skill', content, { footer });
 
-        SkillsView.bindOptimizeButton('btn-optimize-skill-name', 'skill-name', API.optimizeName);
-        SkillsView.bindOptimizeButton('btn-optimize-skill-desc', 'skill-description', API.optimizeDescription);
+        AIActionButton.init('ai-action-skill-name', {
+            targetFieldId: 'skill-name',
+            actions: [
+                { type: 'generate', label: '生成名称', sourceFieldId: 'skill-description', apiMethod: API.generateNameFromContent, emptyMsg: '请先输入描述内容' },
+                { type: 'optimize', label: '优化名称', apiMethod: API.optimizeName }
+            ]
+        });
+        AIActionButton.init('ai-action-skill-desc', {
+            targetFieldId: 'skill-description',
+            actions: [
+                { type: 'generate', label: '生成描述', sourceFieldId: 'skill-name', apiMethod: API.generateDescriptionFromContent, emptyMsg: '请先输入名称内容' },
+                { type: 'optimize', label: '优化描述', apiMethod: API.optimizeDescription }
+            ]
+        });
 
         document.getElementById('skill-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -868,84 +871,4 @@ const SkillsView = {
         ]);
     },
 
-    bindOptimizeButton(btnId, fieldId, apiMethod) {
-        const btn = document.getElementById(btnId);
-        const field = document.getElementById(fieldId);
-        if (!btn || !field) return;
-
-        let originalContent = null;
-        let accumulated = '';
-
-        const setOptimizing = (optimizing) => {
-            const row = field.closest('.ai-optimize-row');
-            btn.disabled = optimizing;
-            field.disabled = optimizing;
-            if (row) row.classList.toggle('ai-optimize-loading', optimizing);
-            if (optimizing) {
-                btn.innerHTML = `<div class="ai-gen-spinner" style="width:14px;height:14px;border-width:2px;"></div> 优化中...`;
-            } else if (originalContent !== null) {
-                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 还原`;
-            } else {
-                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 优化`;
-            }
-        };
-
-        btn.addEventListener('click', async () => {
-            if (originalContent !== null) {
-                field.value = originalContent;
-                originalContent = null;
-                field.dispatchEvent(new Event('input'));
-                setOptimizing(false);
-                return;
-            }
-
-            const currentContent = field.value.trim();
-            if (!currentContent) {
-                Toast.warning('请先输入内容');
-                return;
-            }
-
-            const settings = (await API.getSettings()) || {};
-            if (!settings.ai_api_key) {
-                Toast.warning('请先在设置页配置 AI API Key');
-                return;
-            }
-
-            originalContent = field.value;
-            accumulated = '';
-            setOptimizing(true);
-
-            if (SkillsView._optimizeStream) {
-                SkillsView._optimizeStream.cleanup();
-            }
-            SkillsView._optimizeStream = withAIStream(apiMethod || API.optimizePrompt, {
-                onToken: (token) => {
-                    accumulated += token;
-                    field.value = accumulated;
-                    field.dispatchEvent(new Event('input'));
-                },
-                onDone: () => {
-                    const result = accumulated;
-                    SkillsView._optimizeStream = null;
-                    field.disabled = false;
-                    if (result) {
-                        field.value = result;
-                        field.dispatchEvent(new Event('input'));
-                        Toast.success('优化完成');
-                    }
-                    setOptimizing(false);
-                },
-                onError: (errMsg) => {
-                    SkillsView._optimizeStream = null;
-                    field.value = originalContent;
-                    originalContent = null;
-                    field.dispatchEvent(new Event('input'));
-                    setOptimizing(false);
-                    Toast.error(errMsg);
-                }
-            });
-
-            await SkillsView._optimizeStream.call(currentContent);
-        });
-    }
 };

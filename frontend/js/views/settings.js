@@ -61,6 +61,8 @@ const SettingsView = {
             document.getElementById('setting-ai-optimize-name').value = settings.ai_optimize_name || '';
             document.getElementById('setting-ai-optimize-description').value = settings.ai_optimize_description || '';
             document.getElementById('setting-ai-translate-prompt').value = settings.ai_translate_prompt || '';
+            document.getElementById('setting-ai-generate-name-prompt').value = settings.ai_generate_name_prompt || '';
+            document.getElementById('setting-ai-generate-desc-prompt').value = settings.ai_generate_desc_prompt || '';
 
             // 加载日志级别
             const logLevel = await API.getLogLevel();
@@ -238,6 +240,8 @@ const SettingsView = {
                     ai_optimize_name: document.getElementById('setting-ai-optimize-name').value,
                     ai_optimize_description: document.getElementById('setting-ai-optimize-description').value,
                     ai_translate_prompt: document.getElementById('setting-ai-translate-prompt').value,
+                    ai_generate_name_prompt: document.getElementById('setting-ai-generate-name-prompt').value,
+                    ai_generate_desc_prompt: document.getElementById('setting-ai-generate-desc-prompt').value,
                 });
                 await API.setLogLevel(document.getElementById('log-level-value').value);
                 App.settings = await API.getSettings();

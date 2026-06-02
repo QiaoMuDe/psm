@@ -565,86 +565,7 @@ const PromptsView = {
         }
     },
 
-    bindOptimizeButton(btnId, textareaId, apiMethod) {
-        const btn = document.getElementById(btnId);
-        const textarea = document.getElementById(textareaId);
-        if (!btn || !textarea) return;
 
-        let originalContent = null;
-        let accumulated = '';
-
-        const setOptimizing = (optimizing) => {
-            const row = textarea.closest('.ai-optimize-row');
-            btn.disabled = optimizing;
-            textarea.disabled = optimizing;
-            if (row) row.classList.toggle('ai-optimize-loading', optimizing);
-            if (optimizing) {
-                btn.innerHTML = `<div class="ai-gen-spinner" style="width:14px;height:14px;border-width:2px;"></div> 优化中...`;
-            } else if (originalContent !== null) {
-                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 还原`;
-            } else {
-                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 优化`;
-            }
-        };
-
-        btn.addEventListener('click', async () => {
-            if (originalContent !== null) {
-                textarea.value = originalContent;
-                originalContent = null;
-                textarea.dispatchEvent(new Event('input'));
-                setOptimizing(false);
-                return;
-            }
-
-            const currentContent = textarea.value.trim();
-            if (!currentContent) {
-                Toast.warning('请先输入内容');
-                return;
-            }
-
-            const settings = (await API.getSettings()) || {};
-            if (!settings.ai_api_key) {
-                Toast.warning('请先在设置页配置 AI API Key');
-                return;
-            }
-
-            originalContent = textarea.value;
-            accumulated = '';
-            setOptimizing(true);
-
-            if (PromptsView._optimizeStream) {
-                PromptsView._optimizeStream.cleanup();
-            }
-            PromptsView._optimizeStream = withAIStream(apiMethod || API.optimizePrompt, {
-                onToken: (token) => {
-                    accumulated += token;
-                    textarea.value = accumulated;
-                    textarea.dispatchEvent(new Event('input'));
-                },
-                onDone: () => {
-                    const result = accumulated;
-                    PromptsView._optimizeStream = null;
-                    textarea.disabled = false;
-                    if (result) {
-                        textarea.value = result;
-                        textarea.dispatchEvent(new Event('input'));
-                        Toast.success('优化完成');
-                    }
-                    setOptimizing(false);
-                },
-                onError: (errMsg) => {
-                    PromptsView._optimizeStream = null;
-                    textarea.value = originalContent;
-                    originalContent = null;
-                    textarea.dispatchEvent(new Event('input'));
-                    setOptimizing(false);
-                    Toast.error(errMsg);
-                }
-            });
-
-            await PromptsView._optimizeStream.call(currentContent);
-        });
-    },
 
     /**
      * 绑定分类组合框：输入 + 下拉选择已有分类
@@ -708,18 +629,14 @@ const PromptsView = {
      * 打开新建 Prompt 模态框
      */
     openCreateModal() {
+        AIActionButton.cleanupAll();
         const content = `
             <form id="prompt-form">
                 <div class="form-group">
                     <label class="form-label">名称 <span class="required-mark">*</span></label>
                     <div class="ai-optimize-row">
                         <input type="text" class="form-input" id="prompt-name" required />
-                        <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-name-create" title="AI 优化名称">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                            </svg>
-                            优化
-                        </button>
+                        <div class="ai-action-btn-wrap" id="ai-action-prompt-name-create"></div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -733,12 +650,7 @@ const PromptsView = {
                     <label class="form-label">内容 <span class="required-mark">*</span></label>
                     <div class="ai-optimize-row">
                         <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required></textarea>
-                        <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-content" title="AI 优化此提示词">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                            </svg>
-                            优化
-                        </button>
+                        <div class="ai-action-btn-wrap" id="ai-action-prompt-content-create"></div>
                     </div>
                     <div class="char-count" id="prompt-char-count">0 字符</div>
                 </div>
@@ -764,8 +676,19 @@ const PromptsView = {
 
         Modal.open('新建 Prompt', content, { footer });
 
-        PromptsView.bindOptimizeButton('btn-optimize-name-create', 'prompt-name', API.optimizeName);
-        PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
+        AIActionButton.init('ai-action-prompt-name-create', {
+            targetFieldId: 'prompt-name',
+            actions: [
+                { type: 'generate', label: '生成名称', sourceFieldId: 'prompt-content', apiMethod: API.generateNameFromContent, emptyMsg: '请先输入提示词内容' },
+                { type: 'optimize', label: '优化名称', apiMethod: API.optimizeName }
+            ]
+        });
+        AIActionButton.init('ai-action-prompt-content-create', {
+            targetFieldId: 'prompt-content',
+            actions: [
+                { type: 'optimize', label: '优化内容', apiMethod: API.optimizePrompt }
+            ]
+        });
         PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
         this.bindCategoryCombo();
 
@@ -955,18 +878,14 @@ const PromptsView = {
     },
 
     openCreateModalWithData(name, content) {
+        AIActionButton.cleanupAll();
         const formContent = `
             <form id="prompt-form">
                 <div class="form-group">
                     <label class="form-label">名称 <span class="required-mark">*</span></label>
                     <div class="ai-optimize-row">
                         <input type="text" class="form-input" id="prompt-name" value="${escapeHtml(name)}" required />
-                        <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-name-ai" title="AI 优化名称">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                            </svg>
-                            优化
-                        </button>
+                        <div class="ai-action-btn-wrap" id="ai-action-prompt-name-ai"></div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -980,12 +899,7 @@ const PromptsView = {
                     <label class="form-label">内容 <span class="required-mark">*</span></label>
                     <div class="ai-optimize-row">
                         <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required>${escapeHtml(content)}</textarea>
-                        <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-content" title="AI 优化此提示词">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                            </svg>
-                            优化
-                        </button>
+                        <div class="ai-action-btn-wrap" id="ai-action-prompt-content-ai"></div>
                     </div>
                     <div class="char-count" id="prompt-char-count">${content.length} 字符</div>
                 </div>
@@ -1011,8 +925,19 @@ const PromptsView = {
 
         Modal.open('新建 Prompt（AI 生成）', formContent, { footer });
 
-        PromptsView.bindOptimizeButton('btn-optimize-name-ai', 'prompt-name', API.optimizeName);
-        PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
+        AIActionButton.init('ai-action-prompt-name-ai', {
+            targetFieldId: 'prompt-name',
+            actions: [
+                { type: 'generate', label: '生成名称', sourceFieldId: 'prompt-content', apiMethod: API.generateNameFromContent, emptyMsg: '请先输入提示词内容' },
+                { type: 'optimize', label: '优化名称', apiMethod: API.optimizeName }
+            ]
+        });
+        AIActionButton.init('ai-action-prompt-content-ai', {
+            targetFieldId: 'prompt-content',
+            actions: [
+                { type: 'optimize', label: '优化内容', apiMethod: API.optimizePrompt }
+            ]
+        });
         PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
         this.bindCategoryCombo();
 
@@ -1043,39 +968,30 @@ const PromptsView = {
      */
     async openEditModal(id) {
         try {
+            AIActionButton.cleanupAll();
             const prompt = await API.getPrompt(id);
 
             const content = `
                 <form id="prompt-form">
                     <div class="form-group">
-                        <label class="form-label">名称 <span class="required-mark">*</span></label>
-                        <div class="ai-optimize-row">
-                            <input type="text" class="form-input" id="prompt-name" value="${escapeHtml(prompt.name)}" required />
-                            <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-name-edit" title="AI 优化名称">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                </svg>
-                                优化
-                            </button>
-                        </div>
+                    <label class="form-label">名称 <span class="required-mark">*</span></label>
+                    <div class="ai-optimize-row">
+                        <input type="text" class="form-input" id="prompt-name" value="${escapeHtml(prompt.name)}" required />
+                        <div class="ai-action-btn-wrap" id="ai-action-prompt-name-edit"></div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">分类</label>
-                        <div class="category-combo">
-                            <input type="text" class="form-input" id="prompt-category-input" value="${escapeHtml(prompt.category || '')}" autocomplete="off" />
-                            <div class="model-dropdown" id="category-dropdown"></div>
-                        </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <div class="category-combo">
+                        <input type="text" class="form-input" id="prompt-category-input" value="${escapeHtml(prompt.category || '')}" autocomplete="off" />
+                        <div class="model-dropdown" id="category-dropdown"></div>
+                    </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">内容 <span class="required-mark">*</span></label>
                         <div class="ai-optimize-row">
                             <textarea class="form-textarea textarea-prompt-content" id="prompt-content" rows="6" required>${escapeHtml(prompt.content)}</textarea>
-                            <button type="button" class="btn btn-sm btn-ai-optimize" id="btn-optimize-content" title="AI 优化此提示词">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                </svg>
-                                优化
-                            </button>
+                            <div class="ai-action-btn-wrap" id="ai-action-prompt-content-edit"></div>
                         </div>
                         <div class="char-count" id="prompt-char-count">${prompt.content.length} 字符</div>
                     </div>
@@ -1101,8 +1017,19 @@ const PromptsView = {
 
         Modal.open('编辑 Prompt', content, { footer });
 
-        PromptsView.bindOptimizeButton('btn-optimize-name-edit', 'prompt-name', API.optimizeName);
-        PromptsView.bindOptimizeButton('btn-optimize-content', 'prompt-content');
+        AIActionButton.init('ai-action-prompt-name-edit', {
+            targetFieldId: 'prompt-name',
+            actions: [
+                { type: 'generate', label: '生成名称', sourceFieldId: 'prompt-content', apiMethod: API.generateNameFromContent, emptyMsg: '请先输入提示词内容' },
+                { type: 'optimize', label: '优化名称', apiMethod: API.optimizeName }
+            ]
+        });
+        AIActionButton.init('ai-action-prompt-content-edit', {
+            targetFieldId: 'prompt-content',
+            actions: [
+                { type: 'optimize', label: '优化内容', apiMethod: API.optimizePrompt }
+            ]
+        });
         PromptsView.bindCharCount('prompt-content', 'prompt-char-count');
         this.bindCategoryCombo();
 

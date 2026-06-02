@@ -622,6 +622,249 @@ function positionPopup(el, x, y) {
 }
 
 /**
+ * AI 操作按钮组件
+ * 将"生成"和"优化"合并为一个下拉按钮，支持 idle/loading/restore 三种状态
+ */
+const AIActionButton = {
+    _instances: new Map(),
+
+    /**
+     * 初始化 AI 操作按钮
+     * @param {string} wrapId - .ai-action-btn-wrap 容器的 ID
+     * @param {Object} config - 配置项
+     * @param {string} config.targetFieldId - 目标输入框/文本域的 ID
+     * @param {Array<{type: string, label: string, apiMethod: Function, sourceFieldId?: string, emptyMsg?: string}>} config.actions - 可用操作列表
+     */
+    init(wrapId, config) {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        const targetField = document.getElementById(config.targetFieldId);
+        if (!targetField) return;
+
+        this.cleanup(wrapId);
+
+        var aiIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+        var optimizeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+        var chevronIcon = '<svg class="ai-action-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+        var spinnerHtml = '<div class="ai-gen-spinner" style="width:14px;height:14px;border-width:2px;"></div>';
+        var restoreIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+        const state = { mode: 'idle', originalContent: null, accumulated: '', streamInstance: null, safetyTimer: null };
+
+        wrap.innerHTML = '';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ai-action-btn';
+        btn.innerHTML = aiIcon + ' AI ' + chevronIcon;
+        wrap.appendChild(btn);
+
+        const dropdown = document.createElement('div');
+        dropdown.className = 'ai-action-dropdown';
+        config.actions.forEach(function(action) {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'ai-action-dropdown-item';
+            item.tabIndex = 0;
+            const icon = action.type === 'generate' ? aiIcon : optimizeIcon;
+            item.innerHTML = icon + ' ' + action.label;
+            item.addEventListener('click', function(e) {
+                e.stopPropagation();
+                closeDropdown();
+                executeAction(action);
+            });
+            dropdown.appendChild(item);
+        });
+        dropdown.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Escape' || e.key === 'Tab') {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            if (e.key === 'ArrowDown') {
+                var items = dropdown.querySelectorAll('.ai-action-dropdown-item');
+                var idx = Array.from(items).indexOf(document.activeElement);
+                if (idx < items.length - 1) items[idx + 1].focus();
+            } else if (e.key === 'ArrowUp') {
+                var items = dropdown.querySelectorAll('.ai-action-dropdown-item');
+                var idx = Array.from(items).indexOf(document.activeElement);
+                if (idx > 0) items[idx - 1].focus();
+            } else if (e.key === 'Enter') {
+                var items = dropdown.querySelectorAll('.ai-action-dropdown-item');
+                var idx = Array.from(items).indexOf(document.activeElement);
+                if (idx >= 0) items[idx].click();
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+                btn.focus();
+            }
+        });
+        wrap.appendChild(dropdown);
+
+        function closeDropdown() {
+            wrap.classList.remove('open');
+        }
+
+        function setMode(mode, actionLabel) {
+            state.mode = mode;
+            var row = targetField.closest('.ai-optimize-row');
+            if (mode === 'idle') {
+                btn.disabled = false;
+                btn.className = 'ai-action-btn';
+                btn.innerHTML = aiIcon + ' AI ' + chevronIcon;
+                if (row) row.classList.remove('ai-optimize-loading');
+            } else if (mode === 'loading') {
+                btn.disabled = true;
+                btn.className = 'ai-action-btn';
+                btn.innerHTML = spinnerHtml + ' ' + (actionLabel || '处理中') + '...';
+                if (row) row.classList.add('ai-optimize-loading');
+            } else if (mode === 'restore') {
+                btn.disabled = false;
+                btn.className = 'ai-action-btn ai-action-btn--restore';
+                btn.innerHTML = restoreIcon + ' 还原';
+                if (row) row.classList.remove('ai-optimize-loading');
+                targetField.focus();
+            }
+        }
+
+        async function executeAction(action) {
+            if (state.mode === 'loading') return;
+            var content;
+            if (action.sourceFieldId) {
+                var sourceField = document.getElementById(action.sourceFieldId);
+                content = sourceField ? sourceField.value.trim() : '';
+            } else {
+                content = targetField.value.trim();
+            }
+            if (!content) {
+                Toast.warning(action.emptyMsg || '请先输入内容');
+                return;
+            }
+            var settings = (await API.getSettings()) || {};
+            if (!settings.ai_api_key) {
+                Toast.warning('请先在设置页配置 AI API Key');
+                return;
+            }
+
+            state.originalContent = targetField.value;
+            state.accumulated = '';
+            var prevReadOnly = targetField.readOnly;
+            var prevDisabled = targetField.disabled;
+
+            targetField.focus();
+            if (action.type === 'generate') {
+                targetField.readOnly = true;
+            } else {
+                targetField.disabled = true;
+            }
+            setMode('loading', action.label);
+
+            if (state.streamInstance) state.streamInstance.cleanup();
+
+            state.safetyTimer = setTimeout(function() {
+                state.streamInstance = null;
+                targetField.readOnly = prevReadOnly;
+                targetField.disabled = prevDisabled;
+                setMode('idle');
+                Toast.error('AI 操作超时，请检查 AI 配置或系统提示词是否已配置');
+            }, 30000);
+
+            state.streamInstance = withAIStream(action.apiMethod, {
+                onToken: function(token) {
+                    state.accumulated += token;
+                    targetField.value = state.accumulated;
+                    targetField.dispatchEvent(new Event('input'));
+                },
+                onDone: function() {
+                    state.streamInstance = null;
+                    clearTimeout(state.safetyTimer);
+                    targetField.readOnly = prevReadOnly;
+                    targetField.disabled = prevDisabled;
+                    Toast.success(action.type === 'generate' ? '生成完成' : '优化完成');
+                    setMode('restore');
+                },
+                onError: function(errMsg) {
+                    state.streamInstance = null;
+                    clearTimeout(state.safetyTimer);
+                    targetField.value = state.originalContent;
+                    targetField.dispatchEvent(new Event('input'));
+                    targetField.readOnly = prevReadOnly;
+                    targetField.disabled = prevDisabled;
+                    setMode('idle');
+                    Toast.error(errMsg);
+                }
+            });
+
+            await state.streamInstance.call(content);
+        }
+
+        btn.addEventListener('mousedown', function(e) {
+            if (state.mode === 'restore') {
+                e.preventDefault();
+            }
+        });
+
+        btn.addEventListener('click', function() {
+            if (state.mode === 'loading') return;
+            if (state.mode === 'restore') {
+                if (state.originalContent !== null) {
+                    targetField.value = state.originalContent;
+                    targetField.dispatchEvent(new Event('input'));
+                }
+                state.originalContent = null;
+                setMode('idle');
+                return;
+            }
+            wrap.classList.toggle('open');
+            if (wrap.classList.contains('open')) {
+                var firstItem = dropdown.querySelector('.ai-action-dropdown-item');
+                if (firstItem) firstItem.focus();
+            }
+        });
+
+        targetField.addEventListener('blur', function() {
+            setTimeout(function() {
+                closeDropdown();
+                if (state.mode === 'restore') {
+                    state.originalContent = null;
+                    setMode('idle');
+                }
+            }, 0);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!wrap.contains(e.target)) closeDropdown();
+        });
+
+        this._instances.set(wrapId, {
+            cleanup: function() {
+                if (state.streamInstance) state.streamInstance.cleanup();
+                clearTimeout(state.safetyTimer);
+            }
+        });
+    },
+
+    /**
+     * 清理指定按钮实例的事件监听和流式连接
+     * @param {string} wrapId - 容器 ID
+     */
+    cleanup(wrapId) {
+        var instance = this._instances.get(wrapId);
+        if (instance) {
+            instance.cleanup();
+            this._instances.delete(wrapId);
+        }
+    },
+
+    /**
+     * 清理所有按钮实例
+     */
+    cleanupAll() {
+        var self = this;
+        this._instances.forEach(function(instance, id) {
+            instance.cleanup();
+        });
+        this._instances.clear();
+    }
+};
+
+/**
  * 使用 AI 流式事件注册，统一管理 ai:token/ai:done/ai:error 事件
  * @param {Function} apiMethod - 调用 API 的方法，接收剩余参数
  * @param {Object} callbacks - 回调对象
