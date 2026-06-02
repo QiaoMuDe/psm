@@ -7,12 +7,13 @@ require (
 	gitee.com/MM-Q/go-kit v0.0.20
 	gitee.com/MM-Q/verman v0.0.19
 	github.com/glebarez/sqlite v1.11.0
-	github.com/wailsapp/wails/v2 v2.11.0
+	github.com/wailsapp/wails/v2 v2.12.0
 	golang.org/x/text v0.32.0
 	gorm.io/gorm v1.31.1
 )
 
 require (
+	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	gitee.com/MM-Q/color v1.0.4 // indirect
 	gitee.com/MM-Q/comprx v0.1.7 // indirect
 	gitee.com/MM-Q/logrotatex v1.2.5 // indirect

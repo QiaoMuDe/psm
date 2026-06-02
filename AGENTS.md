@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.15.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
+> 版本: 2.16.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
 
 ---
 
@@ -15,7 +15,7 @@
 - AI 翻译模块（独立侧边栏导航、左右分栏布局、流式翻译、语言交换、分栏动画）
 - 数据管理（完整备份恢复、一键备份还原、数据统计、孤立数据清理、数据重置、数据目录快捷打开）
 - 系统设置（程序家目录配置、8 种主题切换、侧边栏收起持久化、全局字体大小控制、全局字体族设置、AI 配置）
-- 仪表盘数据概览（统计卡片可点击跳转、置顶内容模块、全局搜索框、最常用提示词）
+- 仪表盘极简搜索首页（居中搜索框 + 品牌 Logo + 快捷标签 + 搜索按钮）
 - 全局拖拽导入（支持拖入 ZIP 文件直接导入技能）
 - 快捷键系统（全局快捷键 + 模块快捷键 + 悬停复制）
 - 批量操作增强（批量修改分类/添加移除标签/置顶取消置顶，下拉菜单交互）
@@ -70,7 +70,7 @@ psm/
 │   ├── css/
 │   │   ├── variables.css            # CSS 变量定义：8 种主题颜色/间距/字体/阴影/圆角/全局字体偏移
 │   │   ├── layout.css               # 布局样式：应用容器/侧边栏/主内容区/响应式/视图内容滚动
-│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索/置顶内容/跳转闪烁/动画效果/点击动画/Skill详情弹窗/日志级别分段滑块
+│   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索首页/AI操作按钮/置顶内容/跳转闪烁/动画效果/点击动画/Skill详情弹窗/日志级别分段滑块
 │   └── js/
 │       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换 + 获取置顶内容 + 文件操作
 │       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮 + KeyboardNav 工具函数 + copyToClipboard/withAIStream/positionPopup/AIActionButton 全局工具函数
@@ -81,7 +81,7 @@ psm/
 │       │   ├── context-menu.js      # 右键菜单组件（动态菜单项/自动定位/点击外部关闭/支持弹窗环境）
 │       │   └── dropdown-menu.js     # 下拉菜单组件（批量操作"更多操作"菜单，自动边界定位/点击外部关闭）
 │       └── views/
-│           ├── dashboard.js         # 仪表盘：可点击统计卡片 + 置顶内容模块 + 全局搜索框（300ms 防抖 + 键盘导航），模板已抽取到 html/dashboard.html
+│           ├── dashboard.js         # 仪表盘：极简搜索首页（居中搜索框+品牌Logo+快捷标签+搜索按钮），模板抽取到 html/dashboard.html
 │           ├── prompts.js           # Prompt 管理：卡片/列表视图/搜索/标签筛选/CRUD/批量管理/右键菜单/选择性导入导出/置顶/搜索高亮/悬停复制/模板变量格式说明/AI 生成提示词（回车确认），模板已抽取到 html/prompts.html
 │           ├── skills.js            # Skill 管理：卡片/列表视图/搜索/标签筛选/批量管理/右键菜单/ZIP 导入导出/文件浏览/置顶/搜索高亮/Skill 详情弹窗/文件右键菜单，模板已抽取到 html/skills.html
 │   │   ├── settings.js          # 设置页：程序家目录配置 + 8 种主题切换 + 全局字体大小控制 + 全局字体族设置 + 分组卡片布局 + 日志级别分段滑块，模板已抽取到 html/settings.html
@@ -491,8 +491,9 @@ psm/
 
 **仪表盘全局搜索流程**:
 ```
-用户在仪表盘搜索框输入关键词
-→ 300ms 防抖 → 调用 API.searchPrompts 和 API.searchSkills
+极简搜索首页（全屏居中 Logo + 搜索框 + 快捷标签）
+→ 用户输入关键词（300ms 防抖）或点击搜索按钮/回车
+→ 并行调用 API.getPrompts(keyword) 和 API.getSkills()
 → 合并结果 → 生成候选下拉菜单（最多 8 条）
 → 高亮匹配关键词
 → 用户点击候选项 → App.navigate(viewName, highlightId)
@@ -729,7 +730,7 @@ skills (独立表 + 文件系统)
 11. **卡片视图右键菜单**: 卡片/表格行右键弹出操作菜单（查看/编辑/导出/删除），替代固定按钮，界面更简洁
 12. **批量管理模式**: 工具栏"批量管理"按钮触发，底部操作栏 + 全选 + 退出管理，非批量时界面无复选框干扰
 13. **默认卡片视图**: Prompt 和 Skill 模块默认使用卡片视图（可通过设置切换）
-14. **仪表盘交互**: 统计卡片可点击跳转到对应模块，置顶内容模块（Prompt/Skill 各最多 3 个），全局搜索框（300ms 防抖，候选下拉菜单）
+14. **仪表盘交互**: 极简搜索首页（居中搜索框 + 品牌 Logo + 快捷标签跳转），搜索按钮 + 回车触发搜索，自动聚焦，键盘导航
 15. **导出后清空选中**: 两个模块导出完成后自动清空 selectedIds 和复选框 UI
 16. **构建时版本注入**: 通过 verman 库 + `-ldflags -X` 在构建时注入版本元数据，关于弹窗展示版本号
 17. **全局拖拽导入**: 基于 Wails `OnFileDrop` API，支持拖入 ZIP 文件直接导入技能，已存在的技能自动跳过并提示
@@ -747,13 +748,13 @@ skills (独立表 + 文件系统)
 29. **设置页分组卡片布局**: 外观/存储分组卡片，现代化视觉效果
 30. **关于弹窗**: 侧边栏 LOGO 点击触发，显示版本号、项目地址、快捷键帮助
 31. **仪表盘置顶内容模块**: 显示置顶的 Prompt 和 Skill（各最多 3 个），点击跳转并闪烁
-32. **仪表盘全局搜索框**: 替代最近更新，300ms 防抖，候选下拉菜单（最多 8 条）
+32. **仪表盘全局搜索**: 极简首页居中搜索框（`border-radius: 24px` 胶囊形），300ms 防抖，搜索按钮 + Enter 触发，候选下拉菜单最多 8 条
 33. **跳转闪烁效果**: 从仪表盘跳转后目标项红色边框+背景闪烁 3 秒
 34. **UI 阴影系统**: 5 级阴影（sm/md/lg/xl/2xl），卡片悬停效果
 35. **动画效果系统**: 3 级过渡（fast/normal/slow），模态框滑入动画，列表项入场动画
 36. **悬停复制**: 鼠标悬停在 Prompt 上时按 Ctrl+C 可复制内容
 37. **全局字体族设置**: 设置页字体族选择器（系统字体列表 + 搜索过滤 + 键盘导航），CSS 变量 `--font-family` 控制全局，自动滚动到选中项
-38. **搜索框键盘导航**: 仪表盘搜索框支持上下键移动高亮、回车选择、Esc 关闭
+38. **搜索框键盘导航**: 仪表盘搜索框支持上下键移动高亮、回车选择/搜索、Esc 关闭、Ctrl/Cmd+F 聚焦
 39. **数据重置功能**: 数据管理页"重置所有数据"按钮，二次确认后清空所有提示词、技能（含文件）、恢复默认设置
 40. **工具栏布局优化**: 工具栏按钮保持一行显示，不因导航栏展开而换行
 41. **点击动画反馈**: 卡片/行/统计卡片/置顶内容/搜索候选项使用 CSS `:active` 伪类实现按下瞬间缩放反馈
@@ -828,7 +829,7 @@ skills (独立表 + 文件系统)
 29. **搜索高亮**: `highlightText(text, keyword)` 函数，`<mark>` 标签红色加粗显示
 30. **全局字体偏移**: CSS 变量 `--font-size-offset`，所有 `font-size` 使用 `calc(XXpx + var(--font-size-offset))`
 31. **关于弹窗**: `app.js showAboutDialog()` 显示版本号、项目地址、快捷键帮助
-32. **仪表盘全局搜索**: 300ms 防抖，候选下拉菜单最多 8 条
+32. **仪表盘全局搜索**: 300ms 防抖 + 搜索按钮 + Enter 触发，候选下拉菜单最多 8 条，胶囊形搜索框（`border-radius: 24px`）
 33. **跳转闪烁**: `App.navigate(viewName, highlightId)` 传递 ID，3 秒动画
 34. **悬停复制**: `hoveredPromptId` 追踪悬停 ID，Ctrl+C 快捷键复制内容到剪贴板
 35. **模板变量格式**: `{{变量名}}` / `{{变量名|默认值}}`，支持中文变量名
@@ -958,6 +959,11 @@ skills (独立表 + 文件系统)
 146. **Skill 详情无描述兜底**: `viewSkill` 中 `.skill-detail-desc` 始终渲染，无描述时显示"暂无描述"文本，使用 `var(--text-secondary)` 颜色，与卡片列表的"暂无描述"风格一致
 147. **AI 操作按钮移除旧代码**: prompts.js 和 skills.js 删除 `bindOptimizeButton` 和 `bindGenerateButton` 方法（共约 170 行），所有模态框统一使用 `AIActionButton.init` 替代；HTML 模板中 `<button class="btn-ai-optimize">` 替换为 `<div class="ai-action-btn-wrap">` 空容器
 148. **AI 按钮加载遮罩恢复**: `.ai-optimize-loading::after` 伪元素在 `setMode('loading')` 时添加到 `.ai-optimize-row`，半透明遮罩（`rgba(0,0,0,0.05)`）+ `pointer-events: none`，`setMode('idle'/'restore')` 时移除
+149. **仪表盘重构为搜索首页**: 删除统计卡片（`.stats-grid`）和常用提示词（`.popular-section`），改为极简居中搜索布局；`.dashboard-home` 使用 `display: flex; align-items: center; justify-content: center; min-height: 100%` 全屏垂直居中
+150. **仪表盘品牌区域**: 搜索框上方显示应用名"PSM"（`.dashboard-logo`，`font-size: 48px; font-weight: 800; color: var(--accent)`）+ 副标题"Prompt & Skill Manager"（`.dashboard-subtitle`，`var(--text-muted)`），增强品牌识别
+151. **仪表盘搜索框增强**: `.dashboard-search-box` 使用 `border-radius: 24px` 胶囊形设计，内部嵌入搜索按钮（`.dashboard-search-btn`，`var(--accent)` 背景 + 白色文字），点击按钮和回车均触发搜索；页面加载后自动聚焦搜索框
+152. **仪表盘快捷标签**: 搜索框下方两个 pill 样式标签（`.dashboard-shortcut-tag`，`border-radius: 16px`），点击跳转到 Prompts/Skills 模块；hover 时 accent 变色 + scale 缩放反馈
+153. **仪表盘 JS 精简**: `DashboardView.render()` 移除 `API.countPrompts()`、`API.countSkills()`、`API.getTopUsedPrompts(5)` 调用和 `renderPopularList()` 方法；新增 `bindShortcuts()` 处理标签跳转；搜索逻辑（`bindSearchEvents` + `performSearch`）完全保留
 
 ---
 
@@ -965,6 +971,7 @@ skills (独立表 + 文件系统)
 
 | 版本 | 日期 | 主要变更 |
 |------|------|----------|
+| 2.16.0 | 2026-06-02 | 仪表盘重构为极简搜索首页（居中搜索框+品牌Logo+快捷标签），删除统计卡片和常用提示词 |
 | 2.15.0 | 2026-06-02 | AIActionButton 统一组件（下拉菜单+还原+焦点管理+键盘导航）、一句话生成优化按钮、Skill 详情无描述兜底 |
 | 2.14.0 | 2026-06-02 | Skill 编辑重命名同步、目录冲突检测回滚、SanitizeFileName、UpdateSkillFrontmatter、前端名称冲突视觉反馈、搜索重置、折叠面板、工具栏分隔符修复 |
 | 2.13.0 | 2026-06-02 | AI 生成名称/描述后端+前端、withAIStream 参数 bug 修复、系统提示词折叠面板、设置页新增 AI 生成提示词 |

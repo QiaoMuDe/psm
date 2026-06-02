@@ -2148,6 +2148,118 @@ tr.highlight-flash {
     font-weight: 600;
 }
 
+/* ==================== 仪表盘搜索首页 ==================== */
+
+.dashboard-home {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: var(--spacing-4);
+}
+
+.dashboard-home-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 600px;
+    margin-top: -60px;
+}
+
+.dashboard-logo {
+    font-size: calc(48px + var(--font-size-offset));
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -1.5px;
+    margin: 0;
+    line-height: 1.1;
+    user-select: none;
+}
+
+.dashboard-subtitle {
+    font-size: calc(15px + var(--font-size-offset));
+    color: var(--text-muted);
+    margin: var(--spacing-2) 0 var(--spacing-5);
+    letter-spacing: 0.5px;
+}
+
+.dashboard-search {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.dashboard-search-box {
+    display: flex;
+    align-items: center;
+    border-radius: 24px;
+    padding: 0;
+    overflow: visible;
+}
+
+.dashboard-search-input {
+    flex: 1;
+    padding: 14px 16px 14px 48px;
+    border: none;
+    background: transparent;
+    font-size: calc(15px + var(--font-size-offset));
+    min-width: 0;
+}
+
+.dashboard-search-btn {
+    flex-shrink: 0;
+    padding: 8px 20px;
+    margin: 4px;
+    border: none;
+    border-radius: 20px;
+    background-color: var(--accent);
+    color: #fff;
+    font-size: calc(14px + var(--font-size-offset));
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.dashboard-search-btn:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+}
+
+.dashboard-search-btn:active {
+    transform: scale(0.98);
+}
+
+.dashboard-shortcuts {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-4);
+}
+
+.dashboard-shortcut-tag {
+    padding: 5px 18px;
+    border-radius: 16px;
+    font-size: calc(13px + var(--font-size-offset));
+    color: var(--text-secondary);
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all var(--transition);
+    user-select: none;
+}
+
+.dashboard-shortcut-tag:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+.dashboard-shortcut-tag:active {
+    transform: scale(0.96);
+}
+
 /* ==================== 字体族选择器 ==================== */
 
 .settings-font-family-control {

@@ -1,6 +1,6 @@
 /**
  * 仪表盘视图组件
- * 显示应用概览和统计数据
+ * 极简搜索首页，居中搜索框 + 快捷入口
  */
 const DashboardView = {
     _searchTimer: null,
@@ -15,30 +15,32 @@ const DashboardView = {
             this._template = await resp.text();
         }
         container.innerHTML = this._template;
-        try {
-            const [promptCount, skillCount, popularPrompts] = await Promise.all([
-                API.countPrompts(),
-                API.countSkills(),
-                API.getTopUsedPrompts(5)
-            ]);
-            document.getElementById('prompt-count').textContent = promptCount;
-            document.getElementById('skill-count').textContent = skillCount;
-            container.querySelectorAll('.stat-card[data-view]').forEach(card => {
-                card.addEventListener('click', () => App.navigate(card.dataset.view));
-            });
-            this.renderPopularList(container, popularPrompts);
-            this.bindSearchEvents();
-        } catch (err) {
-            console.error('加载仪表盘数据失败:', err);
-        }
+        this.bindSearchEvents();
+        this.bindShortcuts(container);
+
+        setTimeout(() => {
+            const input = document.getElementById('global-search');
+            if (input) input.focus();
+        }, 100);
     },
 
     /**
-     * 绑定搜索框事件
+     * 绑定快捷标签点击跳转
+     * @param {HTMLElement} container - 容器元素
+     */
+    bindShortcuts(container) {
+        container.querySelectorAll('.dashboard-shortcut-tag[data-view]').forEach(tag => {
+            tag.addEventListener('click', () => App.navigate(tag.dataset.view));
+        });
+    },
+
+    /**
+     * 绑定搜索框和搜索按钮事件
      */
     bindSearchEvents() {
         const searchInput = document.getElementById('global-search');
         const dropdown = document.getElementById('search-dropdown');
+        const searchBtn = document.getElementById('dashboard-search-btn');
 
         if (!searchInput || !dropdown) return;
 
@@ -61,12 +63,29 @@ const DashboardView = {
             }
         });
 
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => {
+                const keyword = searchInput.value.trim();
+                if (keyword) {
+                    DashboardView.performSearch(keyword, dropdown);
+                }
+            });
+        }
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const keyword = searchInput.value.trim();
+                if (keyword) {
+                    DashboardView.performSearch(keyword, dropdown);
+                }
+            }
+        });
+
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.global-search-wrapper')) {
                 dropdown.style.display = 'none';
             }
         });
-
 
         KeyboardNav.bind(searchInput, {
             getItems: () => dropdown.querySelectorAll('.search-result-item'),
@@ -140,40 +159,5 @@ const DashboardView = {
         } catch (err) {
             console.error('搜索失败:', err);
         }
-    },
-
-    /**
-     * 渲染最常用提示词列表到容器
-     * @param {HTMLElement} container - 容器元素
-     * @param {Array} prompts - 最常用的 Prompt 列表
-     */
-    renderPopularList(container, prompts) {
-        const popularList = container.querySelector('#popular-list');
-        if (!popularList) return;
-
-        if (!prompts || prompts.length === 0) {
-            popularList.innerHTML = `
-                <div class="empty-state-small">
-                    <p>暂无使用记录</p>
-                </div>
-            `;
-            return;
-        }
-
-        const items = prompts.map(p => `
-            <div class="popular-item" data-id="${p.id}">
-                <div class="popular-item-header">
-                    <span class="popular-item-name">${escapeHtml(p.name)}</span>
-                    <span class="popular-item-count">${p.usage_count} 次使用</span>
-                </div>
-                <div class="popular-item-preview">${escapeHtml(p.content.substring(0, 80))}${p.content.length > 80 ? '...' : ''}</div>
-            </div>
-        `).join('');
-
-        popularList.innerHTML = items;
-
-        popularList.querySelectorAll('.popular-item').forEach(el => {
-            el.addEventListener('click', () => App.navigate('prompts', Number(el.dataset.id)));
-        });
     }
 };
