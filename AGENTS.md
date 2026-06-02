@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.16.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
+> 版本: 2.17.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
 
 ---
 
@@ -73,7 +73,7 @@ psm/
 │   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索首页/AI操作按钮/置顶内容/跳转闪烁/动画效果/点击动画/Skill详情弹窗/日志级别分段滑块
 │   └── js/
 │       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换 + 获取置顶内容 + 文件操作
-│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮 + KeyboardNav 工具函数 + copyToClipboard/withAIStream/positionPopup/AIActionButton 全局工具函数
+│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮 + KeyboardNav 工具函数 + copyToClipboard/withAIStream(代数标记单例)/positionPopup/AIActionButton/BatchMixin 全局工具函数
 │       ├── components/
 │       │   ├── toast.js             # Toast 消息组件（success/error/warning/info + SVG 图标）
 │       │   ├── modal.js             # 模态框组件（打开/关闭/内容填充）
@@ -139,7 +139,7 @@ psm/
 | 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置、日志级别获取设置、全方法日志覆盖（Errorw/Infow） | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
 | Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶)、全方法日志覆盖（Errorw/Warnw/Infow） | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
 | Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) + 名称特殊字符清理(SanitizeFileName) + 导入时同步更新 SKILL.md frontmatter + 编辑重命名同步目录+SKILL.md+DB relative_path + 目录冲突检测与回滚、全方法日志覆盖（Errorw/Debugw/Infow/Warnw） | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
-| AI 服务 | 流式生成提示词（含重新生成、回车确认）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接、withAIStream 统一事件管理（EventsOff 防泄漏）、AIActionButton 统一操作按钮组件（下拉菜单+还原+焦点管理）、AI 根据内容生成名称/描述 | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
+| AI 服务 | 流式生成提示词（含重新生成、回车确认）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接、withAIStream 代数标记单例（generation counter 防并发+防泄漏）、AIActionButton 统一操作按钮组件（下拉菜单+还原+焦点管理）、BatchMixin 批量操作共享 mixin、AI 根据内容生成名称/描述 | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
 | 前端 SPA | 路由管理、视图切换、组件系统（含右键菜单） | `frontend/js/app.js` + views/ | 用户交互 → API 调用 |
@@ -417,8 +417,9 @@ psm/
 ```
 用户点击 AI 按钮（⚡ AI ▾）→ 下拉菜单显示可用操作（生成/优化）
 → 用户选择操作 → AIActionButton.executeAction(apiMethod)
+→ 检查 _activeStream 单例（generation counter），已有操作则拒绝并提示
 → 保存 originalContent → setMode('loading') 禁用输入框 + 灰色遮罩
-→ withAIStream(apiMethod) 流式替换内容
+→ withAIStream(apiMethod) 流式替换内容（generation 递增，旧监听器自动失效）
 → 完成后 setMode('restore') 显示"还原"按钮
 → 用户点击"还原"恢复原始值 或 blur 自动恢复为 AI 按钮
 ```
@@ -734,7 +735,7 @@ skills (独立表 + 文件系统)
 15. **导出后清空选中**: 两个模块导出完成后自动清空 selectedIds 和复选框 UI
 16. **构建时版本注入**: 通过 verman 库 + `-ldflags -X` 在构建时注入版本元数据，关于弹窗展示版本号
 17. **全局拖拽导入**: 基于 Wails `OnFileDrop` API，支持拖入 ZIP 文件直接导入技能，已存在的技能自动跳过并提示
-18. **快捷键系统**: ShortcutManager 管理全局快捷键（Ctrl+N/F/S/Esc/1-5/?）和模块快捷键（Delete/Ctrl+A/D）
+18. **快捷键系统**: ShortcutManager 管理全局快捷键（Ctrl+N/F/S/Esc/1-6/?）和模块快捷键（Delete/Ctrl+A/D），视图滚动快捷键（Ctrl+Home/End、PgUp/PgDn）由 BatchMixin.bindViewScroll 提供
 19. **Prompt 字符计数**: 新建/编辑 Prompt 时实时显示字符数，查看详情时显示总字符数
 20. **数据统计与清理**: 数据管理页显示 Prompt/Skill 数量和数据库大小，支持检测并清理孤立 Skill 数据
 21. **搜索防抖**: 搜索输入框 100ms 防抖，减少不必要的 API 调用
@@ -964,6 +965,15 @@ skills (独立表 + 文件系统)
 151. **仪表盘搜索框增强**: `.dashboard-search-box` 使用 `border-radius: 24px` 胶囊形设计，内部嵌入搜索按钮（`.dashboard-search-btn`，`var(--accent)` 背景 + 白色文字），点击按钮和回车均触发搜索；页面加载后自动聚焦搜索框
 152. **仪表盘快捷标签**: 搜索框下方两个 pill 样式标签（`.dashboard-shortcut-tag`，`border-radius: 16px`），点击跳转到 Prompts/Skills 模块；hover 时 accent 变色 + scale 缩放反馈
 153. **仪表盘 JS 精简**: `DashboardView.render()` 移除 `API.countPrompts()`、`API.countSkills()`、`API.getTopUsedPrompts(5)` 调用和 `renderPopularList()` 方法；新增 `bindShortcuts()` 处理标签跳转；搜索逻辑（`bindSearchEvents` + `performSearch`）完全保留
+154. **键盘滚动快捷键**: `BatchMixin.bindViewScroll(container)` 绑定 document 级 keydown 监听，支持 Ctrl+Home/End（顶部/底部）和 PgUp/PgDn（翻页），排除模态框和输入框；render 时注册、离开视图时残留但无害（查找不到 `.view-content` 即 return）
+155. **快捷键帮助补全**: `ShortcutManager.showHelp` 快捷键列表新增 `PgUp/PgDn`（翻页）和 `Ctrl+Home/End`（滚动到顶部/底部）两条说明
+156. **BatchMixin 批量操作共享**: `app.js` 新增 `BatchMixin` 对象，提取 PromptsView 和 SkillsView 共享的 12 个方法（bindViewScroll/highlightItem/toggleBatchMode/exitBatchMode/syncBatchMode/updateBatchBar/syncSelectionUI/toggleSelectAll/bindCheckboxEvents/handleBatchAddTags/handleBatchRemoveTags/handleBatchSetPin）；各视图通过 `_batchConfig` 配置对象注入差异化 DOM ID、API 方法、标签文案和刷新回调
+157. **BatchMixin 混入方式**: `Object.assign(this, BatchMixin)` 在 render() 中混入，`_batchConfig` 包含 listId/batchBarId/selectAllId/entityLabel/batchAddTagsApi/batchRemoveTagsApi/batchSetPinApi/loadAll/getAllItems 及标签操作相关 DOM ID
+158. **withAIStream 代数标记单例**: `_activeStream` 全局引用 + `_aiGeneration` 递增计数器；新操作启动前检查 `_activeStream`，已有则拒绝（返回 null + onError 提示）；每个 `EventsOn` 回调第一行检查 `_aiGeneration !== generation` 则 return，旧监听器自动失效无需清理
+159. **AIActionButton 事件监听清理**: `init()` 中 blur 和 document click handler 提取为具名变量存入 `_instances` Map；`cleanup()` 调用 `removeEventListener` 精确移除，防止模态框反复打开关闭时监听器累积
+160. **DashboardView/SettingsView 监听器清理**: `bindSearchEvents` 和 `bindEvents` 中 document 级 click/keydown 监听器注册前先移除旧的（`_docClickHandler`/`_docKeydownHandler`），防止导航到仪表盘/设置页多次时监听器叠加
+161. **loadSkills 导入去重**: `import-skill-btn` 和 `add-skill-btn` 的 click handler 提取为 `_handleSkillImport()` 共享方法，两个按钮共用同一导入逻辑（单文件 importSkillAuto / 多文件 batchImportSkills），删除约 50 行重复代码
+162. **AI 操作并发防护**: `withAIStream` 入口检查 `_activeStream`，已有活跃操作时返回 null + 调用 `onError('有 AI 操作正在执行中，请等待完成')`；`AIActionButton.executeAction` 检查返回值为 null 时恢复输入框状态并退出 loading
 
 ---
 
@@ -971,6 +981,7 @@ skills (独立表 + 文件系统)
 
 | 版本 | 日期 | 主要变更 |
 |------|------|----------|
+| 2.17.0 | 2026-06-02 | BatchMixin 提取 12 个共享方法（PromptsView/SkillsView 去重约 640 行）、withAIStream 代数标记单例（generation counter 防并发+防泄漏）、快捷键帮助补全、事件监听器泄漏修复（AIActionButton/DashboardView/SettingsView）、loadSkills 导入去重 |
 | 2.16.0 | 2026-06-02 | 仪表盘重构为极简搜索首页（居中搜索框+品牌Logo+快捷标签），删除统计卡片和常用提示词 |
 | 2.15.0 | 2026-06-02 | AIActionButton 统一组件（下拉菜单+还原+焦点管理+键盘导航）、一句话生成优化按钮、Skill 详情无描述兜底 |
 | 2.14.0 | 2026-06-02 | Skill 编辑重命名同步、目录冲突检测回滚、SanitizeFileName、UpdateSkillFrontmatter、前端名称冲突视觉反馈、搜索重置、折叠面板、工具栏分隔符修复 |

@@ -19,6 +19,33 @@ const SkillsView = {
     async render(container, highlightId = null) {
         this.highlightId = highlightId;
         this.currentKeyword = '';
+        if (this._viewScrollHandler) {
+            document.removeEventListener('keydown', this._viewScrollHandler);
+            this._viewScrollHandler = null;
+        }
+        Object.assign(this, BatchMixin);
+        this._batchConfig = {
+            listId: 'skill-list',
+            batchBarId: 'skill-batch-bar',
+            selectedCountId: 'skill-selected-count',
+            selectAllId: 'skill-select-all',
+            batchManageBtnId: 'batch-manage-skill-btn',
+            entityLabel: '技能',
+            pluralLabel: '个技能',
+            batchAddTagsApi: API.batchAddSkillTags,
+            batchRemoveTagsApi: API.batchRemoveSkillTags,
+            batchSetPinApi: API.batchSetPinSkill,
+            loadAll: () => this.loadSkills(),
+            getAllItems: () => this.allSkills,
+            tagInputId: 'skill-batch-tags-input',
+            tagCancelId: 'skill-batch-tags-cancel-btn',
+            tagConfirmId: 'skill-batch-tags-confirm-btn',
+            removeTagCbClass: 'skill-batch-remove-tag-cb',
+            removeTagSelectAllId: 'skill-batch-remove-tags-select-all',
+            removeTagDeselectAllId: 'skill-batch-remove-tags-deselect-all',
+            removeTagCancelId: 'skill-batch-remove-tags-cancel-btn',
+            removeTagConfirmId: 'skill-batch-remove-tags-confirm-btn',
+        };
         if (!this._template) {
             const resp = await fetch('html/skills.html');
             this._template = await resp.text();
@@ -31,21 +58,7 @@ const SkillsView = {
         });
         await this.loadSkills();
         this.bindEvents();
-    },
-
-    /**
-     * 高亮指定 ID 的项目并闪烁 3 秒
-     * @param {number} id - 要高亮的项目 ID
-     */
-    highlightItem(id) {
-        const el = document.querySelector(`[data-id="${id}"]`);
-        if (el) {
-            el.classList.add('highlight-flash');
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-                el.classList.remove('highlight-flash');
-            }, 3000);
-        }
+        this.bindViewScroll(container);
     },
 
     /**
@@ -100,7 +113,8 @@ const SkillsView = {
         let html = '<div class="table-container"><table class="table"><thead><tr><th class="th-checkbox"></th><th>名称</th><th>描述</th><th>标签</th><th>更新时间</th><th>置顶</th><th>操作</th></tr></thead><tbody>';
 
         skills.forEach(s => {
-            const desc = s.description ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '-';
+            const hasDesc = !!s.description;
+            const desc = hasDesc ? (s.description.length > 50 ? s.description.substring(0, 50) + '...' : s.description) : '暂无描述';
             const time = new Date(s.updated_at).toLocaleString('zh-CN');
             const tags = parseTags(s.tags);
             const tagsHtml = tags.map(t =>
@@ -110,7 +124,7 @@ const SkillsView = {
                 <tr data-id="${s.id}" class="${s.is_pinned ? 'row-pinned' : ''}">
                     <td class="td-checkbox"><input type="checkbox" class="row-checkbox" data-id="${s.id}" /></td>
                     <td><strong>${highlightText(s.name, SkillsView.currentKeyword)}</strong></td>
-                    <td class="text-secondary">${highlightText(desc, SkillsView.currentKeyword)}</td>
+                    <td class="${hasDesc ? 'text-secondary' : 'text-muted'}">${highlightText(desc, SkillsView.currentKeyword)}</td>
                     <td><div class="item-card-tags">${tagsHtml}</div></td>
                     <td>${time}</td>
                     <td>
@@ -261,144 +275,6 @@ const SkillsView = {
     },
 
     /**
-     * 绑定 checkbox 选择事件（全选/单选/卡片选择）
-     * @param {HTMLElement} container - 包含 checkbox 的容器元素
-     */
-    bindCheckboxEvents(container) {
-        const selectAll = document.getElementById('skill-select-all');
-        const cbSelector = '.row-checkbox, .card-checkbox';
-        if (selectAll) {
-            selectAll.addEventListener('change', () => {
-                container.querySelectorAll(cbSelector).forEach(cb => {
-                    cb.checked = selectAll.checked;
-                    const id = Number(cb.dataset.id);
-                    if (selectAll.checked) {
-                        this.selectedIds.add(id);
-                    } else {
-                        this.selectedIds.delete(id);
-                    }
-                });
-                this.updateBatchBar();
-            });
-        }
-
-        container.querySelectorAll('.row-checkbox, .card-checkbox').forEach(cb => {
-            cb.addEventListener('change', () => {
-                const id = Number(cb.dataset.id);
-                if (cb.checked) {
-                    this.selectedIds.add(id);
-                } else {
-                    this.selectedIds.delete(id);
-                }
-                if (selectAll) {
-                    const allCbs = container.querySelectorAll(cbSelector);
-                    selectAll.checked = allCbs.length > 0 && this.selectedIds.size === allCbs.length;
-                }
-                this.updateBatchBar();
-            });
-        });
-    },
-
-    /**
-     * 更新批量操作栏的显示状态和选中计数
-     */
-    updateBatchBar() {
-        const bar = document.getElementById('skill-batch-bar');
-        const countEl = document.getElementById('skill-selected-count');
-        if (bar && countEl) {
-            const count = this.selectedIds.size;
-            bar.style.display = this.batchMode ? 'flex' : 'none';
-            countEl.textContent = `${count} 项已选`;
-        }
-        this.syncSelectionUI();
-    },
-
-    /**
-     * 同步选中状态的视觉反馈（高亮行/卡片）
-     */
-    syncSelectionUI() {
-        document.querySelectorAll('#skill-list tr[data-id]').forEach(row => {
-            const id = Number(row.dataset.id);
-            row.classList.toggle('row-selected', this.selectedIds.has(id));
-        });
-        document.querySelectorAll('#skill-list .item-card[data-id]').forEach(card => {
-            const id = Number(card.dataset.id);
-            card.classList.toggle('card-selected', this.selectedIds.has(id));
-        });
-    },
-
-    /**
-     * 切换批量管理模式
-     */
-    toggleBatchMode() {
-        this.batchMode = !this.batchMode;
-        if (!this.batchMode) {
-            this.selectedIds.clear();
-            DropdownMenu.hide();
-        }
-        this.syncBatchMode();
-        this.updateBatchBar();
-    },
-
-    /**
-     * 退出批量管理模式
-     */
-    exitBatchMode() {
-        this.batchMode = false;
-        this.selectedIds.clear();
-        DropdownMenu.hide();
-        this.syncBatchMode();
-        this.updateBatchBar();
-    },
-
-    /**
-     * 同步批量管理模式的 DOM 状态（添加/移除 batch-mode 类、显示/隐藏批量栏）
-     */
-    syncBatchMode() {
-        const viewContent = document.querySelector('#skill-list').closest('.view-content') || document.querySelector('#skill-list').parentElement;
-        const wrapper = viewContent.closest('.view-toolbar') || viewContent.parentElement;
-        if (wrapper) {
-            wrapper.classList.toggle('batch-mode', this.batchMode);
-        }
-        const bar = document.getElementById('skill-batch-bar');
-        if (bar) {
-            bar.style.display = this.batchMode ? 'flex' : 'none';
-        }
-        const btn = document.getElementById('batch-manage-skill-btn');
-        if (btn) {
-            btn.classList.toggle('btn-primary', this.batchMode);
-            btn.classList.toggle('btn-default', !this.batchMode);
-        }
-        if (!this.batchMode) {
-            document.getElementById('skill-list').querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            const selectAll = document.getElementById('skill-select-all');
-            if (selectAll) selectAll.checked = false;
-        }
-    },
-
-    /**
-     * 切换全选/取消全选状态
-     * @param {boolean} checked - true 全选，false 取消全选
-     */
-    toggleSelectAll(checked) {
-        const container = document.getElementById('skill-list');
-        if (!container) return;
-        const cbSelector = this.currentView === 'card' ? '.card-checkbox' : '.row-checkbox';
-        container.querySelectorAll(cbSelector).forEach(cb => {
-            cb.checked = checked;
-            const id = Number(cb.dataset.id);
-            if (checked) {
-                this.selectedIds.add(id);
-            } else {
-                this.selectedIds.delete(id);
-            }
-        });
-        const selectAll = document.getElementById('skill-select-all');
-        if (selectAll) selectAll.checked = checked;
-        this.updateBatchBar();
-    },
-
-    /**
      * 处理批量删除 Skill 操作
      */
     async handleBatchDelete() {
@@ -418,88 +294,29 @@ const SkillsView = {
         }
     },
 
-    handleBatchAddTags() {
-        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的技能'); return; }
-        Modal.open('添加标签', `
-            <div style="padding:16px">
-                <label class="form-label">标签（逗号分隔）</label>
-                <input type="text" class="form-input" id="skill-batch-tags-input" placeholder="标签1, 标签2, ..." />
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-default" id="skill-batch-tags-cancel-btn">取消</button>
-                <button type="button" class="btn btn-primary" id="skill-batch-tags-confirm-btn">确认</button>
-            </div>
-        `);
-        document.getElementById('skill-batch-tags-cancel-btn').addEventListener('click', () => Modal.close());
-        document.getElementById('skill-batch-tags-confirm-btn').addEventListener('click', async () => {
-            const val = document.getElementById('skill-batch-tags-input').value.trim();
-            if (!val) { Toast.warning('请输入标签'); return; }
-            const tags = val.split(',').map(t => t.trim()).filter(Boolean);
-            try {
-                await API.batchAddSkillTags([...this.selectedIds], tags);
-                Toast.success(`已为 ${this.selectedIds.size} 个技能添加标签`);
-                Modal.close();
-                this.selectedIds.clear();
-                this.loadSkills();
-            } catch (e) { Toast.error('操作失败: ' + e.message); }
-        });
-    },
-
-    handleBatchRemoveTags() {
-        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的技能'); return; }
-        const allTags = new Set();
-        [...this.selectedIds].forEach(id => {
-            const s = this.allSkills.find(x => x.id === id);
-            if (s) {
-                parseTags(s.tags).forEach(x => allTags.add(x));
+    /**
+     * 处理技能包导入（单个或批量 ZIP 文件）
+     */
+    async _handleSkillImport() {
+        try {
+            const filePaths = await API.openMultiZIPFileDialog();
+            if (!filePaths || filePaths.length === 0) return;
+            let result;
+            if (filePaths.length === 1) {
+                result = await API.importSkillAuto(filePaths[0]);
+            } else {
+                result = await API.batchImportSkills(filePaths);
             }
-        });
-        if (allTags.size === 0) { Toast.info('选中的技能没有标签'); return; }
-        const tagsHtml = [...allTags].map(t => `<label class="batch-remove-tag-item"><input type="checkbox" class="skill-batch-remove-tag-cb" value="${escapeHtml(t)}" checked /> <span class="tag tag-sm">${escapeHtml(t)}</span></label>`).join('');
-        Modal.open('移除标签', `
-            <div class="batch-remove-tags-wrap">
-                <div class="batch-remove-tags-header">
-                    <span class="batch-remove-tags-label">勾选要移除的标签</span>
-                    <div class="batch-remove-tags-actions">
-                        <button type="button" class="btn btn-xs btn-default" id="skill-batch-remove-tags-select-all">全选</button>
-                        <button type="button" class="btn btn-xs btn-default" id="skill-batch-remove-tags-deselect-all">取消全选</button>
-                    </div>
-                </div>
-                <div class="batch-remove-tags-list">${tagsHtml}</div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-default" id="skill-batch-remove-tags-cancel-btn">取消</button>
-                <button type="button" class="btn btn-primary" id="skill-batch-remove-tags-confirm-btn">确认</button>
-            </div>
-        `);
-        document.getElementById('skill-batch-remove-tags-cancel-btn').addEventListener('click', () => Modal.close());
-        document.getElementById('skill-batch-remove-tags-select-all').addEventListener('click', () => {
-            document.querySelectorAll('.skill-batch-remove-tag-cb').forEach(cb => cb.checked = true);
-        });
-        document.getElementById('skill-batch-remove-tags-deselect-all').addEventListener('click', () => {
-            document.querySelectorAll('.skill-batch-remove-tag-cb').forEach(cb => cb.checked = false);
-        });
-        document.getElementById('skill-batch-remove-tags-confirm-btn').addEventListener('click', async () => {
-            const toRemove = [];
-            document.querySelectorAll('.skill-batch-remove-tag-cb').forEach(cb => { if (cb.checked) toRemove.push(cb.value); });
-            if (toRemove.length === 0) { Toast.info('请勾选要移除的标签'); return; }
-            try {
-                await API.batchRemoveSkillTags([...this.selectedIds], toRemove);
-                Toast.success(`已从 ${this.selectedIds.size} 个技能中移除 ${toRemove.length} 个标签`);
-                Modal.close();
-                this.selectedIds.clear();
-                this.loadSkills();
-            } catch (e) { Toast.error('操作失败: ' + e.message); }
-        });
-    },
-
-    handleBatchSetPin(pinned) {
-        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的技能'); return; }
-        API.batchSetPinSkill([...this.selectedIds], pinned).then(() => {
-            Toast.success(pinned ? '已置顶' : '已取消置顶');
-            this.selectedIds.clear();
-            this.loadSkills();
-        }).catch(e => Toast.error('操作失败: ' + e.message));
+            let msg = `导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
+            if (result.failed > 0 && result.errors && result.errors.length > 0) {
+                msg += '\n' + result.errors.slice(0, 3).join('\n');
+                if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
+            }
+            Toast[result.failed > 0 ? 'warning' : 'success'](msg);
+            await this.loadSkills();
+        } catch (err) {
+            // 错误已由 API.call 处理
+        }
     },
 
     /**
@@ -536,32 +353,7 @@ const SkillsView = {
             });
         });
 
-        document.getElementById('import-skill-btn').addEventListener('click', async () => {
-            try {
-                const filePaths = await API.openMultiZIPFileDialog();
-                if (!filePaths || filePaths.length === 0) return;
-                if (filePaths.length === 1) {
-                    const result = await API.importSkillAuto(filePaths[0]);
-                    let msg = `导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
-                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
-                        msg += `\n` + result.errors.slice(0, 3).join('\n');
-                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
-                    }
-                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
-                } else {
-                    const result = await API.batchImportSkills(filePaths);
-                    let msg = `批量导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
-                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
-                        msg += `\n` + result.errors.slice(0, 3).join('\n');
-                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
-                    }
-                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
-                }
-                await this.loadSkills();
-            } catch (err) {
-                // 错误已由 API.call 处理
-            }
-        });
+        document.getElementById('import-skill-btn').addEventListener('click', () => this._handleSkillImport());
 
         document.getElementById('export-skill-btn').addEventListener('click', async () => {
             try {
@@ -600,32 +392,7 @@ const SkillsView = {
             ]);
         });
 
-        document.getElementById('add-skill-btn').addEventListener('click', async () => {
-            try {
-                const filePaths = await API.openMultiZIPFileDialog();
-                if (!filePaths || filePaths.length === 0) return;
-                if (filePaths.length === 1) {
-                    const result = await API.importSkillAuto(filePaths[0]);
-                    let msg = `导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
-                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
-                        msg += `\n` + result.errors.slice(0, 3).join('\n');
-                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
-                    }
-                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
-                } else {
-                    const result = await API.batchImportSkills(filePaths);
-                    let msg = `批量导入完成：成功 ${result.success}，跳过 ${result.skipped}，失败 ${result.failed}`;
-                    if (result.failed > 0 && result.errors && result.errors.length > 0) {
-                        msg += `\n` + result.errors.slice(0, 3).join('\n');
-                        if (result.errors.length > 3) msg += `\n...等 ${result.errors.length} 个错误`;
-                    }
-                    Toast[result.failed > 0 ? 'warning' : 'success'](msg);
-                }
-                await this.loadSkills();
-            } catch (err) {
-                // 错误已由 API.call 处理
-            }
-        });
+        document.getElementById('add-skill-btn').addEventListener('click', () => this._handleSkillImport());
 
         document.getElementById('batch-manage-skill-btn').addEventListener('click', () => this.toggleBatchMode());
 

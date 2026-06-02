@@ -23,6 +23,33 @@ const PromptsView = {
         this.currentKeyword = '';
         this.currentCategory = 'all';
         this.currentTag = '';
+        if (this._viewScrollHandler) {
+            document.removeEventListener('keydown', this._viewScrollHandler);
+            this._viewScrollHandler = null;
+        }
+        Object.assign(this, BatchMixin);
+        this._batchConfig = {
+            listId: 'prompt-list',
+            batchBarId: 'prompt-batch-bar',
+            selectedCountId: 'prompt-selected-count',
+            selectAllId: 'prompt-select-all',
+            batchManageBtnId: 'batch-manage-prompt-btn',
+            entityLabel: '提示词',
+            pluralLabel: '条提示词',
+            batchAddTagsApi: API.batchAddPromptTags,
+            batchRemoveTagsApi: API.batchRemovePromptTags,
+            batchSetPinApi: API.batchSetPinPrompt,
+            loadAll: () => this.loadPrompts(),
+            getAllItems: () => this.allPrompts,
+            tagInputId: 'batch-tags-input',
+            tagCancelId: 'batch-tags-cancel-btn',
+            tagConfirmId: 'batch-tags-confirm-btn',
+            removeTagCbClass: 'batch-remove-tag-cb',
+            removeTagSelectAllId: 'batch-remove-tags-select-all',
+            removeTagDeselectAllId: 'batch-remove-tags-deselect-all',
+            removeTagCancelId: 'batch-remove-tags-cancel-btn',
+            removeTagConfirmId: 'batch-remove-tags-confirm-btn',
+        };
         if (!this._template) {
             const resp = await fetch('html/prompts.html');
             this._template = await resp.text();
@@ -34,6 +61,7 @@ const PromptsView = {
         await this.loadCategories();
         await this.loadPrompts();
         this.bindEvents();
+        this.bindViewScroll(container);
     },
 
     /**
@@ -281,159 +309,6 @@ const PromptsView = {
     },
 
     /**
-     * 高亮指定 ID 的项目并闪烁 3 秒
-     * @param {number} id - 要高亮的项目 ID
-     */
-    highlightItem(id) {
-        const el = document.querySelector(`[data-id="${id}"]`);
-        if (el) {
-            el.classList.add('highlight-flash');
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-                el.classList.remove('highlight-flash');
-            }, 3000);
-        }
-    },
-
-    /**
-     * 绑定 checkbox 选择事件（全选/单选/卡片选择）
-     * @param {HTMLElement} container - 包含 checkbox 的容器元素
-     */
-    bindCheckboxEvents(container) {
-        const selectAll = document.getElementById('prompt-select-all');
-        const cbSelector = '.row-checkbox, .card-checkbox';
-        if (selectAll) {
-            selectAll.addEventListener('change', () => {
-                container.querySelectorAll(cbSelector).forEach(cb => {
-                    cb.checked = selectAll.checked;
-                    const id = Number(cb.dataset.id);
-                    if (selectAll.checked) {
-                        this.selectedIds.add(id);
-                    } else {
-                        this.selectedIds.delete(id);
-                    }
-                });
-                this.updateBatchBar();
-            });
-        }
-
-        container.querySelectorAll('.row-checkbox, .card-checkbox').forEach(cb => {
-            cb.addEventListener('change', () => {
-                const id = Number(cb.dataset.id);
-                if (cb.checked) {
-                    this.selectedIds.add(id);
-                } else {
-                    this.selectedIds.delete(id);
-                }
-                if (selectAll) {
-                    const allCbs = container.querySelectorAll(cbSelector);
-                    selectAll.checked = allCbs.length > 0 && this.selectedIds.size === allCbs.length;
-                }
-                this.updateBatchBar();
-            });
-        });
-    },
-
-    /**
-     * 更新批量操作栏的显示状态和选中计数
-     */
-    updateBatchBar() {
-        const bar = document.getElementById('prompt-batch-bar');
-        const countEl = document.getElementById('prompt-selected-count');
-        if (bar && countEl) {
-            const count = this.selectedIds.size;
-            bar.style.display = this.batchMode ? 'flex' : 'none';
-            countEl.textContent = `${count} 项已选`;
-        }
-        this.syncSelectionUI();
-    },
-
-    /**
-     * 同步选中状态的视觉反馈（高亮行/卡片）
-     */
-    syncSelectionUI() {
-        document.querySelectorAll('#prompt-list tr[data-id]').forEach(row => {
-            const id = Number(row.dataset.id);
-            row.classList.toggle('row-selected', this.selectedIds.has(id));
-        });
-        document.querySelectorAll('#prompt-list .item-card[data-id]').forEach(card => {
-            const id = Number(card.dataset.id);
-            card.classList.toggle('card-selected', this.selectedIds.has(id));
-        });
-    },
-
-    /**
-     * 切换批量管理模式
-     */
-    toggleBatchMode() {
-        this.batchMode = !this.batchMode;
-        if (!this.batchMode) {
-            this.selectedIds.clear();
-            DropdownMenu.hide();
-        }
-        this.syncBatchMode();
-        this.updateBatchBar();
-    },
-
-    /**
-     * 退出批量管理模式
-     */
-    exitBatchMode() {
-        this.batchMode = false;
-        this.selectedIds.clear();
-        DropdownMenu.hide();
-        this.syncBatchMode();
-        this.updateBatchBar();
-    },
-
-    /**
-     * 同步批量管理模式的 DOM 状态（添加/移除 batch-mode 类、显示/隐藏批量栏）
-     */
-    syncBatchMode() {
-        const viewContent = document.querySelector('#prompt-list').closest('.view-content') || document.querySelector('#prompt-list').parentElement;
-        const wrapper = viewContent.closest('.view-toolbar') || viewContent.parentElement;
-        if (wrapper) {
-            wrapper.classList.toggle('batch-mode', this.batchMode);
-        }
-        const bar = document.getElementById('prompt-batch-bar');
-        if (bar) {
-            bar.style.display = this.batchMode ? 'flex' : 'none';
-        }
-        const btn = document.getElementById('batch-manage-prompt-btn');
-        if (btn) {
-            btn.classList.toggle('btn-primary', this.batchMode);
-            btn.classList.toggle('btn-default', !this.batchMode);
-        }
-        if (!this.batchMode) {
-            document.getElementById('prompt-list').querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            const selectAll = document.getElementById('prompt-select-all');
-            if (selectAll) selectAll.checked = false;
-        }
-    },
-
-    /**
-     * 切换全选/取消全选状态
-     * @param {boolean} checked - true 全选，false 取消全选
-     */
-    toggleSelectAll(checked) {
-        const container = document.getElementById('prompt-list');
-        if (!container) return;
-        const cbSelector = this.currentView === 'card' ? '.card-checkbox' : '.row-checkbox';
-        container.querySelectorAll(cbSelector).forEach(cb => {
-            cb.checked = checked;
-            const id = Number(cb.dataset.id);
-            if (checked) {
-                this.selectedIds.add(id);
-            } else {
-                this.selectedIds.delete(id);
-            }
-        });
-        const selectAll = document.getElementById('prompt-select-all');
-        if (selectAll) selectAll.checked = checked;
-        this.updateBatchBar();
-    },
-
-    /**
      * 处理批量删除 Prompt 操作
      */
     async handleBatchDelete() {
@@ -564,8 +439,6 @@ const PromptsView = {
             update();
         }
     },
-
-
 
     /**
      * 绑定分类组合框：输入 + 下拉选择已有分类
@@ -1286,90 +1159,6 @@ const PromptsView = {
                 }
             } catch (e) {}
         }, 100);
-    },
-
-    handleBatchAddTags() {
-        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的提示词'); return; }
-        Modal.open('添加标签', `
-            <div style="padding:16px">
-                <label class="form-label">标签（逗号分隔）</label>
-                <input type="text" class="form-input" id="batch-tags-input" placeholder="标签1, 标签2, ..." />
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-default" id="batch-tags-cancel-btn">取消</button>
-                <button type="button" class="btn btn-primary" id="batch-tags-confirm-btn">确认</button>
-            </div>
-        `);
-        document.getElementById('batch-tags-cancel-btn').addEventListener('click', () => Modal.close());
-        document.getElementById('batch-tags-confirm-btn').addEventListener('click', async () => {
-            const val = document.getElementById('batch-tags-input').value.trim();
-            if (!val) { Toast.warning('请输入标签'); return; }
-            const tags = val.split(',').map(t => t.trim()).filter(Boolean);
-            try {
-                await API.batchAddPromptTags([...this.selectedIds], tags);
-                Toast.success(`已为 ${this.selectedIds.size} 条提示词添加标签`);
-                Modal.close();
-                this.selectedIds.clear();
-                this.loadPrompts();
-            } catch (e) { Toast.error('操作失败: ' + e.message); }
-        });
-    },
-
-    handleBatchRemoveTags() {
-        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的提示词'); return; }
-        const allTags = new Set();
-        [...this.selectedIds].forEach(id => {
-            const p = this.allPrompts.find(x => x.id === id);
-            if (p) {
-                parseTags(p.tags).forEach(x => allTags.add(x));
-            }
-        });
-        if (allTags.size === 0) { Toast.info('选中的提示词没有标签'); return; }
-        const tagsHtml = [...allTags].map(t => `<label class="batch-remove-tag-item"><input type="checkbox" class="batch-remove-tag-cb" value="${escapeHtml(t)}" checked /> <span class="tag tag-sm">${escapeHtml(t)}</span></label>`).join('');
-        Modal.open('移除标签', `
-            <div class="batch-remove-tags-wrap">
-                <div class="batch-remove-tags-header">
-                    <span class="batch-remove-tags-label">勾选要移除的标签</span>
-                    <div class="batch-remove-tags-actions">
-                        <button type="button" class="btn btn-xs btn-default" id="batch-remove-tags-select-all">全选</button>
-                        <button type="button" class="btn btn-xs btn-default" id="batch-remove-tags-deselect-all">取消全选</button>
-                    </div>
-                </div>
-                <div class="batch-remove-tags-list">${tagsHtml}</div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-default" id="batch-remove-tags-cancel-btn">取消</button>
-                <button type="button" class="btn btn-primary" id="batch-remove-tags-confirm-btn">确认</button>
-            </div>
-        `);
-        document.getElementById('batch-remove-tags-cancel-btn').addEventListener('click', () => Modal.close());
-        document.getElementById('batch-remove-tags-select-all').addEventListener('click', () => {
-            document.querySelectorAll('.batch-remove-tag-cb').forEach(cb => cb.checked = true);
-        });
-        document.getElementById('batch-remove-tags-deselect-all').addEventListener('click', () => {
-            document.querySelectorAll('.batch-remove-tag-cb').forEach(cb => cb.checked = false);
-        });
-        document.getElementById('batch-remove-tags-confirm-btn').addEventListener('click', async () => {
-            const toRemove = [];
-            document.querySelectorAll('.batch-remove-tag-cb').forEach(cb => { if (cb.checked) toRemove.push(cb.value); });
-            if (toRemove.length === 0) { Toast.info('请勾选要移除的标签'); return; }
-            try {
-                await API.batchRemovePromptTags([...this.selectedIds], toRemove);
-                Toast.success(`已从 ${this.selectedIds.size} 条提示词中移除 ${toRemove.length} 个标签`);
-                Modal.close();
-                this.selectedIds.clear();
-                this.loadPrompts();
-            } catch (e) { Toast.error('操作失败: ' + e.message); }
-        });
-    },
-
-    handleBatchSetPin(pinned) {
-        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的提示词'); return; }
-        API.batchSetPinPrompt([...this.selectedIds], pinned).then(() => {
-            Toast.success(pinned ? '已置顶' : '已取消置顶');
-            this.selectedIds.clear();
-            this.loadPrompts();
-        }).catch(e => Toast.error('操作失败: ' + e.message));
     },
 
     /**

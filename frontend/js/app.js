@@ -128,6 +128,8 @@ const ShortcutManager = {
             { keys: 'Ctrl + S', desc: '保存设置' },
             { keys: 'Escape', desc: '关闭弹窗 / 退出批量模式' },
             { keys: '1 ~ 6', desc: '快速导航（仪表盘/提示词/技能/翻译/数据/设置）' },
+            { keys: 'PgUp / PgDn', desc: '向上/向下翻页（提示词/技能列表）' },
+            { keys: 'Ctrl + Home / End', desc: '滚动到顶部/底部（提示词/技能列表）' },
             { keys: 'Ctrl + ?', desc: '显示快捷键说明' },
         ];
 
@@ -791,6 +793,13 @@ const AIActionButton = {
                 }
             });
 
+            if (!state.streamInstance) {
+                targetField.readOnly = prevReadOnly;
+                targetField.disabled = prevDisabled;
+                setMode('idle');
+                return;
+            }
+
             await state.streamInstance.call(content);
         }
 
@@ -818,7 +827,7 @@ const AIActionButton = {
             }
         });
 
-        targetField.addEventListener('blur', function() {
+        var blurHandler = function() {
             setTimeout(function() {
                 closeDropdown();
                 if (state.mode === 'restore') {
@@ -826,17 +835,23 @@ const AIActionButton = {
                     setMode('idle');
                 }
             }, 0);
-        });
+        };
 
-        document.addEventListener('click', function(e) {
+        var docClickHandler = function(e) {
             if (!wrap.contains(e.target)) closeDropdown();
-        });
+        };
+
+        targetField.addEventListener('blur', blurHandler);
+        document.addEventListener('click', docClickHandler);
 
         this._instances.set(wrapId, {
             cleanup: function() {
                 if (state.streamInstance) state.streamInstance.cleanup();
                 clearTimeout(state.safetyTimer);
-            }
+            },
+            blurHandler: blurHandler,
+            docClickHandler: docClickHandler,
+            targetField: targetField
         });
     },
 
@@ -848,6 +863,12 @@ const AIActionButton = {
         var instance = this._instances.get(wrapId);
         if (instance) {
             instance.cleanup();
+            if (instance.blurHandler && instance.targetField) {
+                instance.targetField.removeEventListener('blur', instance.blurHandler);
+            }
+            if (instance.docClickHandler) {
+                document.removeEventListener('click', instance.docClickHandler);
+            }
             this._instances.delete(wrapId);
         }
     },
@@ -865,6 +886,303 @@ const AIActionButton = {
 };
 
 /**
+ * 批量操作 Mixin
+ * 提供 PromptsView 和 SkillsView 共享的批量管理、视图滚动、高亮等方法
+ * 各视图通过 this._batchConfig 注入差异化的 DOM ID 和回调
+ */
+const BatchMixin = {
+    /**
+     * 绑定视图内容区域的键盘滚动快捷键（Ctrl+Home/End, PgUp/PgDn）
+     * @param {HTMLElement} container - 视图容器
+     */
+    bindViewScroll(container) {
+        const handler = (e) => {
+            if (e.target.closest('.modal-overlay')) return;
+            if (e.target.matches('input, textarea, select')) return;
+            const viewContent = container.querySelector('.view-content');
+            if (!viewContent) return;
+            if (e.ctrlKey && e.key === 'Home') {
+                e.preventDefault();
+                viewContent.scrollTop = 0;
+            } else if (e.ctrlKey && e.key === 'End') {
+                e.preventDefault();
+                viewContent.scrollTop = viewContent.scrollHeight;
+            } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                viewContent.scrollTop -= viewContent.clientHeight;
+            } else if (e.key === 'PageDown') {
+                e.preventDefault();
+                viewContent.scrollTop += viewContent.clientHeight;
+            }
+        };
+        document.addEventListener('keydown', handler);
+        this._viewScrollHandler = handler;
+    },
+
+    /**
+     * 高亮指定 ID 的项目并闪烁 3 秒
+     * @param {number} id - 要高亮的项目 ID
+     */
+    highlightItem(id) {
+        const el = document.querySelector(`[data-id="${id}"]`);
+        if (el) {
+            el.classList.add('highlight-flash');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                el.classList.remove('highlight-flash');
+            }, 3000);
+        }
+    },
+
+    /**
+     * 切换批量管理模式
+     */
+    toggleBatchMode() {
+        this.batchMode = !this.batchMode;
+        if (!this.batchMode) {
+            this.selectedIds.clear();
+            DropdownMenu.hide();
+        }
+        this.syncBatchMode();
+        this.updateBatchBar();
+    },
+
+    /**
+     * 退出批量管理模式
+     */
+    exitBatchMode() {
+        this.batchMode = false;
+        this.selectedIds.clear();
+        DropdownMenu.hide();
+        this.syncBatchMode();
+        this.updateBatchBar();
+    },
+
+    /**
+     * 同步批量管理模式的 DOM 状态
+     */
+    syncBatchMode() {
+        var cfg = this._batchConfig;
+        var listEl = document.getElementById(cfg.listId);
+        if (!listEl) return;
+        var viewContent = listEl.closest('.view-content') || listEl.parentElement;
+        var wrapper = viewContent.closest('.view-toolbar') || viewContent.parentElement;
+        if (wrapper) {
+            wrapper.classList.toggle('batch-mode', this.batchMode);
+        }
+        var bar = document.getElementById(cfg.batchBarId);
+        if (bar) {
+            bar.style.display = this.batchMode ? 'flex' : 'none';
+        }
+        var btn = document.getElementById(cfg.batchManageBtnId);
+        if (btn) {
+            btn.classList.toggle('btn-primary', this.batchMode);
+            btn.classList.toggle('btn-default', !this.batchMode);
+        }
+        if (!this.batchMode) {
+            listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+            var selectAll = document.getElementById(cfg.selectAllId);
+            if (selectAll) selectAll.checked = false;
+        }
+    },
+
+    /**
+     * 更新批量操作栏的显示状态和选中计数
+     */
+    updateBatchBar() {
+        var cfg = this._batchConfig;
+        var bar = document.getElementById(cfg.batchBarId);
+        var countEl = document.getElementById(cfg.selectedCountId);
+        if (bar && countEl) {
+            var count = this.selectedIds.size;
+            bar.style.display = this.batchMode ? 'flex' : 'none';
+            countEl.textContent = count + ' 项已选';
+        }
+        this.syncSelectionUI();
+    },
+
+    /**
+     * 同步选中状态的视觉反馈（高亮行/卡片）
+     */
+    syncSelectionUI() {
+        var listId = this._batchConfig.listId;
+        document.querySelectorAll('#' + listId + ' tr[data-id]').forEach(function(row) {
+            var id = Number(row.dataset.id);
+            row.classList.toggle('row-selected', this.selectedIds.has(id));
+        }.bind(this));
+        document.querySelectorAll('#' + listId + ' .item-card[data-id]').forEach(function(card) {
+            var id = Number(card.dataset.id);
+            card.classList.toggle('card-selected', this.selectedIds.has(id));
+        }.bind(this));
+    },
+
+    /**
+     * 切换全选/取消全选状态
+     * @param {boolean} checked - true 全选，false 取消全选
+     */
+    toggleSelectAll(checked) {
+        var cfg = this._batchConfig;
+        var container = document.getElementById(cfg.listId);
+        if (!container) return;
+        var cbSelector = this.currentView === 'card' ? '.card-checkbox' : '.row-checkbox';
+        container.querySelectorAll(cbSelector).forEach(function(cb) {
+            cb.checked = checked;
+            var id = Number(cb.dataset.id);
+            if (checked) {
+                this.selectedIds.add(id);
+            } else {
+                this.selectedIds.delete(id);
+            }
+        }.bind(this));
+        var selectAll = document.getElementById(cfg.selectAllId);
+        if (selectAll) selectAll.checked = checked;
+        this.updateBatchBar();
+    },
+
+    /**
+     * 绑定 checkbox 选择事件（全选/单选）
+     * @param {HTMLElement} container - 包含 checkbox 的容器元素
+     */
+    bindCheckboxEvents(container) {
+        var cfg = this._batchConfig;
+        var selectAll = document.getElementById(cfg.selectAllId);
+        var cbSelector = '.row-checkbox, .card-checkbox';
+        var self = this;
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                container.querySelectorAll(cbSelector).forEach(function(cb) {
+                    cb.checked = selectAll.checked;
+                    var id = Number(cb.dataset.id);
+                    if (selectAll.checked) {
+                        self.selectedIds.add(id);
+                    } else {
+                        self.selectedIds.delete(id);
+                    }
+                });
+                self.updateBatchBar();
+            });
+        }
+
+        container.querySelectorAll('.row-checkbox, .card-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var id = Number(cb.dataset.id);
+                if (cb.checked) {
+                    self.selectedIds.add(id);
+                } else {
+                    self.selectedIds.delete(id);
+                }
+                if (selectAll) {
+                    var allCbs = container.querySelectorAll(cbSelector);
+                    selectAll.checked = allCbs.length > 0 && self.selectedIds.size === allCbs.length;
+                }
+                self.updateBatchBar();
+            });
+        });
+    },
+
+    /**
+     * 处理批量添加标签
+     */
+    handleBatchAddTags() {
+        var cfg = this._batchConfig;
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的' + cfg.entityLabel); return; }
+        var self = this;
+        Modal.open('添加标签', '\
+            <div style="padding:16px">\
+                <label class="form-label">标签（逗号分隔）</label>\
+                <input type="text" class="form-input" id="' + cfg.tagInputId + '" placeholder="标签1, 标签2, ..." />\
+            </div>\
+            <div class="form-actions">\
+                <button type="button" class="btn btn-default" id="' + cfg.tagCancelId + '">取消</button>\
+                <button type="button" class="btn btn-primary" id="' + cfg.tagConfirmId + '">确认</button>\
+            </div>');
+        document.getElementById(cfg.tagCancelId).addEventListener('click', function() { Modal.close(); });
+        document.getElementById(cfg.tagConfirmId).addEventListener('click', async function() {
+            var val = document.getElementById(cfg.tagInputId).value.trim();
+            if (!val) { Toast.warning('请输入标签'); return; }
+            var tags = val.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+            try {
+                await cfg.batchAddTagsApi([...self.selectedIds], tags);
+                Toast.success('已为 ' + self.selectedIds.size + ' 个' + cfg.entityLabel + '添加标签');
+                Modal.close();
+                self.selectedIds.clear();
+                cfg.loadAll();
+            } catch (e) { Toast.error('操作失败: ' + e.message); }
+        });
+    },
+
+    /**
+     * 处理批量移除标签
+     */
+    handleBatchRemoveTags() {
+        var cfg = this._batchConfig;
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的' + cfg.entityLabel); return; }
+        var self = this;
+        var allItems = cfg.getAllItems();
+        var allTags = new Set();
+        [...this.selectedIds].forEach(function(id) {
+            var item = allItems.find(function(x) { return x.id === id; });
+            if (item) {
+                parseTags(item.tags).forEach(function(x) { allTags.add(x); });
+            }
+        });
+        if (allTags.size === 0) { Toast.info('选中的' + cfg.entityLabel + '没有标签'); return; }
+        var tagsHtml = [...allTags].map(function(t) {
+            return '<label class="batch-remove-tag-item"><input type="checkbox" class="' + cfg.removeTagCbClass + '" value="' + escapeHtml(t) + '" checked /> <span class="tag tag-sm">' + escapeHtml(t) + '</span></label>';
+        }).join('');
+        Modal.open('移除标签', '\
+            <div class="batch-remove-tags-wrap">\
+                <div class="batch-remove-tags-header">\
+                    <span class="batch-remove-tags-label">勾选要移除的标签</span>\
+                    <div class="batch-remove-tags-actions">\
+                        <button type="button" class="btn btn-xs btn-default" id="' + cfg.removeTagSelectAllId + '">全选</button>\
+                        <button type="button" class="btn btn-xs btn-default" id="' + cfg.removeTagDeselectAllId + '">取消全选</button>\
+                    </div>\
+                </div>\
+                <div class="batch-remove-tags-list">' + tagsHtml + '</div>\
+            </div>\
+            <div class="form-actions">\
+                <button type="button" class="btn btn-default" id="' + cfg.removeTagCancelId + '">取消</button>\
+                <button type="button" class="btn btn-primary" id="' + cfg.removeTagConfirmId + '">确认</button>\
+            </div>');
+        document.getElementById(cfg.removeTagCancelId).addEventListener('click', function() { Modal.close(); });
+        document.getElementById(cfg.removeTagSelectAllId).addEventListener('click', function() {
+            document.querySelectorAll('.' + cfg.removeTagCbClass).forEach(function(cb) { cb.checked = true; });
+        });
+        document.getElementById(cfg.removeTagDeselectAllId).addEventListener('click', function() {
+            document.querySelectorAll('.' + cfg.removeTagCbClass).forEach(function(cb) { cb.checked = false; });
+        });
+        document.getElementById(cfg.removeTagConfirmId).addEventListener('click', async function() {
+            var toRemove = [];
+            document.querySelectorAll('.' + cfg.removeTagCbClass).forEach(function(cb) { if (cb.checked) toRemove.push(cb.value); });
+            if (toRemove.length === 0) { Toast.info('请勾选要移除的标签'); return; }
+            try {
+                await cfg.batchRemoveTagsApi([...self.selectedIds], toRemove);
+                Toast.success('已从 ' + self.selectedIds.size + ' 个' + cfg.entityLabel + '中移除 ' + toRemove.length + ' 个标签');
+                Modal.close();
+                self.selectedIds.clear();
+                cfg.loadAll();
+            } catch (e) { Toast.error('操作失败: ' + e.message); }
+        });
+    },
+
+    /**
+     * 处理批量置顶/取消置顶
+     * @param {boolean} pinned - true 置顶，false 取消置顶
+     */
+    handleBatchSetPin(pinned) {
+        var cfg = this._batchConfig;
+        if (this.selectedIds.size === 0) { Toast.warning('请先选择要操作的' + cfg.entityLabel); return; }
+        var self = this;
+        cfg.batchSetPinApi([...this.selectedIds], pinned).then(function() {
+            Toast.success(pinned ? '已置顶' : '已取消置顶');
+            self.selectedIds.clear();
+            cfg.loadAll();
+        }).catch(function(e) { Toast.error('操作失败: ' + e.message); });
+    },
+};
+
+/**
  * 使用 AI 流式事件注册，统一管理 ai:token/ai:done/ai:error 事件
  * @param {Function} apiMethod - 调用 API 的方法，接收剩余参数
  * @param {Object} callbacks - 回调对象
@@ -873,32 +1191,45 @@ const AIActionButton = {
  * @param {Function} [callbacks.onError] - 错误回调
  * @returns {{ cleanup: Function, call: Function }}
  */
+let _activeStream = null;
+let _aiGeneration = 0;
+
 function withAIStream(apiMethod, callbacks) {
     const { onToken, onDone, onError } = callbacks;
 
+    if (_activeStream) {
+        if (onError) onError('有 AI 操作正在执行中，请等待完成');
+        return null;
+    }
+
+    var generation = ++_aiGeneration;
+
     const cleanup = () => {
-        if (window.runtime && window.runtime.EventsOff) {
-            window.runtime.EventsOff('ai:token', 'ai:done', 'ai:error');
+        if (_activeStream && _activeStream.generation === generation) {
+            _activeStream = null;
         }
     };
 
-    cleanup();
-
     if (window.runtime && window.runtime.EventsOn) {
-        window.runtime.EventsOn('ai:token', (token) => {
+        window.runtime.EventsOn('ai:token', function(token) {
+            if (_aiGeneration !== generation) return;
             if (onToken) onToken(token);
         });
 
-        window.runtime.EventsOn('ai:done', () => {
+        window.runtime.EventsOn('ai:done', function() {
+            if (_aiGeneration !== generation) return;
             cleanup();
             if (onDone) onDone();
         });
 
-        window.runtime.EventsOn('ai:error', (errMsg) => {
+        window.runtime.EventsOn('ai:error', function(errMsg) {
+            if (_aiGeneration !== generation) return;
             cleanup();
             if (onError) onError(errMsg);
         });
     }
+
+    _activeStream = { cleanup, generation };
 
     return {
         cleanup,

@@ -215,12 +215,16 @@ const SettingsView = {
             fontNav.reset();
         });
 
-        document.addEventListener('click', (e) => {
+        if (this._docClickHandler) {
+            document.removeEventListener('click', this._docClickHandler);
+        }
+        this._docClickHandler = (e) => {
             if (!e.target.closest('.font-family-selector')) {
                 dropdown.classList.remove('active');
                 fontNav.reset();
             }
-        });
+        };
+        document.addEventListener('click', this._docClickHandler);
 
         document.getElementById('save-settings-btn').addEventListener('click', async () => {
             const theme = document.getElementById('setting-theme').value;

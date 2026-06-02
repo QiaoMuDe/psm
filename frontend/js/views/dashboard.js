@@ -81,11 +81,15 @@ const DashboardView = {
             }
         });
 
-        document.addEventListener('click', (e) => {
+        if (DashboardView._docClickHandler) {
+            document.removeEventListener('click', DashboardView._docClickHandler);
+        }
+        DashboardView._docClickHandler = (e) => {
             if (!e.target.closest('.global-search-wrapper')) {
                 dropdown.style.display = 'none';
             }
-        });
+        };
+        document.addEventListener('click', DashboardView._docClickHandler);
 
         KeyboardNav.bind(searchInput, {
             getItems: () => dropdown.querySelectorAll('.search-result-item'),
@@ -93,13 +97,17 @@ const DashboardView = {
             onEscape: () => { dropdown.style.display = 'none'; searchInput.blur(); },
         });
 
-        document.addEventListener('keydown', (e) => {
+        if (DashboardView._docKeydownHandler) {
+            document.removeEventListener('keydown', DashboardView._docKeydownHandler);
+        }
+        DashboardView._docKeydownHandler = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'f' && App.currentView === 'dashboard') {
                 e.preventDefault();
                 searchInput.focus();
                 searchInput.select();
             }
-        });
+        };
+        document.addEventListener('keydown', DashboardView._docKeydownHandler);
     },
 
     /**
