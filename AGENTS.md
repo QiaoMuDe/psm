@@ -1,6 +1,6 @@
 # PSM (Skill & Prompt Manager) 项目分析报告
 
-> 版本: 2.14.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
+> 版本: 2.15.0 | 更新日期: 2026-06-02 | 分析人: AI 架构师
 
 ---
 
@@ -73,7 +73,7 @@ psm/
 │   │   └── components.css           # 组件样式：卡片/按钮/表单/表格/标签/模态框/Toast/批量栏/右键菜单/模板变量/关于弹窗/设置分组/仪表盘搜索/置顶内容/跳转闪烁/动画效果/点击动画/Skill详情弹窗/日志级别分段滑块
 │   └── js/
 │       ├── api.js                   # Wails 绑定封装层：统一错误处理 + Number(id) 类型转换 + 获取置顶内容 + 文件操作
-│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮 + KeyboardNav 工具函数 + copyToClipboard/withAIStream/positionPopup 全局工具函数
+│       ├── app.js                   # SPA 路由 + 脚本懒加载 + 主题初始化 + ContextMenu 初始化 + highlightText 工具函数 + 全局字体偏移 + 关于弹窗 + 模板变量函数 + 跳转高亮 + KeyboardNav 工具函数 + copyToClipboard/withAIStream/positionPopup/AIActionButton 全局工具函数
 │       ├── components/
 │       │   ├── toast.js             # Toast 消息组件（success/error/warning/info + SVG 图标）
 │       │   ├── modal.js             # 模态框组件（打开/关闭/内容填充）
@@ -139,7 +139,7 @@ psm/
 | 设置服务 | 系统参数 CRUD、程序家目录管理（读取/迁移）、重置默认设置、日志级别获取设置、全方法日志覆盖（Errorw/Infow） | `internal/service/settings.go` | 输入: key/value → 输出: map/string（GORM 全局实例） |
 | Prompt 服务 | CRUD + 搜索筛选 + 分类查询 + 批量删除 + 选择性 JSON 导入导出 + 模板变量 + 使用统计 + 置顶 + 标签管理 + 批量操作(修改分类/添加移除标签/置顶)、全方法日志覆盖（Errorw/Warnw/Infow） | `internal/service/prompt.go` | 输入: name/content/keyword → 输出: Prompt[]（GORM 全局实例） |
 | Skill 服务 | CRUD + 批量删除 + 单/双格式 ZIP 导入导出 + 编辑同步 SKILL.md + 文件列表 + 置顶 + 标签管理 + 批量操作(添加移除标签/置顶) + 名称特殊字符清理(SanitizeFileName) + 导入时同步更新 SKILL.md frontmatter + 编辑重命名同步目录+SKILL.md+DB relative_path + 目录冲突检测与回滚、全方法日志覆盖（Errorw/Debugw/Infow/Warnw） | `internal/service/skill.go` | 输入: ZIP/元数据 → 输出: Skill[]/SkillFile[]（GORM 全局实例） |
-| AI 服务 | 流式生成提示词（含重新生成、回车确认）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接、withAIStream 统一事件管理（EventsOff 防泄漏） | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
+| AI 服务 | 流式生成提示词（含重新生成、回车确认）、流式优化提示词、流式翻译、获取模型列表（含键盘导航）、测试连接、withAIStream 统一事件管理（EventsOff 防泄漏）、AIActionButton 统一操作按钮组件（下拉菜单+还原+焦点管理）、AI 根据内容生成名称/描述 | `internal/handler/ai.go` | 输入: 描述/内容/目标语言 → 输出: Events 流式推送 |
 | Wails 绑定层 | App 结构体，40+ 个前端 API 方法 + 8 个文件对话框 | `app.go` | 前端 ↔ Go 桥接 |
 | 版本信息 | 构建时版本注入（verman 库），前端展示 | `app.go` GetVersion | 输入: 无 → 输出: version map |
 | 前端 SPA | 路由管理、视图切换、组件系统（含右键菜单） | `frontend/js/app.js` + views/ | 用户交互 → API 调用 |
@@ -413,16 +413,14 @@ psm/
 → 用户确认后打开新建表单，预填充 AI 生成结果
 ```
 
-**AI 优化提示词流程**:
+**AI 操作流程（AIActionButton 组件）**:
 ```
-用户点击 Prompt 内容旁的"优化"按钮
-→ API.optimizePrompt(content) → AIHandler.OptimizePrompt
-→ 从 settings 读取 ai_optimize_prompt（系统提示词）
-→ streamChat(systemMsg, content) 流式请求
-→ 前端监听 ai:token 事件，实时覆盖 textarea 内容
-→ textarea 上方显示半透明遮罩（.ai-optimize-loading）
-→ 按钮文字从"优化"变为"还原"
-→ 用户点击"还原"→ 恢复 originalContent 闭包中的原始内容
+用户点击 AI 按钮（⚡ AI ▾）→ 下拉菜单显示可用操作（生成/优化）
+→ 用户选择操作 → AIActionButton.executeAction(apiMethod)
+→ 保存 originalContent → setMode('loading') 禁用输入框 + 灰色遮罩
+→ withAIStream(apiMethod) 流式替换内容
+→ 完成后 setMode('restore') 显示"还原"按钮
+→ 用户点击"还原"恢复原始值 或 blur 自动恢复为 AI 按钮
 ```
 
 **AI 获取模型列表流程**:
@@ -950,3 +948,37 @@ skills (独立表 + 文件系统)
 136. **Skill 重命名失败回滚**: DB Updates 失败时调用 `os.Rename(newDir, oldDir)` 回滚目录名，确保三处状态一致
 137. **前端名称冲突视觉反馈**: skills.js `openEditModal` 保存时捕获含"已存在"的错误，`#skill-name` 输入框添加 `.input-error-flash` 红色边框闪烁动画（`@keyframes input-error-flash`，`var(--danger)` ↔ `var(--border)`，2 次 1.2s），下方插入 `.input-error-msg` 红色提示文字，模态框不关闭
 138. **UpdateSkillFrontmatter 替换策略**: 整体替换 `--- ... ---` 区块，不解析 YAML 内容，兼容多行 description（`|` 语法）等复杂 frontmatter；正文部分通过定位第二个 `---` 后的偏移量原样保留
+139. **AIActionButton 统一组件**: `app.js` 新增 `AIActionButton` 全局组件，将"生成"+"优化"合并为一个下拉按钮；`init(wrapId, config)` 数据驱动初始化，config 包含 `targetFieldId` 和 `actions` 数组（每项含 type/label/apiMethod/sourceFieldId/emptyMsg）；始终显示下拉菜单，无论操作数量多少
+140. **AIActionButton 三状态**: idle（⚡ AI ▾ 下拉按钮）→ loading（spinner + 操作名，按钮禁用，输入框禁用）→ restore（↩ 还原按钮，恢复原始值）；`setMode()` 统一管理状态切换、按钮外观、`.ai-optimize-loading` 遮罩类
+141. **AI 按钮还原机制**: blur 恢复 + mousedown preventDefault；输入框 `blur` 事件中 `setTimeout(0)` 延迟检查 restore 状态并自动恢复为 idle；`btn` 的 `mousedown` 在 restore 状态下 `e.preventDefault()` 防止 blur 先于 click 执行导致 `originalContent` 被清空；按钮点击时先 focus 输入框确保 blur 能正常触发
+142. **AI 按钮焦点管理**: `executeAction` 开始前 `targetField.focus()` 确保输入框持有焦点；`setMode('restore')` 时 `targetField.focus()` 恢复优化操作中 disabled 导致的焦点丢失；focus 放在 disabled/readOnly 设置之前确保可聚焦
+143. **AI 按钮键盘导航**: dropdown 容器 `keydown` 事件拦截 ArrowDown/ArrowUp/Enter/Escape/Tab，`stopPropagation` + `preventDefault` 阻止页面滚动；上下键切换菜单项焦点，Enter 触发选择，Escape 关闭菜单；菜单打开时自动聚焦第一个选项
+144. **AI 按钮 CSS 定位**: `.ai-action-btn-wrap` 使用 `position: absolute` 定位在 `.ai-optimize-row` 内；input 字段通过 `:has(.form-input)` 选择器垂直居中（`bottom: 50%; transform: translateY(50%)`），textarea 字段固定 `bottom: 8px; right: 8px`；下拉菜单 `top: calc(100% + 4px)` 向下展开，`z-index: 100`
+145. **AI 一句话生成优化按钮**: `openAIGenerateModal` 中"一句话描述"输入框包裹在 `.ai-optimize-row` 中，添加 `AIActionButton` 仅配置 `optimize` 操作（`API.optimizeDescription`），支持先优化描述再生成提示词的两步流程
+146. **Skill 详情无描述兜底**: `viewSkill` 中 `.skill-detail-desc` 始终渲染，无描述时显示"暂无描述"文本，使用 `var(--text-secondary)` 颜色，与卡片列表的"暂无描述"风格一致
+147. **AI 操作按钮移除旧代码**: prompts.js 和 skills.js 删除 `bindOptimizeButton` 和 `bindGenerateButton` 方法（共约 170 行），所有模态框统一使用 `AIActionButton.init` 替代；HTML 模板中 `<button class="btn-ai-optimize">` 替换为 `<div class="ai-action-btn-wrap">` 空容器
+148. **AI 按钮加载遮罩恢复**: `.ai-optimize-loading::after` 伪元素在 `setMode('loading')` 时添加到 `.ai-optimize-row`，半透明遮罩（`rgba(0,0,0,0.05)`）+ `pointer-events: none`，`setMode('idle'/'restore')` 时移除
+
+---
+
+## 5. 版本演进
+
+| 版本 | 日期 | 主要变更 |
+|------|------|----------|
+| 2.15.0 | 2026-06-02 | AIActionButton 统一组件（下拉菜单+还原+焦点管理+键盘导航）、一句话生成优化按钮、Skill 详情无描述兜底 |
+| 2.14.0 | 2026-06-02 | Skill 编辑重命名同步、目录冲突检测回滚、SanitizeFileName、UpdateSkillFrontmatter、前端名称冲突视觉反馈、搜索重置、折叠面板、工具栏分隔符修复 |
+| 2.13.0 | 2026-06-02 | AI 生成名称/描述后端+前端、withAIStream 参数 bug 修复、系统提示词折叠面板、设置页新增 AI 生成提示词 |
+| 2.12.0 | 2026-06-01 | 全局字体偏移配置、仪表盘统计卡片跳转、视图持久化、标签颜色持久化 |
+| 2.11.0 | 2026-05-30 | Skill 导入双向同步（ZIP→DB + DB→ZIP）、批量操作增强（批量删除/标签管理）、置顶管理 |
+| 2.10.0 | 2026-05-29 | 标签管理系统、标签页导航、上下文菜单增强、搜索状态记忆 |
+| 2.9.0 | 2026-05-28 | 翻译模块重构（左右分栏+历史记录+全文翻译+流式渲染）、全局事件管理（withAIStream） |
+| 2.8.0 | 2026-05-27 | 批量选择+管理面板、排序切换、置顶功能、键盘导航、导出选择优化 |
+| 2.7.0 | 2026-05-26 | 设置页重构（侧边导航+卡片分组+滚动联动）、关于弹窗、排序持久化 |
+| 2.6.0 | 2026-05-26 | 主题切换系统（亮色/暗色/跟随系统）、CSS 变量架构、导航图标 SVG 重绘 |
+| 2.5.0 | 2026-05-26 | Wails 构建集成（verman 版本管理）、HTML 模板重构、SPA 路由 |
+| 2.4.0 | 2026-05-26 | Skills 模块开发（CRUD+ZIP 导入导出+置顶+标签）、侧边栏扩展 |
+| 2.3.0 | 2026-05-26 | Prompt 编辑器增强（AI 优化/一键复制/分类筛选）、标签 CRUD、模板变量 |
+| 2.2.0 | 2026-05-26 | AI 集成（流式生成+优化+翻译+模型列表）、数据库迁移系统、AI Prompt 管理 |
+| 2.1.0 | 2026-05-26 | 仪表盘页面（统计卡片+分布图表+近期活动）、空状态引导 |
+| 2.0.0 | 2026-05-26 | 核心功能重构（搜索/排序/分类/标签/批量删除）、UI 交互增强 |
+| 1.0.0 | 2026-05-26 | 初始版本（Prompt CRUD+分类+搜索+导入导出+数据库） |

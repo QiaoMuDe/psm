@@ -728,7 +728,10 @@ const PromptsView = {
                 <div id="ai-gen-input-section">
                     <div class="form-group">
                         <label class="form-label">一句话描述你想要的提示词</label>
-                        <input type="text" class="form-input" id="ai-gen-description" placeholder="例如：帮我写一个代码审查的提示词" />
+                        <div class="ai-optimize-row">
+                            <input type="text" class="form-input" id="ai-gen-description" placeholder="例如：帮我写一个代码审查的提示词" />
+                            <div class="ai-action-btn-wrap" id="ai-action-gen-description"></div>
+                        </div>
                     </div>
                     <div class="ai-gen-loading-state" id="ai-gen-loading" style="display:none;">
                         <div class="ai-gen-wave">
@@ -759,6 +762,14 @@ const PromptsView = {
         `;
 
         Modal.open('AI 生成提示词', content, { width: '560px', footer });
+
+        AIActionButton.cleanupAll();
+        AIActionButton.init('ai-action-gen-description', {
+            targetFieldId: 'ai-gen-description',
+            actions: [
+                { type: 'optimize', label: '优化描述', apiMethod: API.optimizeDescription }
+            ]
+        });
 
         let accumulated = '';
 
