@@ -768,7 +768,7 @@ const SkillsView = {
                         if (tags.length === 0) return '';
                         return `<div class="detail-tags">${tags.map(t => `<span class="tag tag-primary">${escapeHtml(t)}</span>`).join('')}</div><div class="skill-detail-divider"></div>`;
                     })()}
-                    ${skill.description ? `<div class="skill-detail-desc">${escapeHtml(skill.description)}</div>` : ''}
+                    <div class="skill-detail-desc">${skill.description ? escapeHtml(skill.description) : '暂无描述'}</div>
                     <div class="skill-detail-divider"></div>
                     <div class="skill-detail-files-header">
                         <span class="skill-detail-files-title">📁 文件列表 (${files.length} 项)</span>
