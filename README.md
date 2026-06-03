@@ -2,8 +2,6 @@
 
 # ⚡ PSM — Skill & Prompt Manager
 
-**一款现代化的 AI Skill 与 Prompt 统一管理桌面应用**
-
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev/) [![Wails](https://img.shields.io/badge/Wails-v2.11-FF5E5B?style=flat-square&logo=wails&logoColor=white)](https://wails.io/) [![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/) [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE) [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blueviolet?style=flat-square)](https://wails.io/)
 
 [🚀 快速开始](#-快速开始) · [ 下载](https://gitee.com/MM-Q/psm/releases) · [💬 反馈](https://gitee.com/MM-Q/psm/issues)
